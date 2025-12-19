@@ -1,0 +1,51 @@
+import { Link, useLocation } from 'react-router-dom';
+import { Github, BookOpen, Sun, Moon, Cpu } from 'lucide-react';
+
+export default function Navbar() {
+    const location = useLocation();
+    const isVisualizer = location.pathname === '/visualizer';
+
+    return (
+        <nav className="fixed top-0 left-0 right-0 h-[56px] z-50 bg-background/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-6">
+            {/* Left: Logo */}
+            <Link to="/" className="flex items-center space-x-3 group">
+                <div className="p-1.5 bg-gradient-to-br from-primary to-secondary rounded-lg shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all duration-300">
+                    <Cpu size={20} className="text-white" />
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-lg leading-none tracking-tight text-text-primary">
+                        Code<span className="text-primary">Flow</span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted font-medium">Visualize Execution</span>
+                </div>
+            </Link>
+
+            {/* Center: Language Selector (Only visible in Visualizer) */}
+            {isVisualizer && (
+                <div className="hidden md:flex items-center px-4 py-1.5 bg-surface rounded-full border border-white/10 shadow-inner">
+                    <span className="w-2 h-2 rounded-full bg-primary mr-2 animate-pulse"></span>
+                    <span className="text-sm font-mono font-bold text-text-primary">C++</span>
+                    <span className="ml-2 text-xs text-text-muted px-2 py-0.5 rounded bg-white/5">Beta</span>
+                </div>
+            )}
+
+            {/* Right: Actions */}
+            <div className="flex items-center space-x-4">
+                <a href="#" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
+                    <BookOpen size={16} />
+                    <span className="hidden sm:inline">Docs</span>
+                </a>
+                <a href="#" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
+                    <Github size={16} />
+                    <span className="hidden sm:inline">GitHub</span>
+                </a>
+
+                <div className="h-6 w-px bg-white/10 mx-2"></div>
+
+                <button className="p-2 rounded-full hover:bg-white/5 text-text-muted hover:text-warning transition-colors">
+                    <Sun size={18} />
+                </button>
+            </div>
+        </nav>
+    );
+}
