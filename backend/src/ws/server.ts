@@ -16,12 +16,22 @@ export function setupWebSocket(wss: WebSocketServer) {
                 const msg: Message = JSON.parse(message.toString());
 
                 if (msg.type === 'EXECUTE') {
-                    const code = msg.payload;
-                    console.log(`Executing code length: ${code.length}`);
+                    // Support legacy string payload or new object payload
+                    let code = "";
+                    let input = "";
+
+                    if (typeof msg.payload === 'string') {
+                        code = msg.payload;
+                    } else {
+                        code = msg.payload.code || "";
+                        input = msg.payload.input || "";
+                    }
+
+                    console.log(`Executing code length: ${code.length}, Input length: ${input.length}`);
 
                     try {
                         const executor = new Executor();
-                        const generator = executor.execute(code);
+                        const generator = executor.execute(code, input);
                         const traces: ExecutionTrace[] = [];
                         let i = 0;
                         const MAX_STEPS = 2000;

@@ -14,7 +14,12 @@ export type NodeType =
     | 'ForStatement'
     | 'CallExpression'
     | 'ExpressionStatement'
-    | 'UpdateExpression';
+    | 'UpdateExpression'
+    | 'ClassDeclaration'
+    | 'MemberExpression'
+    | 'NewExpression'
+    | 'ThisExpression'
+    | 'ArrayExpression';
 
 export interface BaseASTNode {
     type: NodeType;
@@ -34,6 +39,12 @@ export interface FunctionDeclaration extends BaseASTNode {
     body: Block;
 }
 
+export interface ClassDeclaration extends BaseASTNode {
+    type: 'ClassDeclaration';
+    name: string;
+    members: (VariableDeclaration | FunctionDeclaration)[];
+}
+
 export interface Block extends BaseASTNode {
     type: 'Block';
     body: ASTNode[];
@@ -48,7 +59,16 @@ export interface VariableDeclaration extends BaseASTNode {
 
 export interface Assignment extends BaseASTNode {
     type: 'Assignment';
-    name: string;
+
+    // Actually, for obj.prop = val, we need MemberExpression assignment. 
+    // AST usually handles this by having 'left' be an LValue (Identifier | MemberExpression).
+    // Current Assignment interface enforces 'name: string'.
+    // We should probably change this to 'left: Identifier | MemberExpression' or similar.
+    // To avoid breaking too much, let's allow 'target' as ASTNode?
+    // Or keep 'name' for now and use BinaryExpression used for logic? No, assignment is statement/expr.
+    // Let's UPDATE Assignment to support MemberExpression target.
+    left?: ASTNode; // If present, use this instead of name.
+    name: string; // Legacy support or fall back?
     value: ASTNode;
 }
 
@@ -67,7 +87,29 @@ export interface Identifier extends BaseASTNode {
 export interface Literal extends BaseASTNode {
     type: 'Literal';
     value: any;
-    valueType: 'int' | 'string' | 'bool';
+    valueType: 'int' | 'string' | 'bool' | 'null';
+}
+
+export interface ArrayExpression extends BaseASTNode {
+    type: 'ArrayExpression';
+    elements: ASTNode[];
+}
+
+export interface MemberExpression extends BaseASTNode {
+    type: 'MemberExpression';
+    object: ASTNode;
+    property: ASTNode; // Identifier (for .prop) or Expr (for [i])
+    computed: boolean; // true if [] access, false if . access
+}
+
+export interface NewExpression extends BaseASTNode {
+    type: 'NewExpression';
+    className: string;
+    arguments: ASTNode[];
+}
+
+export interface ThisExpression extends BaseASTNode {
+    type: 'ThisExpression';
 }
 
 export interface ReturnStatement extends BaseASTNode {
@@ -98,7 +140,7 @@ export interface ForStatement extends BaseASTNode {
 
 export interface CallExpression extends BaseASTNode {
     type: 'CallExpression';
-    callee: string;
+    callee: string | ASTNode; // Allow ASTNode (MemberExpression) for obj.method()
     arguments: ASTNode[];
 }
 
@@ -110,26 +152,38 @@ export interface ExpressionStatement extends BaseASTNode {
 export interface UpdateExpression extends BaseASTNode {
     type: 'UpdateExpression';
     operator: '++' | '--';
-    argument: Identifier;
+    argument: ASTNode; // Changed from Identifier to ASTNode to support obj.prop++
     prefix: boolean;
 }
 
 export type ASTNode =
     | Program
     | FunctionDeclaration
+    | ClassDeclaration
     | Block
     | VariableDeclaration
     | Assignment
     | BinaryExpression
     | Identifier
     | Literal
+    | ArrayExpression
+    | MemberExpression
+    | NewExpression
+    | ThisExpression
     | ReturnStatement
     | IfStatement
     | WhileStatement
     | ForStatement
     | CallExpression
     | ExpressionStatement
-    | UpdateExpression;
+    | UpdateExpression
+    | MultiVariableDeclaration;
+
+export interface MultiVariableDeclaration {
+    type: 'MultiVariableDeclaration';
+    declarations: VariableDeclaration[];
+    line: number;
+}
 
 // Execution Trace Types
 export interface ExecutionTrace {

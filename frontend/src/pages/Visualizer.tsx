@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useExecutionStore } from '../store/executionStore';
 import CodeEditor from '../editor/CodeEditor';
+import InputPanel from '../components/panels/InputPanel';
 import VariablesPanel from '../components/panels/VariablesPanel';
 import CallStackPanel from '../components/panels/CallStackPanel';
 import MemoryPanel from '../components/panels/MemoryPanel';
@@ -105,11 +106,26 @@ export default function Visualizer() {
             {/* 2. Main Grid Layout */}
             <div className="flex-1 p-2 gap-2 flex min-h-0">
 
-                {/* Col 1: Input Pane (30%) */}
-                <div className="w-[30%] flex flex-col bg-bg-panel border border-border-subtle rounded-lg overflow-hidden">
-                    <PanelHeader title="INPUT PANE" icons={['settings', 'copy']} />
-                    <div className="flex-1 relative">
-                        <CodeEditor />
+                {/* Col 1: Editor & Input (30%) */}
+                <div className="w-[30%] flex flex-col gap-2">
+                    {/* Code Editor */}
+                    <div className="flex-[2] flex flex-col bg-bg-panel border border-border-subtle rounded-lg overflow-hidden">
+                        <div className="h-9 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-panel">
+                            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">CODE</span>
+                        </div>
+                        <div className="flex-1 relative">
+                            <CodeEditor />
+                        </div>
+                    </div>
+
+                    {/* Input Panel */}
+                    <div className="flex-1 flex flex-col bg-bg-panel border border-border-subtle rounded-lg overflow-hidden min-h-[150px]">
+                        <div className="h-9 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-panel">
+                            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">INPUT</span>
+                        </div>
+                        <div className="flex-1 relative">
+                            <InputPanel />
+                        </div>
                     </div>
                 </div>
 
@@ -215,15 +231,4 @@ function ControlBtn({ onClick, icon, disabled, active, className }: any) {
     )
 }
 
-function PanelHeader({ title, icons }: { title: string, icons?: string[] }) {
-    return (
-        <div className="h-9 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-panel">
-            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">{title}</span>
-            <div className="flex space-x-2">
-                {/* Mock Icons */}
-                <div className="w-3 h-3 rounded bg-border-subtle/50"></div>
-                <div className="w-3 h-3 rounded bg-border-subtle/50"></div>
-            </div>
-        </div>
-    )
-}
+

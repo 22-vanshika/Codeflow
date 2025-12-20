@@ -22,8 +22,10 @@ interface ExecutionState {
     speed: number;
     isConnected: boolean;
     error: string | null;
+    input: string;
 
     setCode: (code: string) => void;
+    setInput: (input: string) => void;
     connect: () => void;
     runCode: () => void;
     nextStep: () => void;
@@ -51,8 +53,10 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
         speed: 500,
         isConnected: false,
         error: null,
+        input: "",
 
         setCode: (code) => set({ code }),
+        setInput: (input) => set({ input }),
 
         connect: () => {
             if (ws) return;
@@ -84,13 +88,13 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
         },
 
         runCode: () => {
-            const { code, isConnected } = get();
+            const { code, input, isConnected } = get();
             if (!isConnected || !ws) {
                 set({ error: 'Not connected to server' });
                 return;
             }
             set({ traces: [], currentStepIndex: -1, error: null });
-            ws.send(JSON.stringify({ type: 'EXECUTE', payload: code }));
+            ws.send(JSON.stringify({ type: 'EXECUTE', payload: { code, input } }));
         },
 
         nextStep: () => {
