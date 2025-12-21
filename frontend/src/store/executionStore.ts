@@ -60,7 +60,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
 
         connect: () => {
             if (ws) return;
-            ws = new WebSocket('ws://localhost:3000');
+            ws = new WebSocket('ws://localhost:5000');
 
             ws.onopen = () => {
                 set({ isConnected: true, error: null });

@@ -4,7 +4,7 @@ import {
     IfStatement, WhileStatement, CallExpression, ExpressionStatement,
     ForStatement, UpdateExpression, ClassDeclaration, MemberExpression,
     NewExpression, ThisExpression, ArrayExpression
-} from '../../types';
+} from '../../../types';
 
 type TokenType =
     | 'KEYWORD' | 'IDENTIFIER' | 'NUMBER' | 'STRING' | 'OPERATOR'

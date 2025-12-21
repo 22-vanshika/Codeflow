@@ -5,8 +5,9 @@ import {
     ExecutionTrace, StackFrame, ForStatement, UpdateExpression,
     ClassDeclaration, MemberExpression, NewExpression, ThisExpression, ArrayExpression,
     MultiVariableDeclaration
-} from '../../types';
+} from '../../../types';
 import { Lexer, Parser } from './parser';
+import { LanguageExecutor } from '../../interfaces';
 
 class Environment {
     private vars: Map<string, any> = new Map();
@@ -47,7 +48,7 @@ class Environment {
     }
 }
 
-export class Executor {
+export class Executor implements LanguageExecutor {
     private globals: Environment = new Environment();
     private callStack: Environment[] = [];
     private traces: ExecutionTrace[] = [];

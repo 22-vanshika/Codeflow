@@ -1,8 +1,9 @@
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { setupWebSocket } from './ws/server';
+import { setupWebSocket } from './websocket/server';
 import cors from 'cors';
+import { PORT } from './config';
 
 const app = express();
 app.use(cors());
@@ -17,7 +18,6 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-const PORT = 3000;
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

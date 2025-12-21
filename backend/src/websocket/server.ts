@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { Executor } from '../languages/cpp/executor';
+import { Executor } from '../engine/languages/cpp/executor';
 import { ExecutionTrace } from '../types';
 
 interface Message {
