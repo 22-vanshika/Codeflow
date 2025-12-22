@@ -7,7 +7,7 @@ import {
     MultiVariableDeclaration
 } from '../../../types';
 import { Lexer, Parser } from './parser';
-import { LanguageExecutor } from '../../interfaces';
+import { IExecutor } from '../../executor.interface';
 
 class Environment {
     private vars: Map<string, any> = new Map();
@@ -48,7 +48,7 @@ class Environment {
     }
 }
 
-export class Executor implements LanguageExecutor {
+export class Executor implements IExecutor {
     private globals: Environment = new Environment();
     private callStack: Environment[] = [];
     private traces: ExecutionTrace[] = [];
