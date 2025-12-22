@@ -1,18 +1,5 @@
 import { create } from 'zustand';
-
-// Duplicate types locally or share via monorepo (simplified: duplicate)
-export interface StackFrame {
-    function: string;
-    locals: Record<string, any>;
-}
-
-export interface ExecutionTrace {
-    line: number;
-    type: 'assignment' | 'comparison' | 'function_call' | 'return' | 'loop' | 'condition' | 'init' | 'definition';
-    explanation: string;
-    stack: StackFrame[];
-    heap: Record<string, any>;
-}
+import type { ExecutionTrace } from '../types';
 
 interface ExecutionState {
     code: string;

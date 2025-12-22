@@ -1,0 +1,65 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript
+*.tsbuildinfo
+typings/
+
+# Build Output
+dist
+dist-ssr
+build
+out
+.next
+.nuxt
+.vuepress/dist
+
+# IDE & OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment Variables
+.env
+.env.test
+.env*.local
+
+# Testing
+coverage
+*.lcov
+.nyc_output
+
+# Temporary Files
+output.txt
+tsc_errors.txt
+tsc_output.txt
+tsc_output_final.txt
+error_log.txt
+
+# Cache
+.npm
+.eslintcache
+.cache
+.parcel-cache

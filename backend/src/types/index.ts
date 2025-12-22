@@ -1,175 +1,39 @@
+export interface ExecutionTrace {
+    line: number;
+    type: 'definition' | 'assignment' | 'return' | 'condition' | 'function_call' | 'error' | 'output';
+    stack: StackFrame[];
+    heap: Record<string, any>;
+    output?: string;
+    explanation?: string;
+}
+
+export interface StackFrame {
+    function: string;
+    locals: Record<string, any>;
+}
+
+export interface ExecutionRequest {
+    code: string;
+    input?: string;
+    language?: string;
+}
+
+export interface ExecutionResponse {
+    type: 'EXECUTION_RESULT' | 'ERROR';
+    payload: ExecutionTrace[] | string;
+}
+
 // AST Types
-export type NodeType =
-    | 'Program'
-    | 'FunctionDeclaration'
-    | 'Block'
-    | 'VariableDeclaration'
-    | 'Assignment'
-    | 'BinaryExpression'
-    | 'Identifier'
-    | 'Literal'
-    | 'ReturnStatement'
-    | 'IfStatement'
-    | 'WhileStatement'
-    | 'ForStatement'
-    | 'CallExpression'
-    | 'ExpressionStatement'
-    | 'UpdateExpression'
-    | 'ClassDeclaration'
-    | 'MemberExpression'
-    | 'NewExpression'
-    | 'ThisExpression'
-    | 'ArrayExpression';
-
-export interface BaseASTNode {
-    type: NodeType;
-    line?: number;
-}
-
-export interface Program extends BaseASTNode {
-    type: 'Program';
-    body: ASTNode[];
-}
-
-export interface FunctionDeclaration extends BaseASTNode {
-    type: 'FunctionDeclaration';
-    name: string;
-    returnType: string;
-    params: { name: string; type: string }[];
-    body: Block;
-}
-
-export interface ClassDeclaration extends BaseASTNode {
-    type: 'ClassDeclaration';
-    name: string;
-    members: (VariableDeclaration | FunctionDeclaration)[];
-}
-
-export interface Block extends BaseASTNode {
-    type: 'Block';
-    body: ASTNode[];
-}
-
-export interface VariableDeclaration extends BaseASTNode {
-    type: 'VariableDeclaration';
-    varType: string;
-    name: string;
-    init?: ASTNode;
-}
-
-export interface Assignment extends BaseASTNode {
-    type: 'Assignment';
-
-    // Actually, for obj.prop = val, we need MemberExpression assignment. 
-    // AST usually handles this by having 'left' be an LValue (Identifier | MemberExpression).
-    // Current Assignment interface enforces 'name: string'.
-    // We should probably change this to 'left: Identifier | MemberExpression' or similar.
-    // To avoid breaking too much, let's allow 'target' as ASTNode?
-    // Or keep 'name' for now and use BinaryExpression used for logic? No, assignment is statement/expr.
-    // Let's UPDATE Assignment to support MemberExpression target.
-    left?: ASTNode; // If present, use this instead of name.
-    name: string; // Legacy support or fall back?
-    value: ASTNode;
-}
-
-export interface BinaryExpression extends BaseASTNode {
-    type: 'BinaryExpression';
-    operator: string;
-    left: ASTNode;
-    right: ASTNode;
-}
-
-export interface Identifier extends BaseASTNode {
-    type: 'Identifier';
-    name: string;
-}
-
-export interface Literal extends BaseASTNode {
-    type: 'Literal';
-    value: any;
-    valueType: 'int' | 'string' | 'bool' | 'null';
-}
-
-export interface ArrayExpression extends BaseASTNode {
-    type: 'ArrayExpression';
-    elements: ASTNode[];
-}
-
-export interface MemberExpression extends BaseASTNode {
-    type: 'MemberExpression';
-    object: ASTNode;
-    property: ASTNode; // Identifier (for .prop) or Expr (for [i])
-    computed: boolean; // true if [] access, false if . access
-}
-
-export interface NewExpression extends BaseASTNode {
-    type: 'NewExpression';
-    className: string;
-    arguments: ASTNode[];
-}
-
-export interface ThisExpression extends BaseASTNode {
-    type: 'ThisExpression';
-}
-
-export interface ReturnStatement extends BaseASTNode {
-    type: 'ReturnStatement';
-    argument?: ASTNode;
-}
-
-export interface IfStatement extends BaseASTNode {
-    type: 'IfStatement';
-    test: ASTNode;
-    consequent: Block;
-    alternate?: Block;
-}
-
-export interface WhileStatement extends BaseASTNode {
-    type: 'WhileStatement';
-    test: ASTNode;
-    body: Block;
-}
-
-export interface ForStatement extends BaseASTNode {
-    type: 'ForStatement';
-    init?: ASTNode;
-    test?: ASTNode;
-    update?: ASTNode;
-    body: Block;
-}
-
-export interface CallExpression extends BaseASTNode {
-    type: 'CallExpression';
-    callee: string | ASTNode; // Allow ASTNode (MemberExpression) for obj.method()
-    arguments: ASTNode[];
-}
-
-export interface ExpressionStatement extends BaseASTNode {
-    type: 'ExpressionStatement';
-    expression: ASTNode;
-}
-
-export interface UpdateExpression extends BaseASTNode {
-    type: 'UpdateExpression';
-    operator: '++' | '--';
-    argument: ASTNode; // Changed from Identifier to ASTNode to support obj.prop++
-    prefix: boolean;
-}
-
 export type ASTNode =
     | Program
     | FunctionDeclaration
-    | ClassDeclaration
     | Block
     | VariableDeclaration
+    | MultiVariableDeclaration
     | Assignment
     | BinaryExpression
     | Identifier
     | Literal
-    | ArrayExpression
-    | MemberExpression
-    | NewExpression
-    | ThisExpression
     | ReturnStatement
     | IfStatement
     | WhileStatement
@@ -177,24 +41,140 @@ export type ASTNode =
     | CallExpression
     | ExpressionStatement
     | UpdateExpression
-    | MultiVariableDeclaration;
+    | ClassDeclaration
+    | MemberExpression
+    | NewExpression
+    | ThisExpression
+    | ArrayExpression;
 
-export interface MultiVariableDeclaration {
+export interface BaseNode {
+    type: string;
+    line?: number;
+}
+
+export interface Program extends BaseNode {
+    type: 'Program';
+    body: ASTNode[];
+}
+
+export interface Block extends BaseNode {
+    type: 'Block';
+    body: ASTNode[];
+}
+
+export interface FunctionDeclaration extends BaseNode {
+    type: 'FunctionDeclaration';
+    name: string;
+    returnType?: string;
+    params: { name: string; type: string }[];
+    body: Block;
+}
+
+export interface VariableDeclaration extends BaseNode {
+    type: 'VariableDeclaration';
+    name: string;
+    varType?: string;
+    init?: ASTNode;
+}
+
+export interface MultiVariableDeclaration extends BaseNode {
     type: 'MultiVariableDeclaration';
     declarations: VariableDeclaration[];
-    line: number;
 }
 
-// Execution Trace Types
-export interface ExecutionTrace {
-    line: number;
-    type: 'assignment' | 'comparison' | 'function_call' | 'return' | 'loop' | 'condition' | 'init' | 'definition';
-    explanation: string;
-    stack: StackFrame[];
-    heap: Record<string, any>;
+export interface Assignment extends BaseNode {
+    type: 'Assignment';
+    left?: ASTNode; // Can be Identifier or MemberExpression
+    name?: string; // Legacy fallback
+    value: ASTNode;
 }
 
-export interface StackFrame {
-    function: string;
-    locals: Record<string, any>;
+export interface BinaryExpression extends BaseNode {
+    type: 'BinaryExpression';
+    operator: string;
+    left: ASTNode;
+    right: ASTNode;
+}
+
+export interface Identifier extends BaseNode {
+    type: 'Identifier';
+    name: string;
+}
+
+export interface Literal extends BaseNode {
+    type: 'Literal';
+    value: any;
+    valueType?: string;
+}
+
+export interface ReturnStatement extends BaseNode {
+    type: 'ReturnStatement';
+    argument?: ASTNode;
+}
+
+export interface IfStatement extends BaseNode {
+    type: 'IfStatement';
+    test: ASTNode;
+    consequent: ASTNode; // Block or Statement
+    alternate?: ASTNode;
+}
+
+export interface WhileStatement extends BaseNode {
+    type: 'WhileStatement';
+    test: ASTNode;
+    body: ASTNode;
+}
+
+export interface ForStatement extends BaseNode {
+    type: 'ForStatement';
+    init?: ASTNode;
+    test?: ASTNode;
+    update?: ASTNode;
+    body: ASTNode;
+}
+
+export interface CallExpression extends BaseNode {
+    type: 'CallExpression';
+    callee: ASTNode | string;
+    arguments: ASTNode[];
+}
+
+export interface ExpressionStatement extends BaseNode {
+    type: 'ExpressionStatement';
+    expression: ASTNode;
+}
+
+export interface UpdateExpression extends BaseNode {
+    type: 'UpdateExpression';
+    operator: '++' | '--';
+    prefix: boolean;
+    argument: ASTNode;
+}
+
+export interface ClassDeclaration extends BaseNode {
+    type: 'ClassDeclaration';
+    name: string;
+    members: ASTNode[];
+}
+
+export interface MemberExpression extends BaseNode {
+    type: 'MemberExpression';
+    object: ASTNode;
+    property: ASTNode;
+    computed: boolean; // true for arr[i], false for obj.prop
+}
+
+export interface NewExpression extends BaseNode {
+    type: 'NewExpression';
+    className: string;
+    arguments: ASTNode[];
+}
+
+export interface ThisExpression extends BaseNode {
+    type: 'ThisExpression';
+}
+
+export interface ArrayExpression extends BaseNode {
+    type: 'ArrayExpression';
+    elements: ASTNode[];
 }

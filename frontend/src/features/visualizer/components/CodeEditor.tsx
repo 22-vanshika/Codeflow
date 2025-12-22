@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { useExecutionStore } from '../store/executionStore';
+import { useExecutionStore } from '@/store/executionStore';
 
 export default function CodeEditor() {
     const { code, setCode, traces, currentStepIndex } = useExecutionStore();

@@ -14,6 +14,10 @@ const wss = new WebSocketServer({ server });
 
 setupWebSocket(wss);
 
+app.get('/', (req, res) => {
+    res.send('Engine Online Backend is running');
+});
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
 });
