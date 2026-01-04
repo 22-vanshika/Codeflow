@@ -317,8 +317,9 @@ export class Executor implements IExecutor {
                 // cout << 
                 if (bin.operator === '<<' && left && (left.__type === 'std::cout')) {
                     // Check for endl
-                    const outputVal = (right === '\\n') ? '\\n' : right;
-                    yield this.createTrace(bin.line || 0, 'function_call', `Output: ${outputVal}`);
+                    const outputVal = (right === '\\n') ? '\n' : right;
+                    this.outputBuffer += outputVal;
+                    yield this.createTrace(bin.line || 0, 'output', `Output: ${JSON.stringify(outputVal)}`);
                     return left; // Return cout object for chaining
                 }
 
@@ -451,6 +452,8 @@ export class Executor implements IExecutor {
         }
     }
 
+    private outputBuffer: string = "";
+
     private createTrace(line: number, type: ExecutionTrace['type'], explanation: string): ExecutionTrace {
         const stack: StackFrame[] = this.callStack.slice(1).map(env => ({
             function: 'unknown', // simplifying
@@ -462,7 +465,8 @@ export class Executor implements IExecutor {
             type,
             explanation,
             stack,
-            heap: { ...this.heap }
+            heap: { ...this.heap },
+            output: this.outputBuffer
         };
     }
 

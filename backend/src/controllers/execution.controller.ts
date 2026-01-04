@@ -22,7 +22,7 @@ export class ExecutionController {
         }
     }
 
-    private handleExecute(ws: WebSocket, payload: any) {
+    private async handleExecute(ws: WebSocket, payload: any) {
         try {
             let code = "";
             let input = "";
@@ -36,11 +36,12 @@ export class ExecutionController {
 
             console.log(`Executing code length: ${code.length}`);
 
-            const traces = this.executionService.execute(code, input);
+            // Await the async execution which includes AI analysis
+            const result = await this.executionService.execute(code, input);
 
             const response: ExecutionResponse = {
                 type: 'EXECUTION_RESULT',
-                payload: traces
+                payload: result
             };
 
             ws.send(JSON.stringify(response));

@@ -18,9 +18,24 @@ export interface ExecutionRequest {
     language?: string;
 }
 
+export interface ExecutionResultPayload {
+    traces: ExecutionTrace[];
+    analysis?: {
+        title: string;
+        complexity: string;
+        pattern: string;
+        explanation: Record<string, string>;
+        overview: string;
+    };
+    flowchart?: string | {
+        markdown: string;
+        mapping: Record<string, string>; // nodeId -> line number string (Or vice versa? We need to find Node by Line. So Line -> NodeID is better, but many nodes can be on one line. Let's do a map.)
+    };
+}
+
 export interface ExecutionResponse {
     type: 'EXECUTION_RESULT' | 'ERROR';
-    payload: ExecutionTrace[] | string;
+    payload: ExecutionResultPayload | string;
 }
 
 // AST Types

@@ -357,6 +357,9 @@ export class Parser {
             const type = this.parseTypeString();
             return this.parseVariableDeclarationList(type);
         }
+        if (this.check('PUNCTUATION', '{')) {
+            return this.parseBlock();
+        }
 
         if (this.match('KEYWORD', 'return')) {
             return this.parseReturnStatement();
@@ -595,12 +598,12 @@ export class Parser {
         this.consume('PUNCTUATION', '(');
         const test = this.parseExpression();
         this.consume('PUNCTUATION', ')');
-        const consequent = this.parseBlock();
-        let alternate: Block | undefined;
+        const consequent = this.parseStatement();
+        let alternate: ASTNode | undefined;
         if (this.match('KEYWORD', 'else')) {
-            alternate = this.parseBlock();
+            alternate = this.parseStatement();
         }
-        return { type: 'IfStatement', test, consequent, alternate, line: this.previous().line };
+        return { type: 'IfStatement', test, consequent, alternate, line: this.previous().line } as IfStatement;
     }
 
     private parseWhileStatement(): WhileStatement {
@@ -627,7 +630,9 @@ export class Parser {
 
     private parseComparison(): ASTNode {
         let expr = this.parseShift();
-        while (this.match('OPERATOR', '<') || this.match('OPERATOR', '>')) {
+        // console.log(`DEBUG: Checking comparison op. Token: ${this.peek().value} Type: ${this.peek().type}`);
+        while (this.match('OPERATOR', '<') || this.match('OPERATOR', '>') ||
+            this.match('OPERATOR', '<=') || this.match('OPERATOR', '>=')) {
             const operator = this.previous().value;
             const right = this.parseShift();
             expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
