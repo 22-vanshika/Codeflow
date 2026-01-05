@@ -1,12 +1,15 @@
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { useExecutionStore } from '../../../store/executionStore';
 import Button from '@/components/common/Button';
+import AnalysisInfoButton from './AnalysisInfoButton';
 
 export default function ExecutionControls() {
     const { togglePlay, isPlaying, nextStep, prevStep, currentStepIndex, traces } = useExecutionStore();
 
     return (
         <>
+            <AnalysisInfoButton />
+            <div className="mx-2 h-4 w-px bg-border-subtle" /> {/* Divider */}
             <Button onClick={prevStep} disabled={currentStepIndex <= 0}>
                 <SkipBack size={18} />
             </Button>

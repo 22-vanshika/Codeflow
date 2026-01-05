@@ -168,16 +168,7 @@ export default function WhiteboardPanel() {
                         </div>
                     )}
 
-                    {/* Analysis info for flowchart mode */}
-                    {!traceMode && analysis && (
-                        <div className="mt-2 text-sm text-text-muted space-y-1">
-                            <p><span className="text-accent-purple font-mono text-xs uppercase tracking-wider">Pattern:</span> {analysis.pattern}</p>
-                            <p><span className="text-accent-green font-mono text-xs uppercase tracking-wider">Complexity:</span> {analysis.complexity}</p>
-                            <p className="border-t border-border-subtle pt-2 mt-2 italic text-xs leading-relaxed opacity-80">
-                                {analysis.overview}
-                            </p>
-                        </div>
-                    )}
+                    {/* Analysis info moved to AnalysisInfoButton in header */}
                 </div>
 
                 {/* Right side controls */}

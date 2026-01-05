@@ -7,7 +7,7 @@ export default function Home() {
             <HeroSection />
             <FeaturesGrid />
             <footer className="py-8 text-center text-text-muted text-sm border-t border-white/5 bg-background">
-                <p>© 2024 CodeFlow. Built with React & TypeScript.</p>
+                <p>© 2025 CodeFlow.</p>
             </footer>
         </div>
     );
