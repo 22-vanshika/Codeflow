@@ -1,24 +1,17 @@
-import { useState } from 'react';
+
 import CodeEditor from './CodeEditor';
 import InputPanel from '../../../components/panels/InputPanel';
 
 import WhiteboardPanel from '../../../components/panels/WhiteboardPanel';
-import BeginnerExplanationPanel from '../../../components/panels/BeginnerExplanationPanel';
 import OutputPanel from '../../../components/panels/OutputPanel';
 import FixPermissionDialog from '../../../components/dialogs/FixPermissionDialog';
 import { useExecutionStore } from '../../../store/executionStore';
-import { ChevronLeft, Terminal, Edit2, Save, RotateCw } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Edit2, Save, RotateCw } from 'lucide-react';
 
 export default function VisualizerLayout() {
-    const { stack, traces, currentStepIndex, reset } = useExecutionStore();
-    const [isOutputOpen, setIsOutputOpen] = useState(false); // Bottom sheet logic if needed
-
+    const { reset } = useExecutionStore();
     // Check if execution finished
-    const isFinished = currentStepIndex === traces.length - 1 && traces.length > 0;
 
-    // Auto-open output on finish (optional, maybe annoying if auto)
-    // useEffect(() => { if(isFinished) setIsOutputOpen(true); }, [isFinished]);
 
     return (
         <div className="flex-1 flex overflow-hidden relative bg-bg-main">

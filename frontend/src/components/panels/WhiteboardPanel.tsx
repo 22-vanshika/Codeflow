@@ -320,9 +320,7 @@ export default function WhiteboardPanel() {
                                         <span className="text-xs font-semibold text-accent-yellow uppercase tracking-wider flex items-center gap-1">
                                             💡 WHAT HAPPENED
                                         </span>
-                                        <p className="text-text-primary text-sm mt-1">
-                                            {currentTrace?.description || `Executing line ${currentTrace?.line}`}
-                                        </p>
+                                        {currentTrace?.explanation || `Executing line ${currentTrace?.line}`}
                                     </div>
 
                                     <div>
