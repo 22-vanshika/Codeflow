@@ -20,31 +20,14 @@ export default function VisualizerHeader() {
                 <ExecutionControls />
 
                 <div className="ml-4 flex gap-2">
-                    {hasExecution ? (
-                        <button
-                            onClick={reset}
-                            className="px-4 py-1.5 bg-accent-purple/10 border border-accent-purple/50 text-accent-purple rounded text-sm font-bold hover:bg-accent-purple/20 transition-colors"
-                        >
-                            EDIT CODE
-                        </button>
-                    ) : (
-                        <>
-                            <button
-                                onClick={runCode}
-                                className="px-4 py-1.5 bg-accent-primary/10 border border-accent-primary/50 text-accent-primary rounded text-sm font-bold hover:bg-accent-primary/20 transition-colors"
-                            >
-                                RUN CODE
-                            </button>
-                            <button
-                                onClick={requestTrace}
-                                className="px-4 py-1.5 bg-accent-orange/10 border border-accent-orange/50 text-accent-orange rounded text-sm font-bold hover:bg-accent-orange/20 transition-colors flex items-center gap-1"
-                                title="Blackboard-style step-by-step visualization"
-                            >
-                                <Sparkles size={14} />
-                                TRACE
-                            </button>
-                        </>
-                    )}
+                    <button
+                        onClick={requestTrace}
+                        className="px-4 py-1.5 bg-accent-orange/10 border border-accent-orange/50 text-accent-orange rounded text-sm font-bold hover:bg-accent-orange/20 transition-colors flex items-center gap-1"
+                        title="Visualize Execution"
+                    >
+                        <Sparkles size={14} />
+                        TRACE
+                    </button>
                 </div>
             </div>
 

@@ -24,6 +24,7 @@ export class TraceService {
     private callStack: { functionName: string; args: Record<string, any>; returnValue?: any }[] = [];
     private detectedPattern: PatternInfo | null = null;
     private codeLines: string[] = [];
+    private outputBuffer: string[] = [];
 
     // Track pointers for pattern visualization
     private trackedPointers: Map<string, { index: number; color: 'red' | 'blue' | 'green' | 'orange' | 'purple' }> = new Map();
@@ -41,6 +42,7 @@ export class TraceService {
             this.callStack = [];
             this.trackedPointers.clear();
             this.trackedArrays.clear();
+            this.outputBuffer = [];
             this.codeLines = code.split('\n');
 
             // Parse code
@@ -53,13 +55,17 @@ export class TraceService {
             this.detectedPattern = this.detectPattern(code, ast);
 
             // Execute and trace
-            this.traceProgram(ast);
+            const result = this.traceProgram(ast);
+            if (result !== undefined) {
+                this.outputBuffer.push(`Program finished with exit code: ${result}`);
+            }
 
             return {
                 success: true,
                 steps: this.steps,
                 pattern: this.detectedPattern || undefined,
-                totalSteps: this.steps.length
+                totalSteps: this.steps.length,
+                output: this.outputBuffer.join('\n')
             };
         } catch (error: any) {
             return {
@@ -174,7 +180,7 @@ export class TraceService {
     /**
      * Trace program execution
      */
-    private traceProgram(program: Program): void {
+    private traceProgram(program: Program): any {
         // Find main function
         const mainFunc = program.body.find(
             node => node.type === 'FunctionDeclaration' && (node as FunctionDeclaration).name === 'main'
@@ -182,8 +188,9 @@ export class TraceService {
 
         if (mainFunc) {
             this.callStack.push({ functionName: 'main', args: {} });
-            this.traceBlock(mainFunc.body);
+            const result = this.traceBlock(mainFunc.body);
             this.callStack.pop();
+            return result;
         }
     }
 

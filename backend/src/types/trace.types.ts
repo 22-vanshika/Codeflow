@@ -66,6 +66,7 @@ export interface TraceResult {
     pattern?: PatternInfo;
     totalSteps: number;
     error?: string;
+    output?: string;
 }
 
 // Pattern detection helpers

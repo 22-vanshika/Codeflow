@@ -49,6 +49,7 @@ interface ExecutionState {
     traceSteps: TraceStep[];
     currentPattern: PatternInfo | null;
     traceMode: boolean;  // true = show blackboard visualizer, false = show flowchart
+    traceOutput: string;
 
     setCode: (code: string) => void;
     setInput: (input: string) => void;
@@ -101,6 +102,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
         traceSteps: [],
         currentPattern: null,
         traceMode: true,  // Default to blackboard mode
+        traceOutput: "",
 
         setCode: (code) => set({ code }),
         setInput: (input) => set({ input }),
@@ -165,6 +167,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
                         set({
                             traceSteps: traceResult.steps,
                             currentPattern: traceResult.pattern || null,
+                            traceOutput: traceResult.output || "",
                             currentStepIndex: 0,
                             isPlaying: true,
                             error: null,
@@ -307,24 +310,31 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
                 error: null,
                 validationPhase: 'idle',
                 validationResult: null,
-                showFixDialog: false
+                showFixDialog: false,
+                traceOutput: ""
             });
         },
 
         requestTrace: () => {
-            const { code, isConnected } = get();
+            const { code, isConnected, traceMode } = get();
             if (!isConnected || !ws) {
                 set({ error: 'Not connected to server' });
                 return;
             }
+
+            // If in Flowchart mode, run the legacy execution (User Request)
+            if (!traceMode) {
+                get().runCode();
+                return;
+            }
+
             set({
                 traceSteps: [],
                 currentStepIndex: -1,
                 error: null,
                 validationPhase: 'validating',
                 validationResult: null,
-                showFixDialog: false,
-                traceMode: true
+                showFixDialog: false
             });
             ws.send(JSON.stringify({ type: 'TRACE', payload: { code } }));
         },

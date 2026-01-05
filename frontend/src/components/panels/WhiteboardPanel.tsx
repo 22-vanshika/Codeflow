@@ -38,18 +38,22 @@ export default function WhiteboardPanel() {
     const [scale, setScale] = useState(1);
     const [visitedNodes, setVisitedNodes] = useState<Set<string>>(new Set());
 
+    // Determine which steps array to use (prioritize new trace steps)
+    const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
+    const hasSteps = stepsArray.length > 0;
+
+    // Get current line for highlighting (works for both trace types)
+    const activeStep = stepsArray[currentStepIndex];
+    const activeLine = activeStep?.line;
+
     // Current trace step for blackboard mode
     const currentTraceStep = traceSteps[currentStepIndex];
 
-    // Get current trace info for flowchart visualization
+    // Get current trace info for flowchart visualization (Legacy)
     const currentTrace = traces[currentStepIndex];
     const currentNodeId = currentTrace?.visualization?.nodeId;
     const loopIteration = currentTrace?.visualization?.loopIteration;
     const pathTaken = currentTrace?.visualization?.pathTaken;
-
-    // Determine which steps array to use
-    const stepsArray = traceMode ? traceSteps : traces;
-    const hasSteps = stepsArray.length > 0;
 
     // Reset visited nodes when traces change (new execution)
     useEffect(() => {
@@ -100,7 +104,7 @@ export default function WhiteboardPanel() {
             ? (flowchart as FlowchartData).mapping
             : {};
 
-        const currentLine = currentTrace?.line;
+        const currentLine = activeLine;
         const activeNodeId = currentLine ? mapping[String(currentLine)] : null;
 
         svg.querySelectorAll('.node').forEach((node) => {
@@ -124,7 +128,7 @@ export default function WhiteboardPanel() {
                 edgeElement.classList.remove('edge-active', 'edge-taken', 'edge-not-taken');
             });
         }
-    }, [svgContent, currentStepIndex, currentNodeId, visitedNodes, pathTaken, flowchart, currentTrace, traceMode]);
+    }, [svgContent, currentStepIndex, currentNodeId, visitedNodes, pathTaken, flowchart, activeLine, traceMode]);
 
     // Get visual component based on trace step visuals
     const renderVisualizer = () => {
@@ -198,9 +202,9 @@ export default function WhiteboardPanel() {
 
                     {/* Step Counter */}
                     {hasSteps && (
-                        <div className="bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg p-3 shadow-xl text-center">
+                        <div className="bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg p-3 shadow-xl text-center w-14 ml-auto">
                             <div className="text-xs text-text-muted uppercase tracking-wider mb-1">Step</div>
-                            <div className="text-2xl font-bold text-accent-cyan">
+                            <div className="text-xs font-bold text-accent-cyan">
                                 {currentStepIndex + 1} <span className="text-text-muted text-sm">/ {stepsArray.length}</span>
                             </div>
                             {!traceMode && loopIteration && (
@@ -217,7 +221,7 @@ export default function WhiteboardPanel() {
                     )}
 
                     {/* Zoom controls */}
-                    <div className="flex flex-col gap-2 bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg p-2 shadow-xl">
+                    <div className="flex flex-col gap-2 bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg p-2 shadow-xl w-14 ml-auto">
                         <button onClick={() => setScale(s => Math.min(s + 0.1, 2))} className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors">
                             <ZoomIn className="w-5 h-5" />
                         </button>

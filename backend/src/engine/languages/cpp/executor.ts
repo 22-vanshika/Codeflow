@@ -114,7 +114,15 @@ export class Executor implements IExecutor {
             throw new Error("Runtime Error: 'main' function not defined");
         }
 
-        yield* this.executeFunction(main as FunctionDeclaration, []);
+        const result = yield* this.executeFunction(main as FunctionDeclaration, []);
+
+        // Capture exit code
+        if (result !== undefined) {
+            const exitMsg = `\nProgram finished with exit code: ${result}`;
+            this.outputBuffer += exitMsg;
+            // Yield final trace to ensure output is visible
+            yield this.createTrace((main as FunctionDeclaration).line || 0, 'output', `Program finished with exit code: ${result}`);
+        }
     }
 
     private *executeFunction(func: FunctionDeclaration, args: any[]): Generator<ExecutionTrace> {
