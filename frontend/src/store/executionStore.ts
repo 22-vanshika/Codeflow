@@ -316,7 +316,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
         },
 
         requestTrace: () => {
-            const { code, isConnected, traceMode } = get();
+            const { code, input, isConnected, traceMode } = get();
             if (!isConnected || !ws) {
                 set({ error: 'Not connected to server' });
                 return;
@@ -336,7 +336,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
                 validationResult: null,
                 showFixDialog: false
             });
-            ws.send(JSON.stringify({ type: 'TRACE', payload: { code } }));
+            ws.send(JSON.stringify({ type: 'TRACE', payload: { code, input } }));
         },
 
         setTraceMode: (enabled) => set({ traceMode: enabled })

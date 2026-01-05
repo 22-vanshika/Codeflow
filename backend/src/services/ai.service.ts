@@ -416,6 +416,11 @@ class MermaidBuilder {
             return "Output";
         }
 
+        // Input (cin)
+        if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'BinaryExpression' && stmt.expression.operator === '>>') {
+            return "Input";
+        }
+
         // Stack/Queue Operations
         if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'CallExpression') {
             const call = stmt.expression;
@@ -447,6 +452,11 @@ class MermaidBuilder {
         }
         if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'UpdateExpression') {
             return this.expressionToString(stmt.expression);
+        }
+
+        // Process generic ExpressionStatement (avoid empty string)
+        if (stmt.type === 'ExpressionStatement') {
+            return this.sanitize(this.expressionToString(stmt.expression));
         }
 
         return stmt.type.replace('Statement', '').replace('Expression', '');

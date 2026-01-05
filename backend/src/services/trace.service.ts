@@ -26,6 +26,8 @@ export class TraceService {
     private detectedPattern: PatternInfo | null = null;
     private codeLines: string[] = [];
     private outputBuffer: string[] = [];
+    private inputTokens: string[] = [];
+    private inputPointer: number = 0;
 
     // Track pointers for pattern visualization
     private trackedPointers: Map<string, { index: number; color: 'red' | 'blue' | 'green' | 'orange' | 'purple' }> = new Map();
@@ -34,7 +36,7 @@ export class TraceService {
     /**
      * Generate a full execution trace for the given code
      */
-    public generateTrace(code: string): TraceResult {
+    public generateTrace(code: string, input: string = ""): TraceResult {
         try {
             // Reset state
             this.steps = [];
@@ -45,6 +47,10 @@ export class TraceService {
             this.trackedArrays.clear();
             this.outputBuffer = [];
             this.codeLines = code.split('\n');
+
+            // Parse input
+            this.inputTokens = input.trim().split(/\s+/).filter(t => t.length > 0);
+            this.inputPointer = 0;
 
             // Parse code
             const lexer = new Lexer(code);
@@ -238,6 +244,10 @@ export class TraceService {
                 return this.traceReturnStatement(node as any, line, lineContent);
 
             case 'ExpressionStatement':
+                // Check if this is a cin >> ... statement
+                if (this.isCinExpression((node as any).expression)) {
+                    return this.traceCinStatement((node as any).expression, line, lineContent);
+                }
                 return this.traceStatement((node as any).expression);
 
             case 'UpdateExpression':
@@ -700,5 +710,72 @@ export class TraceService {
 
     private createTeacherNote(what: string, why: string, next: string): TeacherNote {
         return { what, why, next };
+    }
+
+    // CIN / Input Handling
+    private isCinExpression(node: any): boolean {
+        if (!node) return false;
+
+        // Base case: cin identifier
+        if (node.type === 'Identifier' && node.name === 'cin') return true;
+
+        // Recursive case: BinaryExp with >>
+        if (node.type === 'BinaryExpression' && node.operator === '>>') {
+            return this.isCinExpression(node.left);
+        }
+
+        return false;
+    }
+
+    private traceCinStatement(node: any, line: number, lineContent: string): void {
+        // Collect all variables being read into
+        const targets: string[] = [];
+        this.collectCinTargets(node, targets);
+
+        for (const targetName of targets) {
+            if (this.inputPointer >= this.inputTokens.length) {
+                this.addStep(line, lineContent, 'assignment',
+                    this.createTeacherNote(
+                        `Tried to read input for "${targetName}" but no more input is available`,
+                        `Make sure you provide enough values in the "Input" box`,
+                        `Program might behave unexpectedly`
+                    )
+                );
+                continue;
+            }
+
+            const rawValue = this.inputTokens[this.inputPointer++];
+            // Attempt to parse number if it looks like one, otherwise string
+            const numValue = Number(rawValue);
+            const val = isNaN(numValue) ? rawValue : numValue;
+
+            this.variables[targetName] = val;
+
+            if (this.isPointerVariable(targetName) && typeof val === 'number') {
+                this.trackedPointers.set(targetName, {
+                    index: val,
+                    color: this.getPointerColor(targetName)
+                });
+            }
+
+            this.addStep(line, lineContent, 'assignment',
+                this.createTeacherNote(
+                    `Read value ${val} from input into "${targetName}"`,
+                    `"cin >> ${targetName}" reads the next value from user input`,
+                    `Variable "${targetName}" now holds ${val}`
+                )
+            );
+        }
+    }
+
+    private collectCinTargets(node: any, targets: string[]) {
+        if (node.type === 'BinaryExpression' && node.operator === '>>') {
+            this.collectCinTargets(node.left, targets);
+
+            // The right side is the variable target
+            if (node.right.type === 'Identifier') {
+                targets.push(node.right.name);
+            }
+        }
     }
 }

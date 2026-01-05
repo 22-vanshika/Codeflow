@@ -74,6 +74,7 @@ export class ExecutionController {
     private handleTrace(ws: WebSocket, payload: any) {
         try {
             const code = typeof payload === 'string' ? payload : payload.code || '';
+            const input = typeof payload === 'object' ? (payload.input || '') : '';
 
             console.log('Generating execution trace...');
 
@@ -100,8 +101,8 @@ export class ExecutionController {
                 return;
             }
 
-            // Generate trace
-            const traceResult = this.traceService.generateTrace(code);
+            // Generate trace with input
+            const traceResult = this.traceService.generateTrace(code, input);
 
             this.safeSend(ws, {
                 type: 'TRACE_RESULT',
