@@ -1,10 +1,29 @@
+// Visualization hints for step-by-step animation
+export interface VisualizationHint {
+    nodeId: string;                     // Current flowchart node
+    pathTaken?: 'true' | 'false';       // For conditions - which branch taken
+    loopIteration?: number;             // For loops - which iteration
+    dataStructureOp?: {
+        type: 'push' | 'pop' | 'insert' | 'remove' | 'access' | 'update';
+        target: string;                 // Variable name
+        value?: any;
+        index?: number;
+    };
+    explanation: {
+        what: string;                   // What just happened
+        why: string;                    // Why it happened  
+        next: string;                   // What will be checked next
+    };
+}
+
 export interface ExecutionTrace {
     line: number;
-    type: 'definition' | 'assignment' | 'return' | 'condition' | 'function_call' | 'error' | 'output';
+    type: 'definition' | 'assignment' | 'return' | 'condition' | 'function_call' | 'error' | 'output' | 'loop_start' | 'loop_continue' | 'loop_end';
     stack: StackFrame[];
     heap: Record<string, any>;
     output?: string;
     explanation?: string;
+    visualization?: VisualizationHint;  // Enhanced visualization data
 }
 
 export interface StackFrame {
@@ -18,6 +37,21 @@ export interface ExecutionRequest {
     language?: string;
 }
 
+// Flowchart node metadata for visualization
+export interface FlowchartNodeMetadata {
+    type: 'decision' | 'loop' | 'process' | 'data_structure' | 'call' | 'return' | 'start' | 'end' | 'merge';
+    branches?: { label: string; targetNodeId: string }[];
+    dataStructure?: 'stack' | 'queue' | 'array' | 'linkedlist' | 'tree' | 'graph' | 'dp' | 'map';
+    condition?: string;     // For decision/loop nodes
+}
+
+export interface FlowchartData {
+    markdown: string;
+    mapping: Record<string, string>;                    // line -> nodeId
+    nodeMetadata: Record<string, FlowchartNodeMetadata>; // nodeId -> metadata
+    executionOrder: string[];                           // nodeIds in order they can be visited
+}
+
 export interface ExecutionResultPayload {
     traces: ExecutionTrace[];
     analysis?: {
@@ -27,15 +61,39 @@ export interface ExecutionResultPayload {
         explanation: Record<string, string>;
         overview: string;
     };
-    flowchart?: string | {
-        markdown: string;
-        mapping: Record<string, string>; // nodeId -> line number string (Or vice versa? We need to find Node by Line. So Line -> NodeID is better, but many nodes can be on one line. Let's do a map.)
-    };
+    flowchart?: string | FlowchartData;
 }
 
 export interface ExecutionResponse {
-    type: 'EXECUTION_RESULT' | 'ERROR';
-    payload: ExecutionResultPayload | string;
+    type: 'EXECUTION_RESULT' | 'ERROR' | 'VALIDATION_RESULT';
+    payload: ExecutionResultPayload | string | ValidationPayload;
+}
+
+// Validation types for auto-fix protocol
+export interface ValidationPayload {
+    isValid: boolean;
+    canAutoFix: boolean;
+    issues: ValidationIssue[];
+    fixedCode?: string;
+    fixExplanations?: FixExplanation[];
+    complexityWarning?: string;
+}
+
+export interface ValidationIssue {
+    type: 'syntax' | 'missing_main' | 'missing_header' | 'infinite_loop' | 'infinite_recursion' | 'undefined_behavior' | 'runtime_risk';
+    severity: 'error' | 'warning' | 'info';
+    line?: number;
+    message: string;
+    beginnerMessage: string;
+    canFix: boolean;
+}
+
+export interface FixExplanation {
+    whatWasWrong: string;
+    whyItBlocked: string;
+    whatWasChanged: string;
+    originalSnippet?: string;
+    fixedSnippet?: string;
 }
 
 // AST Types

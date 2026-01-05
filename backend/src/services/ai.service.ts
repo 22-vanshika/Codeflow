@@ -169,45 +169,66 @@ export class AiService {
     }
 }
 
-// Helper Class to build Mermaid Syntax
+import { FlowchartData, FlowchartNodeMetadata } from '../types';
+
+// Helper Class to build Mermaid Syntax with enhanced visualization support
 class MermaidBuilder {
     private nodes: string[] = [];
     private edges: string[] = [];
     private nidCount: number = 0;
-    private mapping: Record<string, string> = {}; // Line -> NodeId
+    private mapping: Record<string, string> = {};                     // Line -> NodeId
+    private nodeMetadata: Record<string, FlowchartNodeMetadata> = {}; // NodeId -> Metadata
+    private executionOrder: string[] = [];                            // Nodes in visitation order
 
     // Generate unique ID
     private nextId(): string {
         return `n${this.nidCount++}`;
     }
 
-    public addNode(id: string, label: string, line?: number): void {
+    public addNode(
+        id: string,
+        label: string,
+        line?: number,
+        metadata?: FlowchartNodeMetadata
+    ): void {
         this.nodes.push(`${id}${label}`);
         if (line) {
-            // Map the line to this node. 
-            // If multiple nodes on same line, last one wins (usually fine for highlighting active step)
-            // Or we could store array. For highlighting, pointing to the 'main' block of the line is enough.
             this.mapping[String(line)] = id;
         }
+        if (metadata) {
+            this.nodeMetadata[id] = metadata;
+        }
+        // Add to execution order (will be refined during traversal)
+        this.executionOrder.push(id);
     }
 
     public addEdge(from: string, to: string, label?: string): void {
         const arrow = label ? `-->|${label}|` : '-->';
         this.edges.push(`${from} ${arrow} ${to}`);
+
+        // Track branches in node metadata
+        if (label && this.nodeMetadata[from]) {
+            if (!this.nodeMetadata[from].branches) {
+                this.nodeMetadata[from].branches = [];
+            }
+            this.nodeMetadata[from].branches!.push({ label, targetNodeId: to });
+        }
     }
 
     public toString(): string {
         return `graph TD;\n${this.nodes.join(';\n')};\n${this.edges.join(';\n')};`;
     }
 
-    public toJSON(): { markdown: string, mapping: Record<string, string> } {
+    public toJSON(): FlowchartData {
         return {
             markdown: this.toString(),
-            mapping: this.mapping
+            mapping: this.mapping,
+            nodeMetadata: this.nodeMetadata,
+            executionOrder: this.executionOrder
         };
     }
 
-    // Overload
+    // Process a block of statements and return the last node ID
     public processBlock(statements: any[], entryId: string, firstEdgeLabel?: string): string {
         let prevId = entryId;
         let isFirst = true;
@@ -217,63 +238,125 @@ class MermaidBuilder {
             const line = stmt.line;
 
             if (stmt.type === 'IfStatement') {
+                // Decision diamond for if/else
                 const cond = this.sanitize(this.expressionToString(stmt.test));
-                this.addNode(nodeId, `{${cond}?}`, line);
+                this.addNode(nodeId, `{${cond}?}`, line, {
+                    type: 'decision',
+                    condition: cond
+                });
                 this.addEdge(prevId, nodeId, isFirst ? firstEdgeLabel : undefined);
 
+                // True branch (consequent)
                 const trueStmts = stmt.consequent.type === 'Block' ? stmt.consequent.body : [stmt.consequent];
-                const trueEndId = this.processBlock(trueStmts, nodeId, "Yes");
+                const trueEndId = this.processBlock(trueStmts, nodeId, "Yes ✓");
 
+                // False branch (alternate)
                 let falseEndId = nodeId;
                 if (stmt.alternate) {
                     const falseStmts = stmt.alternate.type === 'Block' ? stmt.alternate.body : [stmt.alternate];
-                    falseEndId = this.processBlock(falseStmts, nodeId, "No");
+                    falseEndId = this.processBlock(falseStmts, nodeId, "No ✗");
                 }
 
+                // Merge point after if/else
                 const mergeId = this.nextId();
-                this.addNode(mergeId, `(( ))`); // No line for merge point?
+                this.addNode(mergeId, `(( ))`, undefined, { type: 'merge' });
                 this.addEdge(trueEndId, mergeId);
                 if (stmt.alternate) {
                     this.addEdge(falseEndId, mergeId);
                 } else {
-                    this.addEdge(nodeId, mergeId, "No");
+                    this.addEdge(nodeId, mergeId, "No ✗");
                 }
                 prevId = mergeId;
             }
             else if (stmt.type === 'WhileStatement' || stmt.type === 'ForStatement') {
+                // Loop with actual looping arrow
                 const testExpr = stmt.test ? this.expressionToString(stmt.test) : "true";
                 const cond = this.sanitize(testExpr);
-                this.addNode(nodeId, `{Loop: ${cond}?}`, line);
+
+                // Loop condition node (diamond shape)
+                this.addNode(nodeId, `{🔄 ${cond}?}`, line, {
+                    type: 'loop',
+                    condition: cond
+                });
                 this.addEdge(prevId, nodeId, isFirst ? firstEdgeLabel : undefined);
 
+                // Loop body
                 const bodyStmts = stmt.body.type === 'Block' ? stmt.body.body : [stmt.body];
-                const bodyEndId = this.processBlock(bodyStmts, nodeId, "True");
-                this.addEdge(bodyEndId, nodeId);
+                const bodyEndId = this.processBlock(bodyStmts, nodeId, "True ↓");
 
+                // Loop back arrow - this is the key visual for loops!
+                this.addEdge(bodyEndId, nodeId, "↩ Repeat");
+
+                // Exit path
                 const exitId = this.nextId();
-                this.addNode(exitId, `(( ))`);
-                this.addEdge(nodeId, exitId, "False");
+                this.addNode(exitId, `(( ))`, undefined, { type: 'merge' });
+                this.addEdge(nodeId, exitId, "False → Exit");
                 prevId = exitId;
             }
-            else {
-                let label = this.getStatementLabel(stmt);
+            else if (stmt.type === 'SwitchStatement') {
+                // Switch with fan-out to cases
+                const switchExpr = this.sanitize(this.expressionToString(stmt.discriminant));
+                this.addNode(nodeId, `{Switch: ${switchExpr}}`, line, {
+                    type: 'decision',
+                    condition: switchExpr
+                });
+                this.addEdge(prevId, nodeId, isFirst ? firstEdgeLabel : undefined);
 
-                // Stack/Queue Visualization: Use Database Shape [( )]
-                if (label.startsWith('Push') || label.startsWith('Pop') || label.startsWith('Insert')) {
-                    this.addNode(nodeId, `[("${label}")]`, line);
+                // Create merge point for all cases
+                const mergeId = this.nextId();
+                this.addNode(mergeId, `(( ))`, undefined, { type: 'merge' });
+
+                // Process each case
+                if (stmt.cases && Array.isArray(stmt.cases)) {
+                    for (const caseClause of stmt.cases) {
+                        const caseLabel = caseClause.test
+                            ? `case ${this.expressionToString(caseClause.test)}`
+                            : 'default';
+                        const caseEndId = this.processBlock(caseClause.consequent || [], nodeId, caseLabel);
+                        this.addEdge(caseEndId, mergeId);
+                    }
                 }
-                // Function Call: Use Subroutine Shape [[ ]]
+                prevId = mergeId;
+            }
+            else {
+                // Regular statement - determine type and use appropriate shape
+                let label = this.getStatementLabel(stmt);
+                let metadata: FlowchartNodeMetadata = { type: 'process' };
+
+                // Stack/Queue operations: Use cylinder/database shape
+                if (label.startsWith('Push') || label.startsWith('Pop')) {
+                    this.addNode(nodeId, `[("📥 ${label}")]`, line, {
+                        type: 'data_structure',
+                        dataStructure: 'stack'
+                    });
+                }
+                else if (label.startsWith('Enqueue') || label.startsWith('Dequeue')) {
+                    this.addNode(nodeId, `[("📤 ${label}")]`, line, {
+                        type: 'data_structure',
+                        dataStructure: 'queue'
+                    });
+                }
+                else if (label.startsWith('Insert')) {
+                    this.addNode(nodeId, `[("➕ ${label}")]`, line, {
+                        type: 'data_structure',
+                        dataStructure: 'array'
+                    });
+                }
+                // Function Call: Use subroutine shape
                 else if (label.startsWith('Call')) {
-                    this.addNode(nodeId, `[[${label}]]`, line);
+                    this.addNode(nodeId, `[[📞 ${label}]]`, line, { type: 'call' });
                 }
+                // Return: Use stadium shape
                 else if (label.startsWith('Return')) {
-                    this.addNode(nodeId, `([${label}])`, line);
+                    this.addNode(nodeId, `([🔙 ${label}])`, line, { type: 'return' });
                 }
+                // Output/Input: Use parallelogram
                 else if (label.startsWith('Output') || label.startsWith('Input')) {
-                    this.addNode(nodeId, `[/${label}/]`, line);
+                    this.addNode(nodeId, `[/${label}/]`, line, { type: 'process' });
                 }
+                // Default process box
                 else {
-                    this.addNode(nodeId, `[${label}]`, line);
+                    this.addNode(nodeId, `[${label}]`, line, { type: 'process' });
                 }
 
                 this.addEdge(prevId, nodeId, isFirst ? firstEdgeLabel : undefined);
@@ -295,15 +378,14 @@ class MermaidBuilder {
             return String(expr.value);
         }
         if (expr.type === 'CallExpression') {
-            // Visualize Stack/Queue operations in expression
             const callee = this.expressionToString(expr.callee);
-            if (callee.includes('.push') || callee.includes('.pop') || callee.includes('.top') || callee.includes('.front')) {
-                return `${callee}()`;
-            }
             return `${callee}()`;
         }
         if (expr.type === 'MemberExpression') {
             return `${this.expressionToString(expr.object)}.${this.expressionToString(expr.property)}`;
+        }
+        if (expr.type === 'UpdateExpression') {
+            return `${this.expressionToString(expr.argument)}${expr.operator}`;
         }
         return "...";
     }
@@ -311,40 +393,66 @@ class MermaidBuilder {
     private getStatementLabel(stmt: any): string {
         // Variable Declaration
         if (stmt.type === 'VariableDeclaration') {
-            // Check for initialization call
             if (stmt.init && stmt.init.type === 'CallExpression') {
                 const callee = this.expressionToString(stmt.init.callee);
-                return `Call ${callee} -> ${stmt.name}`;
+                return `Call ${callee} → ${stmt.name}`;
             }
-            return `Set ${stmt.name}`;
+            if (stmt.init) {
+                const val = this.expressionToString(stmt.init);
+                return `${stmt.name} = ${this.sanitize(val)}`;
+            }
+            return `Declare ${stmt.name}`;
         }
 
-        // Output
-        if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'BinaryExpression' && stmt.expression.operator === '<<' && (stmt.expression.left as any).name === 'std::cout') return "Output";
+        // Assignment
+        if (stmt.type === 'Assignment') {
+            const target = stmt.left ? this.expressionToString(stmt.left) : stmt.name;
+            const val = this.expressionToString(stmt.value);
+            return `${target} = ${this.sanitize(val)}`;
+        }
 
-        // Stack/Queue Operations (ExpressionStatement -> CallExpression)
+        // Output (cout)
+        if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'BinaryExpression' && stmt.expression.operator === '<<') {
+            return "Output";
+        }
+
+        // Stack/Queue Operations
         if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'CallExpression') {
             const call = stmt.expression;
             const callee = this.expressionToString(call.callee);
             if (callee.includes('.push')) return `Push to ${callee.split('.')[0]}`;
             if (callee.includes('.pop')) return `Pop from ${callee.split('.')[0]}`;
+            if (callee.includes('.push_back')) return `Push to ${callee.split('.')[0]}`;
+            if (callee.includes('.push_front')) return `Enqueue to ${callee.split('.')[0]}`;
+            if (callee.includes('.pop_front')) return `Dequeue from ${callee.split('.')[0]}`;
             if (callee.includes('.insert')) return `Insert into ${callee.split('.')[0]}`;
+            if (callee.includes('.erase')) return `Remove from ${callee.split('.')[0]}`;
             return `Call ${callee}`;
         }
 
         // Return
         if (stmt.type === 'ReturnStatement') {
-            // Check if return value involves a call (Recursion)
             if (stmt.argument && this.containsCall(stmt.argument)) {
                 return `Return & Call`;
+            }
+            if (stmt.argument) {
+                return `Return ${this.sanitize(this.expressionToString(stmt.argument))}`;
             }
             return "Return";
         }
 
-        return stmt.type.replace('Statement', '');
+        // Update expression (i++, i--)
+        if (stmt.type === 'UpdateExpression') {
+            return this.expressionToString(stmt);
+        }
+        if (stmt.type === 'ExpressionStatement' && stmt.expression.type === 'UpdateExpression') {
+            return this.expressionToString(stmt.expression);
+        }
+
+        return stmt.type.replace('Statement', '').replace('Expression', '');
     }
 
-    // Helper to check for nested calls (simple depth check)
+    // Helper to check for nested calls (recursion detection)
     private containsCall(expr: any): boolean {
         if (!expr) return false;
         if (expr.type === 'CallExpression') return true;
@@ -353,6 +461,7 @@ class MermaidBuilder {
     }
 
     private sanitize(str: string): string {
-        return str.replace(/"/g, "'").replace(/[\[\]\{\}\(\)]/g, '').substring(0, 30);
+        return str.replace(/"/g, "'").replace(/[\[\]\{\}\(\)]/g, '').substring(0, 25);
     }
 }
+

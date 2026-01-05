@@ -4,7 +4,7 @@ import {
     IfStatement, WhileStatement, CallExpression, ExpressionStatement,
     ExecutionTrace, StackFrame, ForStatement, UpdateExpression,
     ClassDeclaration, MemberExpression, NewExpression, ThisExpression, ArrayExpression,
-    MultiVariableDeclaration
+    MultiVariableDeclaration, VisualizationHint
 } from '../../../types';
 import { Lexer, Parser } from './parser';
 import { IExecutor } from '../../executor.interface';
@@ -55,6 +55,10 @@ export class Executor implements IExecutor {
     private heap: Record<string, any> = {};
     private heapCounter: number = 0x1000;
     private inputBuffer: string[] = [];
+
+    // Visualization context for step-by-step drawing
+    private currentNodeId: string = 'start';
+    private loopIterations: Map<number, number> = new Map();  // line -> iteration count
 
     constructor() {
         this.callStack.push(this.globals);
@@ -220,7 +224,20 @@ export class Executor implements IExecutor {
             case 'IfStatement': {
                 const ifStmt = node as IfStatement;
                 const test = yield* this.evaluate(ifStmt.test);
-                yield this.createTrace(ifStmt.line || 0, 'condition', `If condition: ${test}`);
+                const pathTaken = test ? 'true' : 'false';
+
+                yield this.createTrace(ifStmt.line || 0, 'condition', `If condition: ${test}`, {
+                    pathTaken: pathTaken as 'true' | 'false',
+                    what: `We checked if the condition is true or false.`,
+                    why: test
+                        ? `The condition evaluated to TRUE, so we take the Yes ✓ branch.`
+                        : `The condition evaluated to FALSE, so we take the No ✗ branch.`,
+                    next: test
+                        ? `We'll execute the code inside the if block.`
+                        : ifStmt.alternate
+                            ? `We'll execute the code inside the else block.`
+                            : `We'll skip the if block and continue after it.`
+                });
 
                 if (test) {
                     yield* this.visitStatement(ifStmt.consequent);
@@ -231,29 +248,86 @@ export class Executor implements IExecutor {
             }
             case 'WhileStatement': {
                 const loop = node as WhileStatement;
+                const loopLine = loop.line || 0;
+                let iteration = 0;
+
                 while (true) {
                     const test = yield* this.evaluate(loop.test);
-                    yield this.createTrace(loop.line || 0, 'condition', `While condition: ${test}`);
-                    if (!test) break;
-                    yield* this.visitStatement(loop.body);
+                    iteration++;
+                    this.loopIterations.set(loopLine, iteration);
+
+                    if (test) {
+                        yield this.createTrace(loopLine, iteration === 1 ? 'loop_start' : 'loop_continue',
+                            `While condition: ${test} (iteration ${iteration})`, {
+                            loopIteration: iteration,
+                            pathTaken: 'true',
+                            what: iteration === 1
+                                ? `We're entering the loop for the first time.`
+                                : `We go back to the loop because the condition is still true.`,
+                            why: `The condition '${test}' is TRUE, so the loop continues.`,
+                            next: `We'll execute the loop body (iteration ${iteration}).`
+                        });
+                        yield* this.visitStatement(loop.body);
+                    } else {
+                        yield this.createTrace(loopLine, 'loop_end',
+                            `While condition: ${test} - Loop ends`, {
+                            loopIteration: iteration,
+                            pathTaken: 'false',
+                            what: `The loop has finished because the condition became false.`,
+                            why: `The condition is now FALSE after ${iteration - 1} iteration(s).`,
+                            next: `We'll continue with the code after the loop.`
+                        });
+                        break;
+                    }
                 }
                 break;
             }
             case 'ForStatement': {
                 const loop = node as ForStatement;
+                const loopLine = loop.line || 0;
+                let iteration = 0;
+
                 // Init
                 if (loop.init) {
-                    yield* this.executeStatement(loop.init); // Handle VariableDeclaration vs Expression
+                    yield* this.executeStatement(loop.init);
                 }
+
                 while (true) {
                     // Test
                     if (loop.test) {
                         const test = yield* this.evaluate(loop.test);
-                        yield this.createTrace(loop.line || 0, 'condition', `For condition: ${test}`);
-                        if (!test) break;
+                        iteration++;
+                        this.loopIterations.set(loopLine, iteration);
+
+                        if (test) {
+                            yield this.createTrace(loopLine, iteration === 1 ? 'loop_start' : 'loop_continue',
+                                `For condition: ${test} (iteration ${iteration})`, {
+                                loopIteration: iteration,
+                                pathTaken: 'true',
+                                what: iteration === 1
+                                    ? `We're entering the for loop for the first time.`
+                                    : `We go back to the loop because the condition is still true.`,
+                                why: `The condition is TRUE, so we continue looping.`,
+                                next: `We'll execute the loop body (iteration ${iteration}).`
+                            });
+                        } else {
+                            yield this.createTrace(loopLine, 'loop_end',
+                                `For condition: ${test} - Loop ends`, {
+                                loopIteration: iteration,
+                                pathTaken: 'false',
+                                what: `The for loop has finished.`,
+                                why: `The condition is now FALSE after ${iteration - 1} iteration(s).`,
+                                next: `We'll continue with the code after the loop.`
+                            });
+                            break;
+                        }
+                    } else {
+                        iteration++;
                     }
+
                     // Body
                     yield* this.visitStatement(loop.body);
+
                     // Update
                     if (loop.update) {
                         yield* this.evaluate(loop.update);
@@ -454,11 +528,38 @@ export class Executor implements IExecutor {
 
     private outputBuffer: string = "";
 
-    private createTrace(line: number, type: ExecutionTrace['type'], explanation: string): ExecutionTrace {
+    // Create enhanced trace with three-part beginner explanation
+    private createTrace(
+        line: number,
+        type: ExecutionTrace['type'],
+        explanation: string,
+        vizContext?: {
+            nodeId?: string;
+            pathTaken?: 'true' | 'false';
+            loopIteration?: number;
+            what?: string;
+            why?: string;
+            next?: string;
+            dataStructureOp?: VisualizationHint['dataStructureOp'];
+        }
+    ): ExecutionTrace {
         const stack: StackFrame[] = this.callStack.slice(1).map(env => ({
-            function: 'unknown', // simplifying
+            function: 'unknown',
             locals: this.extractLocals(env)
         }));
+
+        // Generate beginner-friendly three-part explanation
+        const visualization: VisualizationHint = {
+            nodeId: vizContext?.nodeId || this.currentNodeId,
+            pathTaken: vizContext?.pathTaken,
+            loopIteration: vizContext?.loopIteration,
+            dataStructureOp: vizContext?.dataStructureOp,
+            explanation: {
+                what: vizContext?.what || this.generateWhat(type, explanation),
+                why: vizContext?.why || this.generateWhy(type, explanation),
+                next: vizContext?.next || this.generateNext(type)
+            }
+        };
 
         return {
             line,
@@ -466,8 +567,89 @@ export class Executor implements IExecutor {
             explanation,
             stack,
             heap: { ...this.heap },
-            output: this.outputBuffer
+            output: this.outputBuffer,
+            visualization
         };
+    }
+
+    // Generate "What just happened" explanation
+    private generateWhat(type: ExecutionTrace['type'], explanation: string): string {
+        switch (type) {
+            case 'definition':
+                return `We created a new variable. ${explanation}`;
+            case 'assignment':
+                return `We updated a variable's value. ${explanation}`;
+            case 'condition':
+                return `We checked a condition. ${explanation}`;
+            case 'loop_start':
+                return `We entered a loop and will repeat until the condition becomes false.`;
+            case 'loop_continue':
+                return `We go back to the loop because the condition is still true.`;
+            case 'loop_end':
+                return `The loop has finished because the condition became false.`;
+            case 'function_call':
+                return `We called a function. ${explanation}`;
+            case 'return':
+                return `We returned a value and exited the function. ${explanation}`;
+            case 'output':
+                return `We printed something to the screen. ${explanation}`;
+            default:
+                return explanation;
+        }
+    }
+
+    // Generate "Why it happened" explanation  
+    private generateWhy(type: ExecutionTrace['type'], explanation: string): string {
+        switch (type) {
+            case 'definition':
+                return `Every variable needs to be created before we can use it.`;
+            case 'assignment':
+                return `The variable's value was computed from the expression on the right side.`;
+            case 'condition':
+                if (explanation.includes('true') || explanation.includes('True')) {
+                    return `The condition evaluated to TRUE, so we take the Yes branch.`;
+                } else if (explanation.includes('false') || explanation.includes('False')) {
+                    return `The condition evaluated to FALSE, so we take the No branch.`;
+                }
+                return `The condition determines which path the program takes.`;
+            case 'loop_start':
+            case 'loop_continue':
+                return `The loop condition is still true, so we continue repeating.`;
+            case 'loop_end':
+                return `The loop condition became false, so we stop repeating.`;
+            case 'function_call':
+                return `Functions help organize code into reusable pieces.`;
+            case 'return':
+                return `The function completed its work and sent back a result.`;
+            case 'output':
+                return `We want to show this value to the user.`;
+            default:
+                return `This is part of the program's execution flow.`;
+        }
+    }
+
+    // Generate "What will be checked next" explanation
+    private generateNext(type: ExecutionTrace['type']): string {
+        switch (type) {
+            case 'definition':
+            case 'assignment':
+                return `We'll move to the next statement in the program.`;
+            case 'condition':
+                return `We'll execute the code inside the chosen branch.`;
+            case 'loop_start':
+            case 'loop_continue':
+                return `We'll run the code inside the loop body.`;
+            case 'loop_end':
+                return `We'll continue with the code after the loop.`;
+            case 'function_call':
+                return `We'll execute the code inside the function.`;
+            case 'return':
+                return `Control returns to where the function was called.`;
+            case 'output':
+                return `We'll move to the next statement.`;
+            default:
+                return `The program continues to the next step.`;
+        }
     }
 
     private extractLocals(env: Environment): Record<string, any> {

@@ -7,6 +7,7 @@ import VariablesPanel from '../../../components/panels/VariablesPanel';
 import WhiteboardPanel from '../../../components/panels/WhiteboardPanel';
 import BeginnerExplanationPanel from '../../../components/panels/BeginnerExplanationPanel';
 import OutputPanel from '../../../components/panels/OutputPanel';
+import FixPermissionDialog from '../../../components/dialogs/FixPermissionDialog';
 import { useExecutionStore } from '../../../store/executionStore';
 import { Layers, ChevronRight, ChevronLeft, Terminal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,11 +53,6 @@ export default function VisualizerLayout() {
             {/* RIGHT SIDE: Whiteboard (Main) */}
             <div className="flex-1 flex flex-col relative min-w-0">
                 <WhiteboardPanel />
-
-                {/* Bottom Explanation Bar */}
-                <div className="shrink-0 z-20">
-                    <BeginnerExplanationPanel />
-                </div>
 
                 {/* VISUALIZER OUTPUT PANEL */}
                 <OutputPanel />
@@ -119,6 +115,9 @@ export default function VisualizerLayout() {
             >
                 <Layers className="w-6 h-6" />
             </button>
+
+            {/* Fix Permission Dialog */}
+            <FixPermissionDialog />
         </div>
     );
 }

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/visualizers/visualizers.css";
 
 @theme {
   /* Colors - Dark Cyan Theme */
@@ -9,6 +10,9 @@
   --color-accent-primary: #7aa2f7;
   --color-accent-cyan: #2ac3de;
   --color-accent-purple: #bb9af7;
+  --color-accent-green: #9ece6a;
+  --color-accent-orange: #ff9e64;
+  --color-accent-red: #f7768e;
 
   --color-text-primary: #cfc9c2;
   --color-text-muted: #565f89;
@@ -60,4 +64,143 @@
 
 .monaco-editor .margin {
   background-color: transparent !important;
+}
+
+/* ========================================
+   FLOWCHART NODE VISUALIZATION STYLES
+   Progressive drawing & highlighting
+   ======================================== */
+
+/* Active node - currently executing, bright highlight */
+.flowchart-container .node-active rect,
+.flowchart-container .node-active polygon,
+.flowchart-container .node-active circle,
+.flowchart-container .node-active ellipse,
+.flowchart-container .node-active path {
+  fill: #2ac3de !important;
+  stroke: #7aa2f7 !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 12px rgba(42, 195, 222, 0.6));
+  animation: nodeGlow 1.5s ease-in-out infinite alternate;
+}
+
+.flowchart-container .node-active .nodeLabel {
+  fill: #1a1b26 !important;
+  font-weight: bold !important;
+}
+
+/* Visited node - previously executed, dimmed */
+.flowchart-container .node-visited rect,
+.flowchart-container .node-visited polygon,
+.flowchart-container .node-visited circle,
+.flowchart-container .node-visited ellipse,
+.flowchart-container .node-visited path {
+  fill: #24283b !important;
+  stroke: #565f89 !important;
+  stroke-width: 1px !important;
+  opacity: 0.7;
+}
+
+.flowchart-container .node-visited .nodeLabel {
+  fill: #9aa5ce !important;
+  opacity: 0.8;
+}
+
+/* Future node - not yet executed, very dim */
+.flowchart-container .node-future rect,
+.flowchart-container .node-future polygon,
+.flowchart-container .node-future circle,
+.flowchart-container .node-future ellipse,
+.flowchart-container .node-future path {
+  fill: #16161e !important;
+  stroke: #414868 !important;
+  stroke-width: 1px !important;
+  opacity: 0.4;
+}
+
+.flowchart-container .node-future .nodeLabel {
+  fill: #565f89 !important;
+  opacity: 0.5;
+}
+
+/* Edge states */
+.flowchart-container .edge-active path {
+  stroke: #2ac3de !important;
+  stroke-width: 3px !important;
+  animation: edgeFlow 2s linear infinite;
+}
+
+.flowchart-container .edge-taken path {
+  stroke: #9ece6a !important;
+  stroke-width: 2px !important;
+}
+
+.flowchart-container .edge-not-taken path {
+  stroke: #565f89 !important;
+  stroke-dasharray: 5, 5 !important;
+  opacity: 0.4 !important;
+}
+
+/* Animations */
+@keyframes nodeGlow {
+  from {
+    filter: drop-shadow(0 0 8px rgba(42, 195, 222, 0.4));
+  }
+
+  to {
+    filter: drop-shadow(0 0 16px rgba(42, 195, 222, 0.8));
+  }
+}
+
+@keyframes edgeFlow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  100% {
+    stroke-dashoffset: 20;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Explanation panel animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.explanation-what,
+.explanation-why,
+.explanation-next {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.explanation-why {
+  animation-delay: 0.1s;
+}
+
+.explanation-next {
+  animation-delay: 0.2s;
 }
