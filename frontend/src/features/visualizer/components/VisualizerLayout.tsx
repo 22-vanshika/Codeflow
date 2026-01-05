@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import CodeEditor from './CodeEditor';
 import InputPanel from '../../../components/panels/InputPanel';
-import CallStackPanel from '../../../components/panels/CallStackPanel';
-import MemoryPanel from '../../../components/panels/MemoryPanel';
-import VariablesPanel from '../../../components/panels/VariablesPanel';
+
 import WhiteboardPanel from '../../../components/panels/WhiteboardPanel';
 import BeginnerExplanationPanel from '../../../components/panels/BeginnerExplanationPanel';
 import OutputPanel from '../../../components/panels/OutputPanel';
 import FixPermissionDialog from '../../../components/dialogs/FixPermissionDialog';
 import { useExecutionStore } from '../../../store/executionStore';
-import { Layers, ChevronRight, ChevronLeft, Terminal, Edit2, Save } from 'lucide-react';
+import { ChevronLeft, Terminal, Edit2, Save, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function VisualizerLayout() {
     const { stack, traces, currentStepIndex, reset } = useExecutionStore();
-    const [isMemoryOpen, setIsMemoryOpen] = useState(false);
     const [isOutputOpen, setIsOutputOpen] = useState(false); // Bottom sheet logic if needed
 
     // Check if execution finished
@@ -33,21 +30,26 @@ export default function VisualizerLayout() {
                         <span className="text-xs font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
                             Code
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
                             <button
                                 onClick={reset}
-                                className="text-xs flex items-center gap-1.5 px-2 py-1 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 rounded-md transition-all font-medium"
-                                title="Stop execution and edit code"
+                                className="p-1.5 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 rounded-md transition-all"
+                                title="Edit Code"
                             >
-                                <Edit2 size={12} />
-                                EDIT
+                                <Edit2 size={14} />
                             </button>
                             <button
-                                className="text-xs flex items-center gap-1.5 px-2 py-1 bg-accent-cyan/10 text-accent-cyan hover:bg-accent-cyan/20 rounded-md transition-all font-medium"
-                                title="Save code"
+                                className="p-1.5 bg-accent-cyan/10 text-accent-cyan hover:bg-accent-cyan/20 rounded-md transition-all"
+                                title="Save Code"
                             >
-                                <Save size={12} />
-                                SAVE
+                                <Save size={14} />
+                            </button>
+                            <button
+                                onClick={reset}
+                                className="p-1.5 bg-accent-red/10 text-accent-red hover:bg-accent-red/20 rounded-md transition-all"
+                                title="Reset Execution"
+                            >
+                                <RotateCw size={14} />
                             </button>
                         </div>
                     </div>
@@ -74,64 +76,6 @@ export default function VisualizerLayout() {
                 {/* VISUALIZER OUTPUT PANEL */}
                 <OutputPanel />
             </div>
-
-            {/* FLOATING / SLIDING MEMORY PANEL */}
-            <AnimatePresence>
-                {isMemoryOpen && (
-                    <motion.div
-                        initial={{ x: "100%" }}
-                        animate={{ x: 0 }}
-                        exit={{ x: "100%" }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="absolute top-0 right-0 bottom-0 w-[400px] bg-bg-panel border-l border-border-subtle shadow-2xl z-40 flex flex-col"
-                    >
-                        <div className="h-12 border-b border-border-subtle flex items-center justify-between px-4">
-                            <h3 className="font-bold text-text-primary text-sm uppercase tracking-wider flex items-center gap-2">
-                                <Layers className="w-4 h-4 text-accent-cyan" />
-                                Memory State
-                            </h3>
-                            <button onClick={() => setIsMemoryOpen(false)} className="p-1 hover:bg-white/10 rounded">
-                                <ChevronRight className="w-5 h-5 text-text-muted" />
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-auto p-2 space-y-2">
-                            {/* Stack */}
-                            <div className="bg-bg-main rounded-lg border border-border-subtle overflow-hidden">
-                                <div className="px-3 py-2 text-xs font-bold text-text-muted border-b border-border-subtle">CALL STACK</div>
-                                <div className="p-2 h-[200px] overflow-auto">
-                                    <CallStackPanel stack={stack} />
-                                </div>
-                            </div>
-
-                            {/* Variables */}
-                            <div className="bg-bg-main rounded-lg border border-border-subtle overflow-hidden">
-                                <div className="px-3 py-2 text-xs font-bold text-text-muted border-b border-border-subtle">VARIABLES</div>
-                                <div className="p-2 h-[200px] overflow-auto">
-                                    <VariablesPanel stack={stack} />
-                                </div>
-                            </div>
-
-                            {/* Heap */}
-                            <div className="bg-bg-main rounded-lg border border-border-subtle overflow-hidden">
-                                <div className="px-3 py-2 text-xs font-bold text-text-muted border-b border-border-subtle">HEAP</div>
-                                <div className="p-2 h-[200px] overflow-auto">
-                                    <MemoryPanel />
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* TOGGLE MEMORY BUTTON */}
-            <button
-                onClick={() => setIsMemoryOpen(!isMemoryOpen)}
-                className={`absolute top-4 right-4 z-30 p-2 rounded-full shadow-xl border border-border-subtle transition-all duration-300 ${isMemoryOpen ? 'opacity-0 pointer-events-none' : 'bg-bg-panel hover:bg-white/10 text-accent-cyan'}`}
-                title="Show Memory"
-            >
-                <Layers className="w-6 h-6" />
-            </button>
 
             {/* Fix Permission Dialog */}
             <FixPermissionDialog />

@@ -12,23 +12,10 @@ export default function VisualizerHeader() {
         <header className="h-14 bg-bg-header border-b border-border-subtle flex items-center justify-between px-6 z-20">
             {/* Left: Controls Group */}
             <div className="flex items-center space-x-2">
-                <button onClick={connect} className="p-2 rounded hover:bg-white/5 text-accent-cyan" title="Reset/Reconnect">
-                    <RotateCw size={18} className={!isConnected ? 'opacity-50' : ''} />
-                </button>
-                <div className="h-6 w-px bg-border-subtle mx-2"></div>
 
                 <ExecutionControls />
 
-                <div className="ml-4 flex gap-2">
-                    <button
-                        onClick={requestTrace}
-                        className="px-4 py-1.5 bg-accent-orange/10 border border-accent-orange/50 text-accent-orange rounded text-sm font-bold hover:bg-accent-orange/20 transition-colors flex items-center gap-1"
-                        title="Visualize Execution"
-                    >
-                        <Sparkles size={14} />
-                        TRACE
-                    </button>
-                </div>
+
             </div>
 
             {/* Center: Title */}
@@ -36,14 +23,16 @@ export default function VisualizerHeader() {
                 Memory Visualization
             </div>
 
-            {/* Right: Language & Close */}
+            {/* Right: Trace Control */}
             <div className="flex items-center space-x-4">
-                <div className="px-3 py-1 bg-bg-panel rounded text-xs font-mono text-text-muted border border-border-subtle flex items-center">
-                    <span>C++</span>
-                </div>
-                <Link to="/" className="text-text-muted hover:text-white transition-colors">
-                    <X size={20} />
-                </Link>
+                <button
+                    onClick={requestTrace}
+                    className="px-4 py-1.5 bg-accent-orange/10 border border-accent-orange/50 text-accent-orange rounded text-sm font-bold hover:bg-accent-orange/20 transition-colors flex items-center gap-1"
+                    title="Visualize Execution"
+                >
+                    <Sparkles size={14} />
+                    TRACE
+                </button>
             </div>
         </header>
     );
