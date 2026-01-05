@@ -5,8 +5,23 @@ export interface StackFrame {
 
 export interface ExecutionTrace {
     line: number;
-    type: 'assignment' | 'comparison' | 'function_call' | 'return' | 'loop' | 'condition' | 'init' | 'definition';
+    type: string;
     explanation: string;
     stack: StackFrame[];
     heap: Record<string, any>;
+    output?: string;
+}
+
+export interface AlgorithmAnalysis {
+    title: string;
+    complexity: string;
+    pattern: string;
+    explanation: Record<string, string>;
+    overview: string;
+}
+
+export interface ExecutionResult {
+    traces: ExecutionTrace[];
+    analysis: AlgorithmAnalysis;
+    flowchart: string;
 }

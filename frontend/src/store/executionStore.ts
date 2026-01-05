@@ -1,9 +1,11 @@
 import { create } from 'zustand';
-import type { ExecutionTrace } from '../types';
+import type { ExecutionTrace, AlgorithmAnalysis } from '../types';
 
 interface ExecutionState {
     code: string;
     traces: ExecutionTrace[];
+    analysis: AlgorithmAnalysis | null;
+    flowchart: string | { markdown: string, mapping: Record<string, string> } | null;
     currentStepIndex: number;
     isPlaying: boolean;
     speed: number;
@@ -35,6 +37,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
   return c;
 }`,
         traces: [],
+        analysis: null,
+        flowchart: null,
         currentStepIndex: -1,
         isPlaying: false,
         speed: 500,
@@ -62,7 +66,15 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
             ws.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'EXECUTION_RESULT') {
-                    set({ traces: msg.payload, currentStepIndex: 0, isPlaying: true, error: null });
+                    const { traces, analysis, flowchart } = msg.payload;
+                    set({
+                        traces,
+                        analysis,
+                        flowchart,
+                        currentStepIndex: 0,
+                        isPlaying: true,
+                        error: null
+                    });
                     // Start playback immediately
                     if (intervalId) clearInterval(intervalId);
                     intervalId = setInterval(() => {
@@ -129,7 +141,7 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
 
         reset: () => {
             clearInterval(intervalId);
-            set({ traces: [], currentStepIndex: -1, isPlaying: false, error: null });
+            set({ traces: [], analysis: null, flowchart: null, currentStepIndex: -1, isPlaying: false, error: null });
         }
     };
 });
