@@ -19,6 +19,7 @@ import { ASTNode, Program, FunctionDeclaration, Block } from '../types';
  */
 export class TraceService {
     private steps: TraceStep[] = [];
+    private readonly MAX_TOTAL_STEPS = 5000;
     private stepCounter: number = 0;
     private variables: Record<string, any> = {};
     private callStack: { functionName: string; args: Record<string, any>; returnValue?: any }[] = [];
@@ -449,6 +450,10 @@ export class TraceService {
         type: TraceStep['type'],
         teacherNote: TeacherNote
     ): void {
+        if (this.steps.length >= this.MAX_TOTAL_STEPS) {
+            throw new Error('Trace limit exceeded (program too long or infinite loop detected)');
+        }
+
         this.stepCounter++;
 
         const step: TraceStep = {

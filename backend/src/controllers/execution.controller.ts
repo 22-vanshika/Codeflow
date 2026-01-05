@@ -60,7 +60,7 @@ export class ExecutionController {
                 } as ValidationPayload
             };
 
-            ws.send(JSON.stringify(response));
+            this.safeSend(ws, response);
 
         } catch (e: any) {
             console.error('Validation Error:', e);
@@ -83,13 +83,13 @@ export class ExecutionController {
             if (!validation.isValid) {
                 // Send validation result with fix option
                 if (validation.canAutoFix && validation.fixedCode) {
-                    ws.send(JSON.stringify({
+                    this.safeSend(ws, {
                         type: 'TRACE_VALIDATION_NEEDED',
                         payload: {
                             ...validation,
                             message: 'Code needs fixing before we can trace it'
                         }
-                    }));
+                    });
                 } else {
                     const errorMessages = validation.issues
                         .filter(i => i.severity === 'error')
@@ -103,10 +103,10 @@ export class ExecutionController {
             // Generate trace
             const traceResult = this.traceService.generateTrace(code);
 
-            ws.send(JSON.stringify({
+            this.safeSend(ws, {
                 type: 'TRACE_RESULT',
                 payload: traceResult
-            }));
+            });
 
         } catch (e: any) {
             console.error('Trace Error:', e);
@@ -138,7 +138,7 @@ export class ExecutionController {
                 } as any
             };
 
-            ws.send(JSON.stringify(response));
+            this.safeSend(ws, response);
 
         } catch (e: any) {
             console.error('Execution Error (fixed code):', e);
@@ -177,7 +177,7 @@ export class ExecutionController {
                             complexityWarning: this.codeValidator.estimateComplexity(code).warning
                         } as ValidationPayload
                     };
-                    ws.send(JSON.stringify(response));
+                    this.safeSend(ws, response);
                     return;
                 } else {
                     // Cannot auto-fix - send detailed error
@@ -205,7 +205,7 @@ export class ExecutionController {
                 payload: result
             };
 
-            ws.send(JSON.stringify(response));
+            this.safeSend(ws, response);
 
         } catch (e: any) {
             console.error('Execution Error:', e);
@@ -218,7 +218,17 @@ export class ExecutionController {
             type: 'ERROR',
             payload: message
         };
-        ws.send(JSON.stringify(response));
+        this.safeSend(ws, response);
+    }
+
+    private safeSend(ws: WebSocket, data: any) {
+        if (ws.readyState === WebSocket.OPEN) {
+            try {
+                ws.send(JSON.stringify(data));
+            } catch (e) {
+                console.error('Error sending message:', e);
+            }
+        }
     }
 
     /**
