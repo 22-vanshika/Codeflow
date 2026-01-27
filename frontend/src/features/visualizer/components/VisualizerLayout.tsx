@@ -6,10 +6,10 @@ import WhiteboardPanel from '../../../components/panels/WhiteboardPanel';
 import OutputPanel from '../../../components/panels/OutputPanel';
 import FixPermissionDialog from '../../../components/dialogs/FixPermissionDialog';
 import { useExecutionStore } from '../../../store/executionStore';
-import { Edit2, Save, RotateCw } from 'lucide-react';
+import { Edit2, Save, RotateCw, Play } from 'lucide-react';
 
 export default function VisualizerLayout() {
-    const { reset } = useExecutionStore();
+    const { reset, executeRealCode } = useExecutionStore();
     // Check if execution finished
 
 
@@ -24,6 +24,15 @@ export default function VisualizerLayout() {
                             Code
                         </span>
                         <div className="flex items-center gap-1">
+                            <button
+                                onClick={executeRealCode}
+                                className="p-1.5 bg-accent-green/10 text-accent-green hover:bg-accent-green/20 rounded-md transition-all flex items-center gap-1 px-3"
+                                title="Run Code (Real Execution)"
+                            >
+                                <Play size={14} fill="currentColor" />
+                                <span className="text-xs font-bold">RUN</span>
+                            </button>
+                            <div className="w-px h-4 bg-border-subtle mx-1" />
                             <button
                                 onClick={reset}
                                 className="p-1.5 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 rounded-md transition-all"

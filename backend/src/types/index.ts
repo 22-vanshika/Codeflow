@@ -16,6 +16,14 @@ export interface VisualizationHint {
     };
 }
 
+export interface RunResult {
+    stdout: string;
+    stderr: string;
+    output: string;
+    code: number;
+    signal: string | null;
+}
+
 export interface ExecutionTrace {
     line: number;
     type: 'definition' | 'assignment' | 'return' | 'condition' | 'function_call' | 'error' | 'output' | 'loop_start' | 'loop_continue' | 'loop_end';
@@ -65,8 +73,8 @@ export interface ExecutionResultPayload {
 }
 
 export interface ExecutionResponse {
-    type: 'EXECUTION_RESULT' | 'ERROR' | 'VALIDATION_RESULT';
-    payload: ExecutionResultPayload | string | ValidationPayload;
+    type: 'EXECUTION_RESULT' | 'ERROR' | 'VALIDATION_RESULT' | 'RUN_RESULT';
+    payload: ExecutionResultPayload | string | ValidationPayload | RunResult;
 }
 
 // Validation types for auto-fix protocol

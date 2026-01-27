@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ExecutionTrace, AlgorithmAnalysis, FlowchartData, TraceStep, TraceResult, PatternInfo } from '../types';
+import type { ExecutionTrace, AlgorithmAnalysis, FlowchartData, TraceStep, TraceResult, PatternInfo, RunResult } from '../types';
 
 // Validation types (matching backend)
 export interface ValidationIssue {
@@ -51,10 +51,14 @@ interface ExecutionState {
     traceMode: boolean;  // true = show blackboard visualizer, false = show flowchart
     traceOutput: string;
 
+    // Real Run State
+    runOutput: RunResult | null;
+
     setCode: (code: string) => void;
     setInput: (input: string) => void;
     connect: () => void;
-    runCode: () => void;
+    runCode: () => void; // Existing Visualize
+    executeRealCode: () => void; // New Real Run
     nextStep: () => void;
     prevStep: () => void;
     setStep: (step: number) => void;
@@ -81,7 +85,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
   int a = 5;
   int b = 10;
   int c = a + b;
-  return c;
+  cout << c;
+  return 0;
 }`,
         traces: [],
         analysis: null,
@@ -103,6 +108,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
         currentPattern: null,
         traceMode: true,  // Default to blackboard mode
         traceOutput: "",
+
+        runOutput: null,
 
         setCode: (code) => set({ code }),
         setInput: (input) => set({ input }),
@@ -193,6 +200,11 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
                         validationPhase: 'awaiting_permission',
                         showFixDialog: true
                     });
+                } else if (msg.type === 'RUN_RESULT') {
+                    set({
+                        runOutput: msg.payload,
+                        error: null
+                    });
                 }
             };
         },
@@ -212,6 +224,23 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
                 showFixDialog: false
             });
             ws.send(JSON.stringify({ type: 'EXECUTE', payload: { code, input } }));
+        },
+
+        executeRealCode: () => {
+            const { code, input, isConnected } = get();
+            if (!isConnected || !ws) {
+                set({ error: 'Not connected to server' });
+                return;
+            }
+            set({
+                runOutput: null,
+                error: null,
+                isPlaying: false
+            });
+            ws.send(JSON.stringify({
+                type: 'RUN_CODE',
+                payload: { code, input, language: 'cpp' }
+            }));
         },
 
         acceptFix: () => {
@@ -311,7 +340,8 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
                 validationPhase: 'idle',
                 validationResult: null,
                 showFixDialog: false,
-                traceOutput: ""
+                traceOutput: "",
+                runOutput: null
             });
         },
 
@@ -342,4 +372,3 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
         setTraceMode: (enabled) => set({ traceMode: enabled })
     };
 });
-

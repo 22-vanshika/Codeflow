@@ -1,16 +1,19 @@
 import { WebSocket } from 'ws';
 import { ExecutionService } from '../services/execution.service';
+import { CompilerService } from '../services/compiler.service';
 import { CodeValidator } from '../services/validation.service';
 import { TraceService } from '../services/trace.service';
 import { ExecutionRequest, ExecutionResponse, ValidationPayload } from '../types';
 
 export class ExecutionController {
     private executionService: ExecutionService;
+    private compilerService: CompilerService;
     private codeValidator: CodeValidator;
     private traceService: TraceService;
 
     constructor() {
         this.executionService = new ExecutionService();
+        this.compilerService = new CompilerService();
         this.codeValidator = new CodeValidator();
         this.traceService = new TraceService();
     }
@@ -21,7 +24,12 @@ export class ExecutionController {
 
             switch (msg.type) {
                 case 'EXECUTE':
+                    // This is "Simulate/Visualize"
                     this.handleExecute(ws, msg.payload);
+                    break;
+                case 'RUN_CODE':
+                    // This is "Real Run" (Piston)
+                    this.handleRunCode(ws, msg.payload);
                     break;
                 case 'VALIDATE':
                     this.handleValidate(ws, msg.payload);
@@ -144,6 +152,33 @@ export class ExecutionController {
         } catch (e: any) {
             console.error('Execution Error (fixed code):', e);
             this.sendError(ws, this.makeErrorFriendly(e.message || 'Execution failed'));
+        }
+    }
+
+    /**
+     * Handle "Run Code" request (Real Execution via Piston)
+     */
+    private async handleRunCode(ws: WebSocket, payload: any) {
+        try {
+            const code = payload.code || '';
+            const input = payload.input || '';
+            const language = payload.language || 'cpp';
+
+            console.log(`Running code (${language}) via CompilerService...`);
+
+            // Execute via Piston
+            const result = await this.compilerService.execute(language, code, input);
+
+            const response: ExecutionResponse = {
+                type: 'RUN_RESULT',
+                payload: result
+            };
+
+            this.safeSend(ws, response);
+
+        } catch (e: any) {
+            console.error('Run Code Error:', e);
+            this.sendError(ws, `Failed to run code: ${e.message}`);
         }
     }
 

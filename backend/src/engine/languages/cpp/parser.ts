@@ -570,16 +570,33 @@ export class Parser {
         // Or we parsePrimary and chain MemberAccess.
 
         const target = this.parseExpression();
-        // Check if next is =
-        if (this.match('OPERATOR', '=')) {
+        // Check if next is = or compound assignment (+=, -=, *=, /=, etc.)
+        if (this.match('OPERATOR', '=') || this.match('OPERATOR', '+=') || this.match('OPERATOR', '-=') ||
+            this.match('OPERATOR', '*=') || this.match('OPERATOR', '/=')) {
+            const operator = this.previous().value;
             const value = this.parseExpression();
             this.consume('PUNCTUATION', ';');
+
             // Extract name if simple ID
             let name = '';
             if (target.type === 'Identifier') name = (target as Identifier).name;
             else name = 'Expr'; // Fallback
 
-            return { type: 'Assignment', name, left: target, value, line: this.previous().line };
+            // For compound assignments like +=, convert to regular assignment
+            // c += a becomes c = c + a
+            let finalValue = value;
+            if (operator !== '=') {
+                const binaryOp = operator.slice(0, -1); // Remove the '=' to get +, -, *, /
+                finalValue = {
+                    type: 'BinaryExpression',
+                    operator: binaryOp,
+                    left: target,
+                    right: value,
+                    line: this.previous().line
+                } as BinaryExpression;
+            }
+
+            return { type: 'Assignment', name, left: target, value: finalValue, line: this.previous().line };
         }
 
         throw new Error(`Expected assignment operator '=' at line ${this.previous().line}`);
@@ -758,6 +775,22 @@ export class Parser {
                     arguments: args,
                     line: this.previous().line
                 } as CallExpression;
+            } else if (this.match('OPERATOR', '++')) {
+                expr = {
+                    type: 'UpdateExpression',
+                    operator: '++',
+                    argument: expr,
+                    prefix: false,
+                    line: this.previous().line
+                } as UpdateExpression;
+            } else if (this.match('OPERATOR', '--')) {
+                expr = {
+                    type: 'UpdateExpression',
+                    operator: '--',
+                    argument: expr,
+                    prefix: false,
+                    line: this.previous().line
+                } as UpdateExpression;
             } else {
                 break;
             }

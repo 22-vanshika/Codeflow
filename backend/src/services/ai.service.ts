@@ -1,96 +1,77 @@
-
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+import Groq from 'groq-sdk';
 import { Lexer, Parser } from '../engine/languages/cpp/parser';
 dotenv.config();
 
 export class AiService {
-    private genAI: GoogleGenerativeAI;
+    private groq: Groq;
     private apiKey: string | undefined;
 
-    // List of models to try in order of preference
-    private readonly MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-pro"];
+    // Use Llama 3.3 for best speed/quality balance (3.1 decommissioned Jan 2025)
+    private readonly MODEL = "llama-3.3-70b-versatile";
 
     constructor() {
-        const key = process.env.GOOGLE_API_KEY;
-        this.apiKey = key ? key.trim() : undefined; // Ensure no whitespace
+        const key = process.env.GROQ_API_KEY;
+        this.apiKey = key ? key.trim() : undefined;
 
         if (!this.apiKey) {
-            console.warn("GOOGLE_API_KEY not found. AI disabled.");
+            console.warn("GROQ_API_KEY not found. AI features will use mocks.");
         } else {
-            console.log(`AI Initialized. Key length: ${this.apiKey.length}, Starts with: ${this.apiKey.substring(0, 4)}...`);
+            console.log(`AI Initialized (Groq). Key starts with: ${this.apiKey.substring(0, 4)}...`);
         }
 
-        this.genAI = new GoogleGenerativeAI(this.apiKey || "mock-key");
+        this.groq = new Groq({ apiKey: this.apiKey || "mock-key" });
     }
 
-    private async generateWithFallback(prompt: string): Promise<any> {
+    private async generateCompletion(prompt: string, jsonMode: boolean = false): Promise<string> {
         if (!this.apiKey) throw new Error("No API Key");
 
-        let lastError;
+        try {
+            const completion = await this.groq.chat.completions.create({
+                messages: [{ role: 'user', content: prompt }],
+                model: this.MODEL,
+                temperature: 0.1,
+                max_tokens: 4096,
+                response_format: jsonMode ? { type: 'json_object' } : undefined
+            });
 
-        for (const modelName of this.MODELS) {
-            try {
-                // console.log(`Attempting with model: ${modelName}`); 
-                const model = this.genAI.getGenerativeModel({ model: modelName });
-                const result = await model.generateContent(prompt);
-                // If we get here, it worked!
-                console.log(`Success with model: ${modelName}`);
-                return result;
-            } catch (error: any) {
-                console.warn(`Failed with ${modelName}: ${error.status || error.message}`);
-                lastError = error;
-                // If 404 (Not Found) or 503 (Service Unavailable), try next.
-                // If 401 (Invalid Key), abort immediately.
-                if (error.status === 400 || error.status === 401) {
-                    throw error;
-                }
-            }
+            return completion.choices[0]?.message?.content || "";
+        } catch (error: any) {
+            console.error(`Groq API Error: ${error.message}`);
+            throw error;
         }
-        throw lastError;
     }
-
 
     private getAnalysisPrompt(code: string): string {
         return `
-        Analyze the following Algorithm/Code for a beginner student.
+        Analyze this Code for a beginner.
+        Return a JSON object with keys: "title", "complexity", "pattern", "explanation" (map line#->text), "overview".
+        
         Code:
         ${code}
-
-        Return a JSON object (NO MARKDOWN, JUST JSON) with:
-        - title: A short beginner friendly title
-        - complexity: Time and Space complexity
-        - pattern: The algorithmic pattern used (e.g. "Two Pointers", "Recursion")
-        - explanation: A dictionary/map of line numbers to a simple 1-sentence logic explanation.
-        - overview: A short paragraph explaining the "Idea".
         `;
     }
 
     private getFlowchartPrompt(code: string): string {
         return `
         Create a Mermaid.js flowchart (graph TD) for the logic of this code.
-        Focus on LOGICAL steps. Group logical blocks.
+        Return ONLY the mermaid code string. No markdown formatting.
+        
         Code:
         ${code}
-
-        Return ONLY the raw Mermaid syntax string. No markdown block.
         `;
     }
 
     public async analyzeCode(code: string): Promise<any> {
-        // Mock fallback if no key
         if (!this.apiKey) return this.mockAnalyze(code);
 
         const prompt = this.getAnalysisPrompt(code);
 
         try {
-            const result = await this.generateWithFallback(prompt);
-            const response = result.response;
-            const text = response.text();
-            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(jsonStr);
-        } catch (error: any) {
-            console.error("All AI Models Failed. Switching to Mock Analysis.");
+            const text = await this.generateCompletion(prompt, true);
+            return JSON.parse(text);
+        } catch (error) {
+            console.warn("AI Analysis Failed, using mock.");
             return this.mockAnalyze(code);
         }
     }
@@ -101,71 +82,35 @@ export class AiService {
         const prompt = this.getFlowchartPrompt(code);
 
         try {
-            const result = await this.generateWithFallback(prompt);
-            const response = result.response;
-            let text = response.text();
+            let text = await this.generateCompletion(prompt, false);
+            // Clean markdown if present
             text = text.replace(/```mermaid/g, '').replace(/```/g, '').trim();
             return {
                 markdown: text,
                 mapping: {}
             };
-        } catch (error: any) {
-            console.error("All AI Models Failed. Switching to Mock Flowchart.");
+        } catch (error) {
+            console.warn("AI Flowchart Failed, using mock.");
             return this.mockFlowchart(code);
         }
     }
 
     // --- MOCK GENERATORS ---
-
     private mockAnalyze(code: string): any {
         return {
-            title: "Code Execution (Local)",
-            complexity: "Analysis Unavailable (API Error)",
-            pattern: "Standard Execution",
-            explanation: { "1": "Program starts here." },
-            overview: "The backend could not connect to Google AI (404/Quota). This is a simplified local view."
+            title: "Code Analysis (Mock)",
+            complexity: "Time: O(N), Space: O(1)",
+            pattern: "Linear Scan",
+            explanation: { "1": "Example explanation (AI unavailable)." },
+            overview: "Groq API key missing or failed. Using fallback."
         };
     }
 
     private mockFlowchart(code: string): any {
-        try {
-            // 1. Tokenize & Parse
-            const lexer = new Lexer(code);
-            const tokens = lexer.tokenize();
-            const parser = new Parser(tokens);
-            const program = parser.parse();
-
-            // 2. Build Mermaid Graph
-            const graph = new MermaidBuilder();
-            graph.addNode('start', '([Start])');
-
-            // We assume 'main' function body is the flow we want
-            const main = program.body.find(n => n.type === 'FunctionDeclaration' && (n as any).name === 'main');
-
-            if (main) {
-                const lastId = graph.processBlock((main as any).body.body, 'start');
-                graph.addEdge(lastId, 'end_node');
-            } else {
-                // Fallback if no main: process all top level statements that are not func decls?
-                // Or just process first function?
-                // Let's just create a generic flow
-                graph.addNode('info', '[No main() found]');
-                graph.addEdge('start', 'info');
-                graph.addEdge('info', 'end_node');
-            }
-
-            graph.addNode('end_node', '([End])');
-
-            return graph.toJSON();
-
-        } catch (e: any) {
-            console.error("Mock Flowchart Generation Failed:", e);
-            // Fallback to error node
-            return {
-                markdown: `graph TD;\nA([Start]) --> B[Error: ${e.message.replace(/["\n]/g, '')}];\nB --> C([End]);`,
-                mapping: {}
-            };
-        }
+        return {
+            markdown: `graph TD;\nA([Start]) --> B[Process];\nB --> C([End]);`,
+            mapping: {}
+        };
     }
 }
 

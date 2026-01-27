@@ -57,6 +57,14 @@ export interface FlowchartData {
     executionOrder: string[];
 }
 
+export interface RunResult {
+    stdout: string;
+    stderr: string;
+    output: string;
+    code: number;
+    signal: string | null;
+}
+
 export interface ExecutionResult {
     traces: ExecutionTrace[];
     analysis: AlgorithmAnalysis;

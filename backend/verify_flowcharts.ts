@@ -2,8 +2,8 @@
 import { AiService } from './src/services/ai.service';
 import * as fs from 'fs';
 
-// Mock API Key to force fallback
-process.env.GOOGLE_API_KEY = "";
+import dotenv from 'dotenv';
+dotenv.config();
 
 const aiService = new AiService();
 
