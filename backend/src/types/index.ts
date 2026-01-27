@@ -64,7 +64,9 @@ export interface ExecutionResultPayload {
     traces: ExecutionTrace[];
     analysis?: {
         title: string;
-        complexity: string;
+        timeComplexity: string;
+        spaceComplexity: string;
+        complexityExplanation?: string;
         pattern: string;
         explanation: Record<string, string>;
         overview: string;

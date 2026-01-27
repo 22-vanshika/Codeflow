@@ -68,15 +68,37 @@ export default function AnalysisInfoButton() {
                                         </p>
                                     </div>
 
-                                    {/* Complexity */}
+                                    {/* Time Complexity */}
                                     <div className="bg-bg-main/50 rounded-lg p-3 border border-border-subtle/50">
                                         <div className="text-xs font-semibold text-accent-green uppercase tracking-wider mb-1 flex items-center gap-1">
-                                            <Activity size={12} /> Complexity
+                                            <Activity size={12} /> Time Complexity
                                         </div>
-                                        <p className="text-sm text-text-primary font-medium">
-                                            {analysis?.complexity || <span className="text-text-muted italic">Not available</span>}
+                                        <p className="text-sm text-text-primary font-medium font-mono">
+                                            {analysis?.timeComplexity || <span className="text-text-muted italic">Not available</span>}
                                         </p>
                                     </div>
+
+                                    {/* Space Complexity */}
+                                    <div className="bg-bg-main/50 rounded-lg p-3 border border-border-subtle/50">
+                                        <div className="text-xs font-semibold text-accent-blue uppercase tracking-wider mb-1 flex items-center gap-1">
+                                            <Activity size={12} /> Space Complexity
+                                        </div>
+                                        <p className="text-sm text-text-primary font-medium font-mono">
+                                            {analysis?.spaceComplexity || <span className="text-text-muted italic">Not available</span>}
+                                        </p>
+                                    </div>
+
+                                    {/* Complexity Explanation (if available) */}
+                                    {analysis?.complexityExplanation && (
+                                        <div className="bg-bg-main/30 rounded-lg p-3 border border-border-subtle/30">
+                                            <div className="text-xs font-semibold text-text-muted/80 uppercase tracking-wider mb-1">
+                                                Why?
+                                            </div>
+                                            <p className="text-xs text-text-muted italic leading-relaxed">
+                                                {analysis.complexityExplanation}
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {/* Overview */}
                                     <div className="text-sm text-text-muted leading-relaxed">

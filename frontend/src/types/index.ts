@@ -36,7 +36,9 @@ export interface ExecutionTrace {
 
 export interface AlgorithmAnalysis {
     title: string;
-    complexity: string;
+    timeComplexity: string;
+    spaceComplexity: string;
+    complexityExplanation?: string;
     pattern: string;
     explanation: Record<string, string>;
     overview: string;

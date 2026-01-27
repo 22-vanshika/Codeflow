@@ -44,8 +44,16 @@ export class AiService {
 
     private getAnalysisPrompt(code: string): string {
         return `
-        Analyze this Code for a beginner.
-        Return a JSON object with keys: "title", "complexity", "pattern", "explanation" (map line#->text), "overview".
+        Analyze this C++ code for a beginner programmer.
+        
+        Return a JSON object with the following keys:
+        - "title": A brief descriptive title for the algorithm/code
+        - "timeComplexity": Time complexity in Big-O notation (e.g., "O(N)", "O(N²)", "O(log N)")
+        - "spaceComplexity": Space complexity in Big-O notation (e.g., "O(1)", "O(N)")
+        - "complexityExplanation": A brief explanation of why the code has this complexity (1-2 sentences)
+        - "pattern": The algorithmic pattern used (e.g., "Two Pointers", "Sliding Window", "Recursion", "Iteration")
+        - "explanation": A map of line numbers to explanations (e.g., {"5": "This initializes the counter"})
+        - "overview": A brief summary of what the code does
         
         Code:
         ${code}
@@ -99,7 +107,9 @@ export class AiService {
     private mockAnalyze(code: string): any {
         return {
             title: "Code Analysis (Mock)",
-            complexity: "Time: O(N), Space: O(1)",
+            timeComplexity: "O(N)",
+            spaceComplexity: "O(1)",
+            complexityExplanation: "Linear time due to single loop, constant space as no additional data structures used.",
             pattern: "Linear Scan",
             explanation: { "1": "Example explanation (AI unavailable)." },
             overview: "Groq API key missing or failed. Using fallback."
