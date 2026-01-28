@@ -512,11 +512,29 @@ export class Parser {
 
     private parseVariableDeclarationList(type: string): ASTNode {
         // Parse: name [= init], name2 [= init2];
+        // Also supports: name[size] = {...}
         const decls: VariableDeclaration[] = [];
 
         do {
             const name = this.consume('IDENTIFIER').value;
+            let arraySize: number | undefined;
             let init: ASTNode | undefined;
+
+            // Check for array declaration: int arr[5]
+            if (this.match('PUNCTUATION', '[')) {
+                // Parse array size
+                if (this.check('NUMBER')) {
+                    arraySize = parseInt(this.consume('NUMBER').value);
+                } else {
+                    // Could be expression like arr[n], but for simplicity we'll parse as expression
+                    const sizeExpr = this.parseExpression();
+                    if (sizeExpr.type === 'Literal') {
+                        arraySize = (sizeExpr as any).value;
+                    }
+                }
+                this.consume('PUNCTUATION', ']');
+            }
+
             if (this.match('OPERATOR', '=')) {
                 if (this.check('PUNCTUATION', '{')) {
                     init = this.parseArrayExpression();
@@ -532,7 +550,13 @@ export class Parser {
                 init = { type: 'NewExpression', className: type, arguments: args, line: this.previous().line } as NewExpression;
             }
 
-            decls.push({ type: 'VariableDeclaration', varType: type, name, init, line: this.previous().line });
+            decls.push({
+                type: 'VariableDeclaration',
+                varType: arraySize !== undefined ? `${type}[]` : type,
+                name,
+                init,
+                line: this.previous().line
+            });
 
         } while (this.match('PUNCTUATION', ','));
 
@@ -679,7 +703,7 @@ export class Parser {
 
     private parseFactor(): ASTNode {
         let expr = this.parsePrimary();
-        while (this.match('OPERATOR', '*') || this.match('OPERATOR', '/')) {
+        while (this.match('OPERATOR', '*') || this.match('OPERATOR', '/') || this.match('OPERATOR', '%')) {
             const operator = this.previous().value;
             const right = this.parsePrimary();
             expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
