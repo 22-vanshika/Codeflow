@@ -1,0 +1,101 @@
+Starting Comprehensive Test Suite (Phase 4)...
+Testing: 26. Binary Search Tree (BST)
+DEBUG: Tokens: [
+  'int',    'main', '(',     ')',    '{',
+  'struct', 'Node', '{',     'int',  'val',
+  ';',      'Node', '*',     'left', ';',
+  'Node',   '*',    'right', ';',    '}',
+  ';',      'Node', '*',     'root', '=',
+  'new',    'Node', '(',     ')',    ';',
+  'root',   '->',   'val',   '=',    '10',
+  ';',      'Node', '*',     'left', '=',
+  'new',    'Node', '(',     ')',    ';',
+  'left',   '->',   'val',   '=',    '5'
+]
+DEBUG: Program Body Types: [ 'FunctionDeclaration' ]
+❌ FAILED
+Runtime Error: Undefined variable 'Node'
+Testing: 27. Graph DFS (Adjacency List)
+DEBUG: Tokens: [
+  'void',    'dfs',  '(',       'int',
+  'u',       ',',    'vector',  '<',
+  'vector',  '<',    'int',     '>>',
+  '&',       'adj',  ',',       'vector',
+  '<',       'bool', '>',       '&',
+  'visited', ',',    'vector',  '<',
+  'int',     '>',    '&',       'path',
+  ')',       '{',    'visited', '[',
+  'u',       ']',    '=',       'true',
+  ';',       'path', '.',       'push_back',
+  '(',       'u',    ')',       ';',
+  'for',     '(',    'int',     'i',
+  '=',       '0'
+]
+DEBUG: Program Body Types: [ 'FunctionDeclaration', 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 28. Graph BFS (Shortest Path)
+DEBUG: Tokens: [
+  'int',       'main',      '(',   ')',
+  '{',         'vector',    '<',   'vector',
+  '<',         'int',       '>>',  'adj',
+  ';',         'vector',    '<',   'int',
+  '>',         'r0',        ';',   'r0',
+  '.',         'push_back', '(',   '1',
+  ')',         ';',         'adj', '.',
+  'push_back', '(',         'r0',  ')',
+  ';',         'vector',    '<',   'int',
+  '>',         'r1',        ';',   'r1',
+  '.',         'push_back', '(',   '2',
+  ')',         ';',         'adj', '.',
+  'push_back', '('
+]
+DEBUG: Program Body Types: [ 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 29. 2D DP (Grid Paths)
+DEBUG: Tokens: [
+  'int', 'main', '(',   ')',   '{',   'int',
+  'm',   '=',    '3',   ';',   'int', 'n',
+  '=',   '3',    ';',   'int', 'dp',  '[',
+  '3',   ']',    '[',   '3',   ']',   ';',
+  'for', '(',    'int', 'i',   '=',   '0',
+  ';',   'i',    '<',   'm',   ';',   'i',
+  '++',  ')',    '{',   'for', '(',   'int',
+  'j',   '=',    '0',   ';',   'j',   '<',
+  'n',   ';'
+]
+DEBUG: Program Body Types: [ 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 30. Towers of Hanoi (Recursion)
+DEBUG: Tokens: [
+  'int',   'moves', '=',      '0',   ';',
+  'void',  'solve', '(',      'int', 'n',
+  ',',     'char',  'from',   ',',   'char',
+  'to',    ',',     'char',   'aux', ')',
+  '{',     'if',    '(',      'n',   '==',
+  '0',     ')',     'return', ';',   'solve',
+  '(',     'n',     '-',      '1',   ',',
+  'from',  ',',     'aux',    ',',   'to',
+  ')',     ';',     'moves',  '++',  ';',
+  'solve', '(',     'n',      '-',   '1'
+]
+DEBUG: Program Body Types: [ 'VariableDeclaration', 'FunctionDeclaration', 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 31. Nested Structs (Linked Box)
+DEBUG: Tokens: [
+  'struct', 'Box', '{',   'int',    'id',
+  ';',      'Box', '*',   'inside', ';',
+  '}',      ';',   'int', 'main',   '(',
+  ')',      '{',   'Box', '*',      'b1',
+  '=',      'new', 'Box', '(',      ')',
+  ';',      'b1',  '->',  'id',     '=',
+  '1',      ';',   'Box', '*',      'b2',
+  '=',      'new', 'Box', '(',      ')',
+  ';',      'b2',  '->',  'id',     '=',
+  '2',      ';',   'b1',  '->',     'inside'
+]
+DEBUG: Program Body Types: [ 'ClassDeclaration', 'FunctionDeclaration' ]
+✅ PASSED
+
+Method Summary:
+Passed: 5
+Failed: 1

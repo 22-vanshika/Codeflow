@@ -1,0 +1,1 @@
+src/engine/languages/cpp/parser.ts(477,5): error TS1128: Declaration or statement expected.

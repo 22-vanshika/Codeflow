@@ -1,0 +1,27 @@
+Starting Comprehensive Test Suite (Phase 4)...
+Testing: 26. Binary Search Tree (BST)
+DEBUG: Program Body Types: [ 'FunctionDeclaration' ]
+DEBUG: NewExpression className='Node'
+❌ FAILED
+Runtime Error: Undefined variable 'Node'
+Testing: 27. Graph DFS (Adjacency List)
+DEBUG: Program Body Types: [ 'FunctionDeclaration', 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 28. Graph BFS (Shortest Path)
+DEBUG: Program Body Types: [ 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 29. 2D DP (Grid Paths)
+DEBUG: Program Body Types: [ 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 30. Towers of Hanoi (Recursion)
+DEBUG: Program Body Types: [ 'VariableDeclaration', 'FunctionDeclaration', 'FunctionDeclaration' ]
+✅ PASSED
+Testing: 31. Nested Structs (Linked Box)
+DEBUG: Program Body Types: [ 'ClassDeclaration', 'FunctionDeclaration' ]
+DEBUG: NewExpression className='Box'
+DEBUG: NewExpression className='Box'
+✅ PASSED
+
+Method Summary:
+Passed: 5
+Failed: 1

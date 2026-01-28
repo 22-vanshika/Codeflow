@@ -132,6 +132,16 @@ export class Lexer {
                     this.position += 2;
                     continue;
                 }
+                if (char === '&' && next === '&') {
+                    tokens.push({ type: 'OPERATOR', value: '&&', line: this.line });
+                    this.position += 2;
+                    continue;
+                }
+                if (char === '|' && next === '|') {
+                    tokens.push({ type: 'OPERATOR', value: '||', line: this.line });
+                    this.position += 2;
+                    continue;
+                }
             }
 
             if (['+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^'].includes(char)) {
@@ -265,6 +275,11 @@ export class Parser {
                 }
             }
 
+            // Skip pointers/refs
+            while (this.peek(offset).value === '*' || this.peek(offset).value === '&') {
+                offset++;
+            }
+
             // Now we should be at Name
             if (this.peek(offset).type === 'IDENTIFIER') {
                 offset++;
@@ -342,9 +357,57 @@ export class Parser {
                 type += ', ';
                 type += this.parseTypeString();
             }
-            this.consume('OPERATOR', '>');
-            type += '>';
+
+            // Handle > or >>
+            if (this.check('OPERATOR', '>')) {
+                this.consume('OPERATOR', '>');
+                type += '>';
+            } else if (this.check('OPERATOR', '>>')) {
+                // Split >> into > and >. 
+                // We consume one > here, and leave one > for the outer loop/caller?
+                // Actually, if we are in nested calls, the inner one needs one >, the outer needs one >.
+                // We can mutate the token?
+                // Or just:
+                // type += '>';
+                // Change current token from >> to > and NOT advance position?
+                // Yes, hacky but works.
+                this.tokens[this.current].value = '>'; // Change >> to >
+                // Don't advance, effectively "consuming" the first > of >> by transforming it to > for the *next* consumer.
+                // Wait, if I change it to >, then I *should* consume this one, and the *next* consumer sees... wait.
+                // If I have >>, I want to consume one >, leave one >.
+                // So I append > to type.
+                type += '>';
+                // Now I need to ensure the NEXT consumer sees a >.
+                // Currently token is >>.
+                // If I change it to >, and don't advance...
+                // The NEXT consumer calls check('>'). It sees >. It consumes it.
+                // So correct flow: 
+                // Inner parseTypeString sees >>. It wants >.
+                // It takes "half".
+                // We change token to >. We return.
+                // Outer parseTypeString wants >. It sees >. It consumes it.
+
+                // ISSUE: We need to consume the "first half" now?
+                // No, `parseTypeString` returns the type string.
+                // We just need to ensure `type` gets `>`.
+                // And the token stream allows the outer loop to see `>`.
+                // So: Change >> to >. Do NOT advance.
+                // But wait, if I don't advance, I processed nothing?
+                // No, I processed the "closing of this template".
+                // But I didn't verify I found a >?
+                // I checked >>.
+                // So: I found "closing".
+                // I change >> to > for the *next* guy.
+            } else {
+                throw new Error(`Expected '>' or '>>' at line ${this.peek()!.line}`);
+            }
         }
+
+        // Handle Pointers/Refs (* or &)
+        while (this.check('OPERATOR', '*') || this.check('OPERATOR', '&')) {
+            type += this.advance().value;
+        }
+
         return type;
     }
 
@@ -355,7 +418,7 @@ export class Parser {
         const params: { name: string; type: string }[] = [];
         if (!this.check('PUNCTUATION', ')')) {
             do {
-                const pType = this.consume('KEYWORD').value;
+                const pType = this.parseTypeString(); // Use parseTypeString instead of consume KEYWORD
                 const pName = this.consume('IDENTIFIER').value;
                 params.push({ name: pName, type: pType });
             } while (this.match('PUNCTUATION', ','));
@@ -401,23 +464,22 @@ export class Parser {
         if (this.match('KEYWORD', 'while')) {
             return this.parseWhileStatement();
         }
-        if (this.match('KEYWORD', 'while')) {
-            return this.parseWhileStatement();
-        }
         if (this.match('KEYWORD', 'for')) {
             return this.parseForStatement();
         }
+        if (this.check('KEYWORD', 'struct') || this.check('KEYWORD', 'class')) {
+            return this.parseClassDeclaration();
+        }
         if (this.match('KEYWORD', 'break')) {
             this.consume('PUNCTUATION', ';');
-            // We'll treat break as a minimal ReturnStatement-like or specific BreakStatement?
-            // Executor needs to handle it. Let's return a simple object.
-            // But valid Types? ASTNode type includes... we might need to cast or add type.
-            return { type: 'BreakStatement', line: this.previous().line } as any;
+            // We'll treat break as a minimal specific BreakStatement
+            return { type: 'BreakStatement', line: this.previous().line } as any; // Cast as ASTNode
         }
-        // Check for potential assignment/update/call handled by parseExpression
-        // Fallthrough to generic expression statement
 
-        // Fallback expression statement (e.g. i++;)
+        return this.parseExpressionStatement();
+    }
+
+    private parseExpressionStatement(): ExpressionStatement {
         const expr = this.parseExpression();
         this.consume('PUNCTUATION', ';');
         return { type: 'ExpressionStatement', expression: expr, line: expr.line };
@@ -440,7 +502,7 @@ export class Parser {
             // Since we don't have transaction/rollback easily, implement peephole.
 
             // Simple heuristic: If starts with keyword (int/bool/etc) -> VarDecl.
-            if (KEYWORDS.has(this.peek().value) && !['return', 'if', 'while', 'for', 'break'].includes(this.peek().value)) {
+            if (KEYWORDS.has(this.peek().value) && !['return', 'if', 'while', 'for', 'break', 'struct', 'class', 'using', 'namespace'].includes(this.peek().value)) {
                 // Excluding control keywords. 
                 // Includes 'vector', 'map' if in KEYWORDS.
                 return true;
@@ -650,7 +712,7 @@ export class Parser {
     }
 
     private parseAssignment(): ASTNode {
-        const left = this.parseEquality(); // Was parseExpression, but now we hierarchically go down
+        const left = this.parseLogicalOr(); // Was parseEquality, now parseLogicalOr
 
         // Check if next is = or compound assignment (+=, -=, *=, /=, %=)
         if (this.match('OPERATOR', '=') || this.match('OPERATOR', '+=') || this.match('OPERATOR', '-=') ||
@@ -718,6 +780,26 @@ export class Parser {
 
     private parseExpression(): ASTNode {
         return this.parseAssignment();
+    }
+
+    private parseLogicalOr(): ASTNode {
+        let expr = this.parseLogicalAnd();
+        while (this.match('OPERATOR', '||')) {
+            const operator = this.previous().value;
+            const right = this.parseLogicalAnd();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
+    }
+
+    private parseLogicalAnd(): ASTNode {
+        let expr = this.parseEquality();
+        while (this.match('OPERATOR', '&&')) {
+            const operator = this.previous().value;
+            const right = this.parseEquality();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
     }
 
     private parseEquality(): ASTNode {

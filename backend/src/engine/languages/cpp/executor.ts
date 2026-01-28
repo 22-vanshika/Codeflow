@@ -93,10 +93,11 @@ export class Executor implements IExecutor {
         const lexer = new Lexer(source);
         const tokens = lexer.tokenize();
         const parser = new Parser(tokens);
+        console.log("DEBUG: Tokens:", tokens.slice(0, 50).map(t => t.value));
         const ast = parser.parse();
 
-        // Hoist function declarations
         if (ast.type === 'Program') {
+            console.log("DEBUG: Program Body Types:", ast.body.map(n => n.type));
             for (const node of ast.body) {
                 if (node.type === 'FunctionDeclaration') {
                     const func = node as FunctionDeclaration;
@@ -104,6 +105,9 @@ export class Executor implements IExecutor {
                 } else if (node.type === 'ClassDeclaration') {
                     const cls = node as ClassDeclaration;
                     this.globals.define(cls.name, cls);
+                } else if (node.type === 'VariableDeclaration' || node.type === 'MultiVariableDeclaration') {
+                    // Global variable, execute it
+                    yield* this.executeStatement(node);
                 }
             }
         }
@@ -218,6 +222,12 @@ export class Executor implements IExecutor {
                 for (const decl of multi.declarations) {
                     yield* this.executeStatement(decl);
                 }
+                break;
+            }
+            case 'ClassDeclaration': {
+                const cls = node as ClassDeclaration;
+                this.currentEnv().define(cls.name, cls);
+                yield this.createTrace(cls.line || 0, 'definition', `Defined struct ${cls.name}`);
                 break;
             }
             case 'Assignment': {
@@ -700,19 +710,20 @@ export class Executor implements IExecutor {
                     // Arrays or objects wrapping arrays
                     this.heap[address] = [];
                     // Store metadata if needed, but array is flexible.
-                } else if (['map'].includes(newExpr.className)) {
-                    this.heap[address] = new Map();
                 } else if (['pair'].includes(newExpr.className)) {
                     this.heap[address] = { first: 0, second: 0 };
                 } else {
                     // Assume class
-                    const cls = this.globals.get(newExpr.className) as ClassDeclaration; // Check globals
+                    let cls: ClassDeclaration | undefined;
+                    try {
+                        cls = this.currentEnv().get(newExpr.className);
+                    } catch (e) {
+                        // ignore undefined
+                    }
+
                     if (!cls) {
-                        // Fallback for templates like vector<int> which might parse as "vector" if we strip generic?
-                        // Actually parser stores "vector" or "vector<int>"?
-                        // Parser currently stores "vector" or we need to handle "vector<int>" via stripped ClassName if passed.
-                        // For now assuming parser output is clean.
-                        this.heap[address] = {}; // Fallback
+                        // Fallback for untyped/template-stripped IDs
+                        this.heap[address] = {};
                     } else {
                         const instance: any = {};
                         // Initialize members
