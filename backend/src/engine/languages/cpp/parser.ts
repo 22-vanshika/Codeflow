@@ -70,7 +70,7 @@ export class Lexer {
             }
 
             // Multi-char operators
-            if (['=', '!', '<', '>', '+', '-', '&', '|'].includes(char)) {
+            if (['=', '!', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^'].includes(char)) {
                 const next = this.source[this.position + 1];
                 if (next === '=') {
                     tokens.push({ type: 'OPERATOR', value: char + '=', line: this.line });
@@ -99,6 +99,11 @@ export class Lexer {
                 }
                 if ((char === '+' && next === '+') || (char === '-' && next === '-')) {
                     tokens.push({ type: 'OPERATOR', value: char + next, line: this.line });
+                    this.position += 2;
+                    continue;
+                }
+                if (next === '=' && ['+', '-', '*', '/', '%', '&', '|', '^'].includes(char)) {
+                    tokens.push({ type: 'OPERATOR', value: char + '=', line: this.line });
                     this.position += 2;
                     continue;
                 }
@@ -376,30 +381,15 @@ export class Parser {
         if (this.match('KEYWORD', 'for')) {
             return this.parseForStatement();
         }
-        if (this.check('IDENTIFIER')) {
-            // Assignment or Function Call or Update?
-            const next = this.peek(1);
-            if (next.value === '(') {
-                const expr = this.parseExpression();
-                this.consume('PUNCTUATION', ';');
-                return { type: 'ExpressionStatement', expression: expr, line: expr.line };
-            }
-            if (next.value === '=' || next.value === '+=') { // Simplified assignment support
-                return this.parseAssignment();
-            }
-            if (next.value === '++' || next.value === '--') {
-                const name = this.consume('IDENTIFIER').value;
-                const operator = this.consume('OPERATOR').value as '++' | '--';
-                this.consume('PUNCTUATION', ';');
-                return {
-                    type: 'UpdateExpression',
-                    operator,
-                    argument: { type: 'Identifier', name, line: this.previous().line },
-                    prefix: false,
-                    line: this.previous().line
-                } as UpdateExpression;
-            }
+        if (this.match('KEYWORD', 'break')) {
+            this.consume('PUNCTUATION', ';');
+            // We'll treat break as a minimal ReturnStatement-like or specific BreakStatement?
+            // Executor needs to handle it. Let's return a simple object.
+            // But valid Types? ASTNode type includes... we might need to cast or add type.
+            return { type: 'BreakStatement', line: this.previous().line } as any;
         }
+        // Check for potential assignment/update/call handled by parseExpression
+        // Fallthrough to generic expression statement
 
         // Fallback expression statement (e.g. i++;)
         const expr = this.parseExpression();
@@ -587,43 +577,42 @@ export class Parser {
         return { type: 'ArrayExpression', elements, line: this.previous().line };
     }
 
-    private parseAssignment(): Assignment {
-        // We need to parse LValue. It could be Identifier or MemberExpression (a.b = 1) or Index (a[0] = 1).
-        // parseExpression() usually parses RValues.
-        // We can parseExpression(), checking that it is a valid LValue target?
-        // Or we parsePrimary and chain MemberAccess.
+    private parseAssignment(): ASTNode {
+        const left = this.parseEquality(); // Was parseExpression, but now we hierarchically go down
 
-        const target = this.parseExpression();
-        // Check if next is = or compound assignment (+=, -=, *=, /=, etc.)
+        // Check if next is = or compound assignment (+=, -=, *=, /=, %=)
         if (this.match('OPERATOR', '=') || this.match('OPERATOR', '+=') || this.match('OPERATOR', '-=') ||
-            this.match('OPERATOR', '*=') || this.match('OPERATOR', '/=')) {
+            this.match('OPERATOR', '*=') || this.match('OPERATOR', '/=') || this.match('OPERATOR', '%=')) {
+
             const operator = this.previous().value;
-            const value = this.parseExpression();
-            this.consume('PUNCTUATION', ';');
+            const value = this.parseAssignment(); // Right-associative
 
-            // Extract name if simple ID
-            let name = '';
-            if (target.type === 'Identifier') name = (target as Identifier).name;
-            else name = 'Expr'; // Fallback
+            // Handle simple assignment
+            if (operator === '=') {
+                let name = '';
+                if (left.type === 'Identifier') name = (left as Identifier).name;
 
-            // For compound assignments like +=, convert to regular assignment
-            // c += a becomes c = c + a
-            let finalValue = value;
-            if (operator !== '=') {
-                const binaryOp = operator.slice(0, -1); // Remove the '=' to get +, -, *, /
-                finalValue = {
-                    type: 'BinaryExpression',
-                    operator: binaryOp,
-                    left: target,
-                    right: value,
-                    line: this.previous().line
-                } as BinaryExpression;
+                return { type: 'Assignment', name, left, value, line: this.previous().line };
             }
 
-            return { type: 'Assignment', name, left: target, value: finalValue, line: this.previous().line };
+            // Handle compound assignment (+=, etc.)
+            // Convert c += a to c = c + a
+            const binaryOp = operator.slice(0, -1);
+            const binaryExpr = {
+                type: 'BinaryExpression',
+                operator: binaryOp,
+                left,
+                right: value,
+                line: this.previous().line
+            } as BinaryExpression;
+
+            let name = '';
+            if (left.type === 'Identifier') name = (left as Identifier).name;
+
+            return { type: 'Assignment', name, left, value: binaryExpr, line: this.previous().line };
         }
 
-        throw new Error(`Expected assignment operator '=' at line ${this.previous().line}`);
+        return left;
     }
 
     private parseReturnStatement(): ReturnStatement {
@@ -656,7 +645,7 @@ export class Parser {
     }
 
     private parseExpression(): ASTNode {
-        return this.parseEquality();
+        return this.parseAssignment();
     }
 
     private parseEquality(): ASTNode {
@@ -702,13 +691,46 @@ export class Parser {
     }
 
     private parseFactor(): ASTNode {
-        let expr = this.parsePrimary();
+        let expr = this.parseUnary();
         while (this.match('OPERATOR', '*') || this.match('OPERATOR', '/') || this.match('OPERATOR', '%')) {
             const operator = this.previous().value;
-            const right = this.parsePrimary();
+            const right = this.parseUnary();
             expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
         }
         return expr;
+    }
+
+    private parseUnary(): ASTNode {
+        if (this.match('OPERATOR', '-') || this.match('OPERATOR', '!')) {
+            const operator = this.previous().value;
+            const argument = this.parseUnary();
+            // Simplify unary minus to binary 0 - x for now if types allow, or implement UnaryExpression
+            // For now, implementing simple UnaryExpression (need to add type support if not exists)
+            // Or cheat: 0 - x for '-'
+            if (operator === '-') {
+                return {
+                    type: 'BinaryExpression',
+                    operator: '-',
+                    left: { type: 'Literal', value: 0, valueType: 'int', line: this.previous().line },
+                    right: argument,
+                    line: this.previous().line
+                } as BinaryExpression;
+            }
+            // Handle !
+            if (operator === '!') {
+                // We don't have UnaryExpression in executor? 
+                // Using x == false for !x? Or just add Unary support
+                // Let's create a Binary expression: x == false
+                return {
+                    type: 'BinaryExpression',
+                    operator: '==',
+                    left: argument,
+                    right: { type: 'Literal', value: false, valueType: 'bool', line: this.previous().line },
+                    line: this.previous().line
+                } as BinaryExpression;
+            }
+        }
+        return this.parsePrimary();
     }
 
     private parsePrimary(): ASTNode {

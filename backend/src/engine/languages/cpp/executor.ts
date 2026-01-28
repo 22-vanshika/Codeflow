@@ -176,43 +176,7 @@ export class Executor implements IExecutor {
             }
             case 'Assignment': {
                 const assign = node as Assignment;
-                const right = yield* this.evaluate(assign.value);
-
-                // Handle left-hand side
-                if (assign.left) {
-                    if (assign.left.type === 'Identifier') {
-                        const name = (assign.left as Identifier).name;
-                        this.currentEnv().assign(name, right);
-                        yield this.createTrace(assign.line || 0, 'assignment', `${name} = ${right}`);
-                    } else if (assign.left.type === 'MemberExpression') {
-                        const mem = assign.left as MemberExpression;
-                        const obj = yield* this.evaluate(mem.object);
-                        let target = obj;
-                        if (typeof obj === 'string' && obj.startsWith('#')) target = this.heap[obj];
-
-                        if (mem.computed) {
-                            const idx = yield* this.evaluate(mem.property);
-                            target[idx] = right;
-                            yield this.createTrace(assign.line || 0, 'assignment', `${(mem.object as Identifier).name}[${idx}] = ${right}`);
-                        } else {
-                            const prop = (mem.property as Identifier).name;
-                            target[prop] = right;
-                            yield this.createTrace(assign.line || 0, 'assignment', `${(mem.object as Identifier).name}.${prop} = ${right}`);
-                        }
-                    } else if (assign.left.type === 'UpdateExpression') {
-                        throw new Error(`Runtime Error: Invalid left-hand side for assignment`);
-                    } else {
-                        throw new Error(`Runtime Error: Invalid left-hand side for assignment: ${assign.left.type}`);
-                    }
-                } else {
-                    // Legacy fallback if left is missing but name exists?
-                    if (assign.name) {
-                        this.currentEnv().assign(assign.name, right);
-                        yield this.createTrace(assign.line || 0, 'assignment', `${assign.name} = ${right}`);
-                    } else {
-                        throw new Error(`Runtime Error: Invalid assignment`);
-                    }
-                }
+                yield* this.evaluate(assign); // Handled in evaluate
                 break;
             }
             case 'ReturnStatement': {
@@ -254,6 +218,15 @@ export class Executor implements IExecutor {
                 }
                 break;
             }
+            case 'BreakStatement': {
+                yield this.createTrace(node.line || 0, 'condition', 'Breaking out of the loop', {
+                    pathTaken: 'true',
+                    what: 'We encountered a break statement.',
+                    why: 'The program explicitly requested to stop the loop.',
+                    next: 'We will exit the loop immediately.'
+                });
+                throw new BreakException();
+            }
             case 'WhileStatement': {
                 const loop = node as WhileStatement;
                 const loopLine = loop.line || 0;
@@ -275,7 +248,22 @@ export class Executor implements IExecutor {
                             why: `The condition '${test}' is TRUE, so the loop continues.`,
                             next: `We'll execute the loop body (iteration ${iteration}).`
                         });
-                        yield* this.visitStatement(loop.body);
+                        try {
+                            yield* this.visitStatement(loop.body);
+                        } catch (e: any) {
+                            if (e instanceof BreakException) {
+                                yield this.createTrace(loopLine, 'loop_end',
+                                    `Loop broken - exiting`, {
+                                    loopIteration: iteration,
+                                    pathTaken: 'true',
+                                    what: `We are exiting the loop due to a break statement.`,
+                                    why: `A break statement was executed inside the loop.`,
+                                    next: `We'll continue with the code after the loop.`
+                                });
+                                break;
+                            }
+                            throw e;
+                        }
                     } else {
                         yield this.createTrace(loopLine, 'loop_end',
                             `While condition: ${test} - Loop ends`, {
@@ -334,7 +322,22 @@ export class Executor implements IExecutor {
                     }
 
                     // Body
-                    yield* this.visitStatement(loop.body);
+                    try {
+                        yield* this.visitStatement(loop.body);
+                    } catch (e: any) {
+                        if (e instanceof BreakException) {
+                            yield this.createTrace(loopLine, 'loop_end',
+                                `Loop broken - exiting`, {
+                                loopIteration: iteration,
+                                pathTaken: 'true',
+                                what: `We are exiting the loop due to a break statement.`,
+                                why: `A break statement was executed inside the loop.`,
+                                next: `We'll continue with the code after the loop.`
+                            });
+                            break;
+                        }
+                        throw e;
+                    }
 
                     // Update
                     if (loop.update) {
@@ -369,6 +372,37 @@ export class Executor implements IExecutor {
 
     private *evaluate(node: ASTNode): Generator<any, any, any> {
         switch (node.type) {
+            case 'Assignment': {
+                const assign = node as Assignment;
+                const right = yield* this.evaluate(assign.value);
+
+                // Handle left-hand side
+                if (assign.left) {
+                    if (assign.left.type === 'Identifier') {
+                        const name = (assign.left as Identifier).name;
+                        this.currentEnv().assign(name, right);
+                        yield this.createTrace(assign.line || 0, 'assignment', `${name} = ${right}`);
+                    } else if (assign.left.type === 'MemberExpression') {
+                        const mem = assign.left as MemberExpression;
+                        const obj = yield* this.evaluate(mem.object);
+                        let target = obj;
+                        if (typeof obj === 'string' && obj.startsWith('#')) target = this.heap[obj];
+
+                        if (mem.computed) {
+                            const idx = yield* this.evaluate(mem.property);
+                            target[idx] = right;
+                            yield this.createTrace(assign.line || 0, 'assignment', `${(mem.object as Identifier).name}[${idx}] = ${right}`);
+                        } else {
+                            const prop = (mem.property as Identifier).name;
+                            target[prop] = right;
+                            yield this.createTrace(assign.line || 0, 'assignment', `${(mem.object as Identifier).name}.${prop} = ${right}`);
+                        }
+                    } else {
+                        throw new Error(`Runtime Error: Invalid left-hand side for assignment: ${assign.left.type}`);
+                    }
+                }
+                return right;
+            }
             case 'Literal': return (node as Literal).value;
             case 'Identifier': return this.currentEnv().get((node as Identifier).name);
             case 'BinaryExpression': {
@@ -669,3 +703,6 @@ export class Executor implements IExecutor {
 class ReturnException {
     constructor(public value: any) { }
 }
+
+class BreakException { }
+

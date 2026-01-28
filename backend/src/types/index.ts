@@ -128,7 +128,13 @@ export type ASTNode =
     | MemberExpression
     | NewExpression
     | ThisExpression
-    | ArrayExpression;
+    | ThisExpression
+    | ArrayExpression
+    | BreakStatement;
+
+export interface BreakStatement extends BaseNode {
+    type: 'BreakStatement';
+}
 
 export interface BaseNode {
     type: string;

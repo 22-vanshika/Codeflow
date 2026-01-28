@@ -7,6 +7,7 @@ const testCases = [
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int a = 5;
     int b = 10;
@@ -14,13 +15,14 @@ int main() {
     cout << sum << endl;
     return 0;
 }
-        `
+`
     },
     {
         name: "2. Linear Loop",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int n = 5;
     for(int i = 1; i <= n; i++) {
@@ -28,13 +30,14 @@ int main() {
     }
     return 0;
 }
-        `
+`
     },
     {
         name: "3. If-Else Branching",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int x = 10;
     if(x > 5) {
@@ -44,13 +47,14 @@ int main() {
     }
     return 0;
 }
-        `
+`
     },
     {
         name: "4. Nested Loops",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int n = 3;
     for(int i = 1; i <= n; i++) {
@@ -61,13 +65,14 @@ int main() {
     }
     return 0;
 }
-        `
+`
     },
     {
         name: "5. Array Sum",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int arr[5] = {1, 2, 3, 4, 5};
     int sum = 0;
@@ -77,13 +82,14 @@ int main() {
     cout << sum << endl;
     return 0;
 }
-        `
+`
     },
     {
-        name: "6. Factorial While Loop",
+        name: "6. Factorial While",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int n = 5;
     int factorial = 1;
@@ -95,13 +101,14 @@ int main() {
     cout << factorial << endl;
     return 0;
 }
-        `
+`
     },
     {
-        name: "7. Find Max in Array",
+        name: "7. Find Max",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int arr[5] = {3, 7, 2, 9, 1};
     int max = arr[0];
@@ -113,32 +120,36 @@ int main() {
     cout << max << endl;
     return 0;
 }
-        `
+`
     },
     {
         name: "8. Recursive Fibonacci",
         code: `
 #include <iostream>
 using namespace std;
+
 int fibonacci(int n) {
     if(n <= 1) return n;
     return fibonacci(n-1) + fibonacci(n-2);
 }
+
 int main() {
     int n = 6;
     cout << fibonacci(n) << endl;
     return 0;
 }
-        `
+`
     },
     {
         name: "9. Bubble Sort",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int arr[5] = {5, 2, 8, 1, 9};
     int n = 5;
+    
     for(int i = 0; i < n-1; i++) {
         for(int j = 0; j < n-i-1; j++) {
             if(arr[j] > arr[j+1]) {
@@ -148,22 +159,25 @@ int main() {
             }
         }
     }
+    
     for(int i = 0; i < n; i++) {
         cout << arr[i] << " ";
     }
     return 0;
 }
-        `
+`
     },
     {
         name: "10. Two Pointers",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int arr[5] = {1, 2, 3, 4, 5};
     int left = 0;
     int right = 4;
+    
     while(left < right) {
         int temp = arr[left];
         arr[left] = arr[right];
@@ -171,24 +185,27 @@ int main() {
         left++;
         right--;
     }
+    
     for(int i = 0; i < 5; i++) {
         cout << arr[i] << " ";
     }
     return 0;
 }
-        `
+`
     },
     {
         name: "11. Binary Search",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int arr[7] = {1, 3, 5, 7, 9, 11, 13};
     int target = 7;
     int left = 0;
     int right = 6;
     int result = -1;
+    
     while(left <= right) {
         int mid = left + (right - left) / 2;
         if(arr[mid] == target) {
@@ -201,19 +218,22 @@ int main() {
             right = mid - 1;
         }
     }
+    
     cout << result << endl;
     return 0;
 }
-        `
+`
     },
     {
-        name: "12. Prime Number Check",
+        name: "12. Prime Check",
         code: `
 #include <iostream>
 using namespace std;
+
 int main() {
     int n = 17;
     int isPrime = 1;
+    
     if(n <= 1) {
         isPrime = 0;
     } else {
@@ -224,6 +244,7 @@ int main() {
             }
         }
     }
+    
     if(isPrime) {
         cout << "Prime" << endl;
     } else {
@@ -231,37 +252,49 @@ int main() {
     }
     return 0;
 }
-        `
+`
     }
 ];
 
+
+import * as fs from 'fs';
+
 async function runTests() {
-    console.log("Starting Test Suite...");
+    const logBuffer: string[] = [];
+    const log = (msg: string) => {
+        console.log(msg);
+        logBuffer.push(msg);
+    };
+
+    log("Starting Test Suite...");
     let passed = 0;
     let failed = 0;
 
     for (const test of testCases) {
-        console.log(`\n-----------------------------------`);
-        console.log(`Testing: ${test.name}`);
+        log(`\nTesting: ${test.name}`);
         try {
             const executor = new Executor();
-            const generator = executor.execute(test.code);
-            let steps = 0;
-            for (const trace of generator) {
-                steps++;
+            const iterator = executor.execute(test.code);
+            let result = iterator.next();
+            while (!result.done) {
+                result = iterator.next();
             }
-            console.log(`✅ Passed! Execution completed in ${steps} steps.`);
+            log("✅ PASSED");
             passed++;
         } catch (error: any) {
-            console.error(`❌ Failed!`);
-            console.error(`Error: ${error.message}`);
-            // console.error(error.stack);
+            log("❌ FAILED");
+            log(error.toString());
+            if (error.stack) log(error.stack);
             failed++;
         }
     }
 
-    console.log(`\n-----------------------------------`);
-    console.log(`Summary: ${passed} Passed, ${failed} Failed`);
+    log(`\n\nMethod Summary:`);
+    log(`Passed: ${passed}`);
+    log(`Failed: ${failed}`);
+
+    fs.writeFileSync('test_results.log', logBuffer.join('\n'));
 }
+
 
 runTests();
