@@ -162,9 +162,38 @@ export class Executor implements IExecutor {
                 let value = undefined;
                 if (decl.init) {
                     value = yield* this.evaluate(decl.init);
+                } else if (decl.arrayDimensions && decl.arrayDimensions.length > 0) {
+                    // Initialize array
+                    const createArray = (dims: number[]): any[] => {
+                        if (dims.length === 0) return 0 as any; // Base case
+                        const size = dims[0];
+                        const arr = new Array(size);
+                        if (dims.length === 1) {
+                            for (let i = 0; i < size; i++) {
+                                const t = decl.varType || '';
+                                if (t.includes('int') || t.includes('float') || t.includes('double') || t.includes('long')) {
+                                    arr[i] = 0;
+                                } else if (t.includes('bool')) {
+                                    arr[i] = false;
+                                } else if (t.includes('string')) {
+                                    arr[i] = "";
+                                } else if (t.includes('char')) {
+                                    arr[i] = '\0';
+                                } else {
+                                    arr[i] = {}; // Default object for structs
+                                }
+                            }
+                        } else {
+                            for (let i = 0; i < size; i++) {
+                                arr[i] = createArray(dims.slice(1));
+                            }
+                        }
+                        return arr;
+                    };
+                    value = createArray(decl.arrayDimensions);
                 }
                 this.currentEnv().define(decl.name, value);
-                yield this.createTrace(decl.line || 0, 'definition', `Declared ${decl.name} = ${value !== undefined ? value : '?'}`);
+                yield this.createTrace(decl.line || 0, 'definition', `Declared ${decl.name} = ${value !== undefined ? JSON.stringify(value) : '?'}`);
                 break;
             }
             case 'MultiVariableDeclaration': {

@@ -163,6 +163,7 @@ export interface VariableDeclaration extends BaseNode {
     type: 'VariableDeclaration';
     name: string;
     varType?: string;
+    arrayDimensions?: number[]; // [3,3] for int arr[3][3]
     init?: ASTNode;
 }
 

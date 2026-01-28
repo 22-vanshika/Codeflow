@@ -22,7 +22,7 @@ export const KEYWORDS = new Set([
     'true', 'false', 'null',
     'class', 'struct', 'public', 'private', 'protected',
     'new', 'delete', 'this',
-    'std', 'vector', 'map', 'set', 'pair', 'stack', 'queue', 'list',
+    'std',
     'using', 'namespace'
 ]);
 
@@ -64,7 +64,7 @@ export class Lexer {
                 continue;
             }
 
-            if (char === '"') {
+            if (char === '"' || char === "'") {
                 tokens.push(this.readString());
                 continue;
             }
@@ -145,9 +145,10 @@ export class Lexer {
     }
 
     private readString(): Token {
+        const quoteType = this.source[this.position]; // " or '
         this.position++; // Skip quote
         let value = '';
-        while (this.position < this.source.length && this.source[this.position] !== '"') {
+        while (this.position < this.source.length && this.source[this.position] !== quoteType) {
             value += this.source[this.position++];
         }
         this.position++; // Skip closing quote
@@ -423,11 +424,46 @@ export class Parser {
             // If starts with identifier, check next.
             if (this.peek().type === 'IDENTIFIER') {
                 // T name;
-                // If next is Identifier (name), and next is ; or = or (, it is likely VarDecl.
-                // But could be "a * b;" (mult). C++ ambiguity!
-                // We mock. Assume Capitalized is Type? No.
-                // Assume if followed by name then ;/=, it is decl.
+                const nextVal = this.peek(1).value;
+                const nextType = this.peek(1).type;
 
+                // Handle template: vector<int> v;
+                if (nextVal === '<') {
+                    // ID < ...
+                    // Assume it's a type.
+                    // It could be comparison: a < b;
+                    // But at statement start, likely decl?
+                    // "a < b;" is valid expression statement.
+                    // "vector<int> v;" is decl.
+                    // Use simple heuristic: if it looks like type<...> Name, it's decl.
+                    // Checking for matching > and then Identifier.
+                    let offset = 2; // after <
+                    let depth = 1;
+                    while (offset < 100 && depth > 0) { // arbitrary limit
+                        const t = this.peek(offset).value;
+                        if (t === '<') depth++;
+                        if (t === '>') depth--;
+                        if (this.check('EOF')) break;
+                        offset++;
+                    }
+                    if (depth === 0) {
+                        // We found closing >, check next
+                        if (this.peek(offset).type === 'IDENTIFIER') return true;
+                    }
+                }
+
+                // T name;
+                if (nextType === 'IDENTIFIER') {
+                    // ID ID -> likely decl.
+                    // But could be "obj prop" (invalid syntax unless macro?)
+                    // "a b;" -> valid if a is type.
+                    return true;
+                }
+
+                // T * name; (Pointer)
+                if (nextVal === '*' || nextVal === '&') {
+                    return true;
+                }
                 // Let's rely on parseStatement order.
                 // If we fail to parse as Statement constructs, check Expr.
                 // But VarDecl IS a statement.
@@ -510,20 +546,30 @@ export class Parser {
             let arraySize: number | undefined;
             let init: ASTNode | undefined;
 
-            // Check for array declaration: int arr[5]
-            if (this.match('PUNCTUATION', '[')) {
+            // Check for array declaration: int arr[5][5]
+            const dimensions: number[] = [];
+            while (this.match('PUNCTUATION', '[')) {
                 // Parse array size
                 if (this.check('NUMBER')) {
-                    arraySize = parseInt(this.consume('NUMBER').value);
+                    dimensions.push(parseInt(this.consume('NUMBER').value));
                 } else {
                     // Could be expression like arr[n], but for simplicity we'll parse as expression
+                    // For visualization, we really want a number to allocate.
+                    // If it's an Identifier, we might not know value yet.
+                    // Let's assume Expression evaluating to number, but we can't eval here.
+                    // We'll store 0 or skip? 
+                    // Better: Executor handles sizing? 
+                    // We'll try to parse expression and if Literal use value.
                     const sizeExpr = this.parseExpression();
                     if (sizeExpr.type === 'Literal') {
-                        arraySize = (sizeExpr as any).value;
+                        dimensions.push((sizeExpr as any).value);
+                    } else {
+                        dimensions.push(0); // Dynamic size
                     }
                 }
                 this.consume('PUNCTUATION', ']');
             }
+            if (dimensions.length > 0) arraySize = dimensions[0]; // Legacy support for now
 
             if (this.match('OPERATOR', '=')) {
                 if (this.check('PUNCTUATION', '{')) {
@@ -542,8 +588,9 @@ export class Parser {
 
             decls.push({
                 type: 'VariableDeclaration',
-                varType: arraySize !== undefined ? `${type}[]` : type,
+                varType: dimensions.length > 0 ? `${type}${dimensions.map(() => '[]').join('')}` : type,
                 name,
+                arrayDimensions: dimensions.length > 0 ? dimensions : undefined,
                 init,
                 line: this.previous().line
             });
