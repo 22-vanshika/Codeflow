@@ -1,0 +1,2 @@
+src/engine/languages/cpp/executor.ts(603,33): error TS2339: Property 'type' does not exist on type 'string | ASTNode'.
+  Property 'type' does not exist on type 'string'.

@@ -175,6 +175,7 @@ export interface MultiVariableDeclaration extends BaseNode {
 export interface Assignment extends BaseNode {
     type: 'Assignment';
     left?: ASTNode; // Can be Identifier or MemberExpression
+    operator?: string; // For +=, -=, etc.
     name?: string; // Legacy fallback
     value: ASTNode;
 }

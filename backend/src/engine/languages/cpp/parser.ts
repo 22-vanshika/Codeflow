@@ -69,6 +69,31 @@ export class Lexer {
                 continue;
             }
 
+            // Comments
+            if (char === '/') {
+                const next = this.source[this.position + 1];
+                if (next === '/') {
+                    // Single line comment
+                    while (this.position < this.source.length && this.source[this.position] !== '\n') {
+                        this.position++;
+                    }
+                    continue;
+                }
+                if (next === '*') {
+                    // Block comment
+                    this.position += 2;
+                    while (this.position < this.source.length) {
+                        if (this.source[this.position] === '*' && this.source[this.position + 1] === '/') {
+                            this.position += 2;
+                            break;
+                        }
+                        if (this.source[this.position] === '\n') this.line++;
+                        this.position++;
+                    }
+                    continue;
+                }
+            }
+
             // Multi-char operators
             if (['=', '!', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^'].includes(char)) {
                 const next = this.source[this.position + 1];
