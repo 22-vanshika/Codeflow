@@ -1,12 +1,9 @@
-import { RotateCw, X, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { useExecutionStore } from '../../../store/executionStore';
 import ExecutionControls from './ExecutionControls';
 
 export default function VisualizerHeader() {
-    const { connect, isConnected, runCode, reset, traces, traceSteps, requestTrace } = useExecutionStore();
-
-    const hasExecution = traces.length > 0 || traceSteps.length > 0;
+    const { requestTrace } = useExecutionStore();
 
     return (
         <header className="h-14 bg-bg-header border-b border-border-subtle flex items-center justify-between px-6 z-20">

@@ -1,9 +1,9 @@
-import { Terminal, X, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Terminal, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useExecutionStore } from '../../store/executionStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OutputPanel() {
-    const { traces, currentStepIndex, isPlaying, traceMode, traceOutput, traceSteps, runOutput } = useExecutionStore();
+    const { traces, currentStepIndex, isPlaying, traceOutput, traceSteps, runOutput } = useExecutionStore();
 
     // Trace/Visualize Output
     const currentTrace = traces[currentStepIndex];

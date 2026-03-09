@@ -1,0 +1,17 @@
+﻿
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+src/components/dialogs/FixPermissionDialog.tsx(14,38): error TS6133: 'fixedCode' is declared but its value is never read.
+src/components/panels/BeginnerExplanationPanel.tsx(6,39): error TS6133: 'analysis' is declared but its value is never read.
+src/features/visualizer/components/AnalysisInfoButton.tsx(7,23): error TS6133: 'traceMode' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(1,10): error TS6133: 'RotateCw' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(1,20): error TS6133: 'X' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(2,1): error TS6133: 'Link' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(7,13): error TS6133: 'connect' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(7,22): error TS6133: 'isConnected' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(7,35): error TS6133: 'runCode' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(7,44): error TS6133: 'reset' is declared but its value is never read.
+src/features/visualizer/components/VisualizerHeader.tsx(9,11): error TS6133: 'hasExecution' is declared but its value is never read.
+src/pages/CuratedSheet.tsx(17,11): error TS6133: 'setCode' is declared but its value is never read.
+

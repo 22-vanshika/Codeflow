@@ -3,7 +3,7 @@ import { useExecutionStore } from '../../store/executionStore';
 import { Sparkles, HelpCircle, ArrowRight, Lightbulb } from 'lucide-react';
 
 export default function BeginnerExplanationPanel() {
-    const { traces, currentStepIndex, analysis } = useExecutionStore();
+    const { traces, currentStepIndex } = useExecutionStore();
 
     // Safety check
     if (!traces || traces.length === 0 || currentStepIndex < 0 || currentStepIndex >= traces.length) {

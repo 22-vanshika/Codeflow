@@ -11,7 +11,7 @@ export default function FixPermissionDialog() {
 
     if (!showFixDialog || !validationResult) return null;
 
-    const { issues, fixExplanations, fixedCode } = validationResult;
+    const { issues, fixExplanations } = validationResult;
     const errors = issues.filter(i => i.severity === 'error');
     const warnings = issues.filter(i => i.severity === 'warning');
 

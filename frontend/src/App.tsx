@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
-import Visualizer from './pages/Visualizer';
+import ProblemWorkspace from './pages/ProblemWorkspace';
+import CuratedSheet from './pages/CuratedSheet';
 
 function App() {
   return (
@@ -9,7 +10,8 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/visualizer" element={<Visualizer />} />
+        <Route path="/workspace" element={<ProblemWorkspace />} />
+        <Route path="/sheet" element={<CuratedSheet />} />
       </Routes>
     </Router>
   );

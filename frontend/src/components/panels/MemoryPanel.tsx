@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+
 
 export default function MemoryPanel() {
     // Currently, the backend C++ executor does not support Pointer/Reference logic or Heap allocation (new/delete).

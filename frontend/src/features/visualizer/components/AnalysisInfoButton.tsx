@@ -4,7 +4,7 @@ import { useExecutionStore } from '../../../store/executionStore';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function AnalysisInfoButton() {
-    const { analysis, traceMode } = useExecutionStore();
+    const { analysis } = useExecutionStore();
     const [isOpen, setIsOpen] = useState(false);
 
     // Button is now always visible
