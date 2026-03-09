@@ -1,9 +1,0 @@
-src/engine/languages/cpp/executor.ts(519,60): error TS2448: Block-scoped variable 'right' used before its declaration.
-src/engine/languages/cpp/executor.ts(520,54): error TS2448: Block-scoped variable 'right' used before its declaration.
-src/engine/languages/cpp/executor.ts(522,35): error TS2448: Block-scoped variable 'right' used before its declaration.
-src/engine/languages/cpp/executor.ts(568,33): error TS2339: Property 'type' does not exist on type 'string | ASTNode'.
-  Property 'type' does not exist on type 'string'.
-src/engine/languages/cpp/executor.ts(570,40): error TS2339: Property 'type' does not exist on type 'string | Program | FunctionDeclaration | Block | VariableDeclaration | MultiVariableDeclaration | ... 15 more ... | BreakStatement'.
-  Property 'type' does not exist on type 'string'.
-src/engine/languages/cpp/executor.ts(613,33): error TS2339: Property 'type' does not exist on type 'string | ASTNode'.
-  Property 'type' does not exist on type 'string'.

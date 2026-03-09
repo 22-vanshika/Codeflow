@@ -1,4 +1,4 @@
-import type { TeacherNote, PatternInfo } from '../../types';
+import type { TeacherNote, PatternInfo } from '../../../../types';
 import './visualizers.css';
 
 interface TeacherNoteCardProps {

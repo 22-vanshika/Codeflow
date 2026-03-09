@@ -1,5 +1,5 @@
 import { Terminal, CheckCircle, AlertTriangle } from 'lucide-react';
-import { useExecutionStore } from '../../store/executionStore';
+import { useExecutionStore } from '../../../../store/executionStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OutputPanel() {

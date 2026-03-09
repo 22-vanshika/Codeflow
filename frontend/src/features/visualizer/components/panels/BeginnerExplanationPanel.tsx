@@ -1,5 +1,5 @@
 
-import { useExecutionStore } from '../../store/executionStore';
+import { useExecutionStore } from '../../../../store/executionStore';
 import { Sparkles, HelpCircle, ArrowRight, Lightbulb } from 'lucide-react';
 
 export default function BeginnerExplanationPanel() {

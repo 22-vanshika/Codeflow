@@ -1,9 +1,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
-import { useExecutionStore } from '../../store/executionStore';
+import { useExecutionStore } from '../../../../store/executionStore';
 import { Network, ZoomIn, ZoomOut, Maximize, Play, Pause, LayoutGrid, GitBranch } from 'lucide-react';
-import type { FlowchartData, ArrayVisual, CallStackVisual } from '../../types';
+import type { FlowchartData, ArrayVisual, CallStackVisual } from '../../../../types';
 import { ArrayVisualizer, TeacherNoteCard, CallStackVisualizer } from '../visualizers';
 
 mermaid.initialize({

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./components/visualizers/visualizers.css";
+@import "./features/visualizer/components/visualizers/visualizers.css";
 
 @theme {
   /* Colors - Dark Cyan Theme */

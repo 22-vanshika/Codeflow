@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Search, Loader2 } from 'lucide-react';
-import { useExecutionStore } from '../../store/executionStore';
+import { useExecutionStore } from '../../../store/executionStore';
 
 interface ImportProblemDialogProps {
     isOpen: boolean;

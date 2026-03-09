@@ -1,9 +1,9 @@
 
 import CodeEditor from './CodeEditor';
-import InputPanel from '../../../components/panels/InputPanel';
+import InputPanel from './panels/InputPanel';
 
-import WhiteboardPanel from '../../../components/panels/WhiteboardPanel';
-import OutputPanel from '../../../components/panels/OutputPanel';
+import WhiteboardPanel from './panels/WhiteboardPanel';
+import OutputPanel from './panels/OutputPanel';
 import FixPermissionDialog from '../../../components/dialogs/FixPermissionDialog';
 import { useExecutionStore } from '../../../store/executionStore';
 import { Edit2, Save, RotateCw, Play } from 'lucide-react';

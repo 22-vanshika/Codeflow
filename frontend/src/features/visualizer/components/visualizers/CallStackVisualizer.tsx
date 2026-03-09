@@ -1,4 +1,4 @@
-import type { CallStackVisual } from '../../types';
+import type { CallStackVisual } from '../../../../types';
 import './visualizers.css';
 
 interface CallStackVisualizerProps {

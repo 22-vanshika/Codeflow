@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ArrayVisual, PointerVisual } from '../../types';
+import type { ArrayVisual, PointerVisual } from '../../../../types';
 import './visualizers.css';
 
 interface ArrayVisualizerProps {
