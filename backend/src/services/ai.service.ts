@@ -60,6 +60,41 @@ export class AiService {
         `;
     }
 
+    private getTracePrompt(code: string, input: string): string {
+        return `
+        Analyze and trace the execution of this C++ code step by step.
+        You are a simulator generating a pedagogical execution trace. Maximum 40 steps.
+        
+        Input provided: "${input}"
+        
+        Determine if the algorithm is dealing with a specific data structure:
+        - "graph": Needs {type: "graph", nodes: [{id, value, label}], edges: [{from, to, directed, label}], activeNodes, visitedNodes}
+        - "tree": Needs {type: "tree", nodes: [{id, value, parentId}], activeNodes, visitedNodes}
+        - "stack"/"queue": Needs {type: "stack"|"queue", target, elements: [], pointers: [{name, index}], activeIndices: []}
+        - "array_1d": Needs {type: "array_1d", target, values: [], pointers: [{name, index, color, action}], highlightIndices: []}
+        
+        Return a JSON object matching this TypeScript interface exactly:
+        {
+            success: boolean;
+            pattern?: { name: string; description: string; color: string; };
+            totalSteps: number;
+            output?: string;
+            steps: {
+                step: number; 
+                line: number; 
+                lineContent: string; 
+                type: "assignment" | "condition" | "loop_start" | "loop_continue" | "loop_end" | "function_call" | "return";
+                variables: Record<string, any>;
+                visuals?: object; // Must match one of the schema types described above based on current state
+                teacherNote: { what: string; why: string; next: string; };
+            }[];
+        }
+
+        Code:
+        ${code}
+        `;
+    }
+
     private getFlowchartPrompt(code: string): string {
         return `
         Create a Mermaid.js flowchart (graph TD) for the logic of this code.
@@ -103,6 +138,21 @@ export class AiService {
         }
     }
 
+    public async generateTrace(code: string, input: string): Promise<any> {
+        if (!this.apiKey) return this.mockTrace(code);
+
+        const prompt = this.getTracePrompt(code, input);
+
+        try {
+            const text = await this.generateCompletion(prompt, true);
+            const data = JSON.parse(text);
+            return data;
+        } catch (error) {
+            console.error("AI Trace Failed:", error);
+            return { success: false, error: "AI Trace generation failed." };
+        }
+    }
+
     // --- MOCK GENERATORS ---
     private mockAnalyze(code: string): any {
         return {
@@ -120,6 +170,13 @@ export class AiService {
         return {
             markdown: `graph TD;\nA([Start]) --> B[Process];\nB --> C([End]);`,
             mapping: {}
+        };
+    }
+
+    private mockTrace(code: string): any {
+        return {
+            success: false,
+            error: "No API Key available to generate trace."
         };
     }
 }

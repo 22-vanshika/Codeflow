@@ -3,6 +3,7 @@ import { ExecutionService } from '../services/execution.service';
 import { CompilerService } from '../services/compiler.service';
 import { CodeValidator } from '../services/validation.service';
 import { TraceService } from '../services/trace.service';
+import { AiService } from '../services/ai.service';
 import { ExecutionRequest, ExecutionResponse, ValidationPayload } from '../types';
 
 export class ExecutionController {
@@ -10,12 +11,14 @@ export class ExecutionController {
     private compilerService: CompilerService;
     private codeValidator: CodeValidator;
     private traceService: TraceService;
+    private aiService: AiService;
 
     constructor() {
         this.executionService = new ExecutionService();
         this.compilerService = new CompilerService();
         this.codeValidator = new CodeValidator();
         this.traceService = new TraceService();
+        this.aiService = new AiService();
     }
 
     public handleMessage(ws: WebSocket, message: string) {
@@ -79,12 +82,12 @@ export class ExecutionController {
     /**
      * Handle trace generation request for Blackboard-style visualization
      */
-    private handleTrace(ws: WebSocket, payload: any) {
+    private async handleTrace(ws: WebSocket, payload: any) {
         try {
             const code = typeof payload === 'string' ? payload : payload.code || '';
             const input = typeof payload === 'object' ? (payload.input || '') : '';
 
-            console.log('Generating execution trace...');
+            console.log('Generating execution trace via AI...');
 
             // First validate the code
             const validation = this.codeValidator.validate(code);
@@ -109,8 +112,14 @@ export class ExecutionController {
                 return;
             }
 
-            // Generate trace with input
-            const traceResult = this.traceService.generateTrace(code, input);
+            // Generate trace with AI first for advanced Data Structures
+            let traceResult = await this.aiService.generateTrace(code, input);
+            
+            // Fallback to static AST analysis if AI fails
+            if (!traceResult || !traceResult.success) {
+                console.log('AI Trace failed, falling back to static AST parser...');
+                traceResult = this.traceService.generateTrace(code, input);
+            }
 
             this.safeSend(ws, {
                 type: 'TRACE_RESULT',

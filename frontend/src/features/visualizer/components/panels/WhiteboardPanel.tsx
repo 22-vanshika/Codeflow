@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { useExecutionStore } from '../../../../store/executionStore';
-import { Network, ZoomIn, ZoomOut, Maximize, Play, Pause, LayoutGrid, GitBranch } from 'lucide-react';
-import type { FlowchartData, ArrayVisual, CallStackVisual } from '../../../../types';
-import { ArrayVisualizer, TeacherNoteCard, CallStackVisualizer } from '../visualizers';
+import { Network, Play, Pause, LayoutGrid, GitBranch, SkipBack, SkipForward, RotateCcw } from 'lucide-react';
+import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual } from '../../../../types';
+import { ArrayVisualizer, TeacherNoteCard, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer } from '../visualizers';
 
 mermaid.initialize({
     startOnLoad: false,
@@ -30,12 +30,15 @@ export default function WhiteboardPanel() {
         currentPattern,
         isPlaying,
         togglePlay,
-        setTraceMode
+        setTraceMode,
+        nextStep,
+        prevStep,
+        reset
     } = useExecutionStore();
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [svgContent, setSvgContent] = useState<string>("");
-    const [scale, setScale] = useState(1);
+    const [scale] = useState(1);
     const [visitedNodes, setVisitedNodes] = useState<Set<string>>(new Set());
 
     // Determine which steps array to use (prioritize new trace steps)
@@ -52,13 +55,42 @@ export default function WhiteboardPanel() {
     // Get current trace info for flowchart visualization (Legacy)
     const currentTrace = traces[currentStepIndex];
     const currentNodeId = currentTrace?.visualization?.nodeId;
-    const loopIteration = currentTrace?.visualization?.loopIteration;
     const pathTaken = currentTrace?.visualization?.pathTaken;
 
     // Reset visited nodes when traces change (new execution)
     useEffect(() => {
         setVisitedNodes(new Set());
     }, [traces.length === 0, traceSteps.length === 0]);
+
+    // Keyboard Shortcuts (SWE180 style)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if typing in an input or textarea (Monaco editor)
+            if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+                return;
+            }
+
+            switch (e.key) {
+                case ' ': // Spacebar
+                    e.preventDefault();
+                    if (hasSteps) togglePlay();
+                    break;
+                case 'ArrowRight':
+                    if (hasSteps) nextStep();
+                    break;
+                case 'ArrowLeft':
+                    if (hasSteps) prevStep();
+                    break;
+                case 'r':
+                case 'R':
+                    if (hasSteps) reset();
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [hasSteps, togglePlay, nextStep, prevStep, reset]);
 
     // Track visited nodes as we progress
     useEffect(() => {
@@ -141,6 +173,13 @@ export default function WhiteboardPanel() {
                 return <ArrayVisualizer visual={visuals as ArrayVisual} />;
             case 'call_stack':
                 return <CallStackVisualizer visual={visuals as CallStackVisual} />;
+            case 'tree':
+                return <TreeVisualizer visual={visuals as TreeVisual} />;
+            case 'graph':
+                return <GraphVisualizer visual={visuals as GraphVisual} />;
+            case 'stack':
+            case 'queue':
+                return <StackQueueVisualizer visual={visuals as StackQueueVisual} />;
             default:
                 return null;
         }
@@ -148,88 +187,105 @@ export default function WhiteboardPanel() {
 
     return (
         <div className="flex-1 flex flex-col bg-bg-main relative text-text-primary overflow-hidden">
-            {/* Header / Config Bar */}
-            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
-                <div className="pointer-events-auto bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-xl p-4 shadow-xl max-w-md">
-                    <h2 className="text-lg font-bold text-accent-cyan flex items-center gap-2">
-                        <Network className="w-5 h-5" />
-                        {traceMode
-                            ? (currentPattern?.name || "Blackboard Mode")
-                            : (analysis?.title || "Algorithm Flow")
-                        }
-                    </h2>
+            {/* Header / Config Bar (SWE180 Style) */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex flex-col pointer-events-none gap-4">
+                <div className="flex justify-between items-start">
+                    {/* Left Side: Title & Info */}
+                    <div className="pointer-events-auto bg-bg-panel/90 backdrop-blur-md border border-border-subtle rounded-xl p-4 shadow-xl min-w-[350px]">
+                        <h2 className="text-xl font-bold text-accent-primary flex items-center gap-2 mb-3">
+                            {traceMode
+                                ? (currentPattern?.name || "Code Visualizer")
+                                : (analysis?.title || "Algorithm Flow")
+                            }
+                        </h2>
 
-                    {/* Pattern info for trace mode */}
-                    {traceMode && currentPattern && (
-                        <div className="mt-2 text-sm text-text-muted">
-                            <p className="text-xs leading-relaxed opacity-80">
-                                {currentPattern.description}
-                            </p>
+                        {/* Language Pills */}
+                        <div className="flex items-center gap-2 mb-4 text-xs">
+                            <span className="text-text-muted">Language:</span>
+                            <div className="flex gap-1.5">
+                                <span className="px-2 py-0.5 rounded bg-bg-main text-text-muted line-through opacity-50">Javascript</span>
+                                <span className="px-2 py-0.5 rounded bg-bg-main text-text-muted line-through opacity-50">Python</span>
+                                <span className="px-2 py-0.5 rounded bg-bg-main text-text-muted line-through opacity-50">Java</span>
+                                <span className="px-2 py-0.5 rounded bg-accent-primary/20 text-accent-primary font-medium border border-accent-primary/20">C++</span>
+                            </div>
                         </div>
-                    )}
 
-                    {/* Analysis info moved to AnalysisInfoButton in header */}
+                        {/* Shortcuts Legend */}
+                        <div className="flex items-center gap-3 text-[10px] text-text-muted uppercase tracking-wider">
+                            <span className="font-semibold text-text-primary/70">Shortcuts:</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.5 rounded border border-border-subtle bg-bg-main text-text-primary font-mono">Space</span> Play/Pause
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.5 rounded border border-border-subtle bg-bg-main text-text-primary font-mono">← / →</span> Step
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="px-1.5 py-0.5 rounded border border-border-subtle bg-bg-main text-text-primary font-mono">R</span> Reset
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Side: Playback & View Controls */}
+                    <div className="pointer-events-auto flex flex-col gap-3 items-end">
+                        {/* Playback Controls (SWE180 style array of buttons) */}
+                        <div className="flex items-center bg-bg-panel/90 backdrop-blur-md border border-border-subtle rounded-lg shadow-xl p-1 gap-1">
+                            <button
+                                onClick={prevStep}
+                                disabled={!hasSteps || currentStepIndex <= 0}
+                                className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                            >
+                                <SkipBack size={18} />
+                            </button>
+                            <button
+                                onClick={togglePlay}
+                                disabled={!hasSteps}
+                                className={`p-2 rounded-md transition-colors disabled:opacity-30 disabled:hover:bg-transparent ${isPlaying ? 'bg-accent-orange/20 text-accent-orange' : 'hover:bg-white/5 text-text-muted hover:text-white'}`}
+                            >
+                                {isPlaying ? <Pause size={18} /> : <Play size={18} fill={hasSteps ? "currentColor" : "none"} />}
+                            </button>
+                            <button
+                                onClick={nextStep}
+                                disabled={!hasSteps || currentStepIndex >= (stepsArray.length - 1)}
+                                className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                            >
+                                <SkipForward size={18} />
+                            </button>
+                            <div className="w-px h-6 bg-border-subtle mx-1" />
+                            <button
+                                onClick={reset}
+                                className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors"
+                            >
+                                <RotateCcw size={18} />
+                            </button>
+                        </div>
+
+                        {/* View Modes */}
+                        <div className="flex bg-bg-panel/90 backdrop-blur-md border border-border-subtle rounded-lg shadow-xl overflow-hidden">
+                            <button
+                                onClick={() => setTraceMode(true)}
+                                className={`p-1.5 px-3 flex items-center gap-2 text-xs font-medium transition-colors ${traceMode ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-text-muted hover:text-white hover:bg-white/5'}`}
+                            >
+                                <LayoutGrid size={14} /> Blackboard
+                            </button>
+                            <button
+                                onClick={() => setTraceMode(false)}
+                                className={`p-1.5 px-3 flex items-center gap-2 text-xs font-medium transition-colors ${!traceMode ? 'bg-accent-purple/20 text-accent-purple' : 'text-text-muted hover:text-white hover:bg-white/5'}`}
+                            >
+                                <GitBranch size={14} /> Flowchart
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Right side controls */}
-                <div className="pointer-events-auto flex flex-col gap-3">
-                    {/* Mode Toggle */}
-                    <div className="flex bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg overflow-hidden shadow-xl">
-                        <button
-                            onClick={() => setTraceMode(true)}
-                            className={`p-2 px-3 flex items-center gap-2 text-xs font-medium transition-colors ${traceMode ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-text-muted hover:text-white hover:bg-white/5'}`}
-                        >
-                            <LayoutGrid className="w-4 h-4" />
-                            Blackboard
-                        </button>
-                        <button
-                            onClick={() => setTraceMode(false)}
-                            className={`p-2 px-3 flex items-center gap-2 text-xs font-medium transition-colors ${!traceMode ? 'bg-accent-purple/20 text-accent-purple' : 'text-text-muted hover:text-white hover:bg-white/5'}`}
-                        >
-                            <GitBranch className="w-4 h-4" />
-                            Flowchart
-                        </button>
-                    </div>
-
-                    {/* Step Counter */}
+                {/* Bottom of header section: Step counter if playing */}
+                <div className="pointer-events-auto flex justify-end">
                     {hasSteps && (
-                        <div className="bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg p-3 shadow-xl text-center w-14 ml-auto">
-                            <div className="text-xs text-text-muted uppercase tracking-wider mb-1">Step</div>
-                            <div className="text-xs font-bold text-accent-cyan">
-                                {currentStepIndex + 1} <span className="text-text-muted text-sm">/ {stepsArray.length}</span>
-                            </div>
-                            {!traceMode && loopIteration && (
-                                <div className="text-xs text-accent-orange mt-1">
-                                    🔄 Loop iteration {loopIteration}
-                                </div>
-                            )}
-                            {!traceMode && pathTaken && (
-                                <div className={`text-xs mt-1 ${pathTaken === 'true' ? 'text-accent-green' : 'text-accent-red'}`}>
-                                    {pathTaken === 'true' ? '✓ Yes branch' : '✗ No branch'}
-                                </div>
-                            )}
+                        <div className="bg-bg-panel/90 backdrop-blur-md border border-border-subtle rounded-lg px-3 py-1.5 shadow-xl flex items-center gap-3">
+                            <span className="text-xs font-bold text-accent-cyan">
+                                Step {currentStepIndex + 1} <span className="text-text-muted font-normal">of {stepsArray.length}</span>
+                            </span>
                         </div>
                     )}
-
-                    {/* Zoom controls */}
-                    <div className="flex flex-col gap-2 bg-bg-panel/80 backdrop-blur-md border border-border-subtle rounded-lg p-2 shadow-xl w-14 ml-auto">
-                        <button onClick={() => setScale(s => Math.min(s + 0.1, 2))} className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors">
-                            <ZoomIn className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => setScale(s => Math.max(s - 0.1, 0.5))} className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors">
-                            <ZoomOut className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => setScale(1)} className="p-2 hover:bg-white/5 rounded-md text-text-muted hover:text-white transition-colors">
-                            <Maximize className="w-5 h-5" />
-                        </button>
-                        <div className="border-t border-border-subtle my-1" />
-                        <button
-                            onClick={togglePlay}
-                            className={`p-2 rounded-md transition-colors ${isPlaying ? 'bg-accent-orange/20 text-accent-orange' : 'hover:bg-white/5 text-text-muted hover:text-white'}`}
-                        >
-                            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                        </button>
-                    </div>
                 </div>
             </div>
 

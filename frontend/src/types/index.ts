@@ -99,7 +99,47 @@ export interface CallStackVisual {
     activeFrame: number;
 }
 
-export type VisualInstruction = ArrayVisual | CallStackVisual;
+export interface TreeVisual {
+    type: 'tree';
+    nodes: { value: any; id: string; parentId?: string }[];
+    currentNodeId?: string;
+    activeNodes?: string[];
+    visitedNodes?: string[];
+}
+
+export interface GraphNode {
+    id: string;
+    value: any;
+    label?: string;
+}
+
+export interface GraphEdge {
+    from: string;
+    to: string;
+    label?: string;
+    directed?: boolean;
+    weight?: number;
+}
+
+export interface GraphVisual {
+    type: 'graph';
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+    activeNodes?: string[];
+    visitedNodes?: string[];
+    activeEdges?: {from: string, to: string}[];
+    adjacencyList?: Record<string, string[]>;
+}
+
+export interface StackQueueVisual {
+    type: 'stack' | 'queue';
+    target: string;
+    elements: any[];
+    pointers?: {name: string, index: number, color?: string}[];
+    activeIndices?: number[];
+}
+
+export type VisualInstruction = ArrayVisual | TreeVisual | GraphVisual | StackQueueVisual | CallStackVisual;
 
 export interface PatternInfo {
     name: string;           // e.g., "Two-Pointer", "Sliding Window"

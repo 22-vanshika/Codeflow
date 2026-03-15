@@ -2,31 +2,31 @@
 @import "./features/visualizer/components/visualizers/visualizers.css";
 
 @theme {
-  /* Colors - Dark Cyan Theme */
-  --color-bg-main: #1a1b26;
-  --color-bg-header: #16161e;
-  --color-bg-panel: #24283b;
+  /* Colors - SWE180 Deep Navy Theme */
+  --color-bg-main: #0B1120;
+  --color-bg-header: #0f172a;
+  --color-bg-panel: #1e293b;
 
-  --color-accent-primary: #7aa2f7;
-  --color-accent-cyan: #2ac3de;
-  --color-accent-purple: #bb9af7;
-  --color-accent-green: #9ece6a;
-  --color-accent-orange: #ff9e64;
-  --color-accent-red: #f7768e;
+  --color-accent-primary: #3b82f6; /* Electric Blue */
+  --color-accent-cyan: #06b6d4;
+  --color-accent-purple: #8b5cf6;
+  --color-accent-green: #10b981; /* Default Success Green */
+  --color-accent-orange: #f59e0b; /* Default Pointer Yellow/Orange */
+  --color-accent-red: #ef4444; /* Graph active red */
 
-  --color-text-primary: #cfc9c2;
-  --color-text-muted: #565f89;
-  --color-text-glow: #73daca;
+  --color-text-primary: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-text-glow: #e2e8f0;
 
-  --color-border-subtle: #414868;
-  --color-border-active: #7aa2f7;
+  --color-border-subtle: #334155;
+  --color-border-active: #3b82f6;
 
   /* Fonts */
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Shadows */
-  --shadow-glow: 0 0 10px rgba(42, 195, 222, 0.3);
+  --shadow-glow: 0 0 12px rgba(59, 130, 246, 0.4);
 }
 
 @layer base {
