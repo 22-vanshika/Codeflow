@@ -4,7 +4,7 @@ import mermaid from 'mermaid';
 import { useExecutionStore } from '../../../../store/executionStore';
 import { Network } from 'lucide-react';
 import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual } from '../../../../types';
-import { ArrayVisualizer, TeacherNoteCard, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer } from '../visualizers';
+import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer } from '../visualizers';
 
 mermaid.initialize({
     startOnLoad: false,
@@ -164,15 +164,7 @@ export default function WhiteboardPanel() {
                             </div>
                         )}
 
-                        {/* Teacher Note Card */}
-                        {currentTraceStep && (
-                            <TeacherNoteCard
-                                note={currentTraceStep.teacherNote}
-                                pattern={currentTraceStep.pattern || currentPattern || undefined}
-                                step={currentStepIndex + 1}
-                                totalSteps={traceSteps.length}
-                            />
-                        )}
+
                     </div>
                 ) : (
                     /* Flowchart Mode */
@@ -182,18 +174,10 @@ export default function WhiteboardPanel() {
                             className="transition-transform duration-300 flowchart-container"
                             dangerouslySetInnerHTML={{ __html: svgContent }}
                         />
-                        {currentTraceStep && (
-                            <TeacherNoteCard
-                                note={currentTraceStep.teacherNote}
-                                pattern={currentTraceStep.pattern || currentPattern || undefined}
-                                step={currentStepIndex + 1}
-                                totalSteps={traceSteps.length || traces.length}
-                            />
-                        )}
                         {!currentTraceStep && currentTrace && (
-                            <div className="bg-[#0d1117]/90 border border-[#1e2d3d] rounded-xl p-5 max-w-lg space-y-3">
-                                <p className="font-bold text-white">Step {currentStepIndex + 1} of {traces.length}</p>
-                                <p className="text-sm text-[#768390]">{currentTrace?.explanation || `Line ${currentTrace?.line}`}</p>
+                            <div className="bg-[#0d1117]/90 border border-[#1e2d3d] rounded-lg px-4 py-2 font-mono text-xs text-[#768390]">
+                                <span>Line {currentTrace?.line}:</span>
+                                <span className="ml-2 text-cyan-400">{currentTrace?.explanation || ''}</span>
                             </div>
                         )}
                     </div>
