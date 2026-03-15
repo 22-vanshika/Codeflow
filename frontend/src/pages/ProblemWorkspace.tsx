@@ -54,7 +54,7 @@ export default function ProblemWorkspace() {
             }
         } else {
              if (window.confirm("Are you sure you want to reset the editor? All unsaved changes will be lost.")) {
-                 setCode(`int main() {\n  \n  return 0;\n}`);
+                 setCode(`#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n  return 0;\n}`);
                  reset(); // clear output
              }
         }

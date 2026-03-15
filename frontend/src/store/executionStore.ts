@@ -81,11 +81,11 @@ export const useExecutionStore = create<ExecutionState>((set, get) => {
     let intervalId: any = null;
 
     return {
-        code: `int main() {
-  int a = 5;
-  int b = 10;
-  int c = a + b;
-  cout << c;
+        code: `#include <iostream>
+using namespace std;
+
+int main() {
+  cout << "Hello, World!" << endl;
   return 0;
 }`,
         traces: [],
