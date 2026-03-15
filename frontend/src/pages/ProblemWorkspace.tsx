@@ -1,17 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useExecutionStore } from '../store/executionStore';
-import VisualizerHeader from '../features/visualizer/components/VisualizerHeader';
-import ScrubbingBar from '../features/visualizer/components/ScrubbingBar';
 import CodeEditor from '../features/visualizer/components/CodeEditor';
 import InputPanel from '../features/visualizer/components/panels/InputPanel';
 import WhiteboardPanel from '../features/visualizer/components/panels/WhiteboardPanel';
 import OutputPanel from '../features/visualizer/components/panels/OutputPanel';
 import FixPermissionDialog from '../components/dialogs/FixPermissionDialog';
 import ImportProblemDialog from '../features/workspace/components/ImportProblemDialog';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Save, RotateCw, Play, PanelLeftClose, PanelLeftOpen, Download, Eraser } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, RotateCcw, ChevronLeft, ChevronRight, Sparkles, Terminal, ChevronDown, ChevronUp, Code2 } from 'lucide-react';
 
 interface ProblemData {
     id: string;
@@ -25,233 +21,457 @@ interface ProblemData {
 }
 
 export default function ProblemWorkspace() {
-    const { connect, isConnected, reset, executeRealCode, error, setCode, code } = useExecutionStore();
+    const {
+        connect, isConnected, reset, executeRealCode, error, setCode, code,
+        requestTrace, nextStep, prevStep, togglePlay, isPlaying,
+        currentStepIndex, traceSteps, traces, traceMode, setTraceMode,
+        currentPattern, speed, setSpeed
+    } = useExecutionStore();
+
     const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+    const [testCasesOpen, setTestCasesOpen] = useState(true);
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [problemDetails, setProblemDetails] = useState<ProblemData | null>(null);
+    const [logicPanelOpen, setLogicPanelOpen] = useState(true);
     const location = useLocation();
     const hasAutoImported = useRef(false);
     const [showSaveToast, setShowSaveToast] = useState(false);
 
+    const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
+    const hasSteps = stepsArray.length > 0;
+    const currentTraceStep = traceSteps[currentStepIndex];
+
     const handleSaveCode = () => {
-        if (problemDetails?.id || location.state?.autoImportUrl) {
-            const id = problemDetails?.id || 'custom';
-            localStorage.setItem(`codeflow_saved_code_${id}`, code);
-            setShowSaveToast(true);
-            setTimeout(() => setShowSaveToast(false), 2000);
-        } else {
-            localStorage.setItem(`codeflow_saved_code_scratchpad`, code);
-            setShowSaveToast(true);
-            setTimeout(() => setShowSaveToast(false), 2000);
-        }
+        const id = problemDetails?.id || 'scratchpad';
+        localStorage.setItem(`codeflow_saved_code_${id}`, code);
+        setShowSaveToast(true);
+        setTimeout(() => setShowSaveToast(false), 2000);
     };
 
     const handleResetCode = () => {
         if (problemDetails?.starterCode?.cpp) {
-            if (window.confirm("Are you sure you want to reset to the starter code? All unsaved changes will be lost.")) {
+            if (window.confirm("Reset to starter code? Unsaved changes will be lost.")) {
                 setCode(problemDetails.starterCode.cpp);
-                reset(); // clear output
+                reset();
             }
         } else {
-             if (window.confirm("Are you sure you want to reset the editor? All unsaved changes will be lost.")) {
-                 setCode(`#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n  return 0;\n}`);
-                 reset(); // clear output
-             }
+            if (window.confirm("Reset editor? Unsaved changes will be lost.")) {
+                setCode(`#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n  return 0;\n}`);
+                reset();
+            }
         }
     };
 
-    useEffect(() => {
-        connect();
-    }, [connect]);
+    useEffect(() => { connect(); }, [connect]);
 
     useEffect(() => {
-        const autoImportUrl = location.state?.autoImportUrl;
-        if (autoImportUrl && !hasAutoImported.current) {
+        const url = location.state?.autoImportUrl;
+        if (url && !hasAutoImported.current) {
             hasAutoImported.current = true;
-            // Trigger import silently
-            const fetchProblem = async () => {
-                try {
-                    const response = await fetch('http://localhost:3000/api/problems/import', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: autoImportUrl })
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        // Check if we have saved code for this
-                        const savedCode = localStorage.getItem(`codeflow_saved_code_${result.data.id || 'custom'}`);
-                        if (savedCode) {
-                            setCode(savedCode);
-                        } else {
-                            setCode(result.data.starterCode.cpp);
-                        }
-                        setProblemDetails(result.data);
-                    }
-                } catch (err) {
-                    console.error('Auto-import failed:', err);
+            fetch('http://localhost:3000/api/problems/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    const saved = localStorage.getItem(`codeflow_saved_code_${result.data.id}`);
+                    setCode(saved || result.data.starterCode.cpp);
+                    setProblemDetails(result.data);
                 }
-            };
-            fetchProblem();
+            })
+            .catch(console.error);
         }
     }, [location, setCode]);
 
+    // Speed display (convert ms to multiplier)
+    const speedMultiplier = (1050 - speed) / 500;
+    const speedLabel = speedMultiplier.toFixed(1) + 'x';
+
     return (
-        <div className="h-screen w-screen flex flex-col bg-bg-main overflow-hidden font-sans relative pt-14">
-            {/* Error Toast */}
-            {(!isConnected || error) && (
-                <div className="absolute top-16 right-6 z-50 bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-lg shadow-lg backdrop-blur-md flex items-center space-x-3">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                    <div>
-                        <p className="font-bold text-xs uppercase">
-                            {!isConnected ? "Connection Error" : "Execution Error"}
-                        </p>
-                        <p className="text-xs">{error || "Backend Disconnected"}</p>
+        <div className="h-screen w-screen flex flex-col bg-[#0B1120] overflow-hidden font-sans text-[#c9d1d9]">
+
+            {/* ── TOP STATUS BAR ─────────────────────────────────────────── */}
+            <header className="flex-none h-12 bg-[#0d1117] border-b border-[#1e2d3d] flex items-center justify-between px-5 z-30 shrink-0">
+                {/* Left: Logo + File */}
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#1e2d3d] flex items-center justify-center">
+                            <Code2 size={14} className="text-[#58a6ff]" />
+                        </div>
+                        <span className="font-bold text-sm text-white tracking-tight">CodeFlow</span>
                     </div>
-                    {!isConnected && (
-                        <button onClick={connect} className="ml-4 text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors">
-                            Retry
-                        </button>
+                    <div className="h-4 w-px bg-[#1e2d3d]" />
+                    <div className="flex items-center gap-2 text-xs text-[#768390]">
+                        <span className="text-[#58a6ff] font-mono">
+                            {problemDetails ? `${problemDetails.id}.cpp` : 'main.cpp'}
+                        </span>
+                        {problemDetails && (
+                            <>
+                                <span>·</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                    problemDetails.difficulty === 'Easy' ? 'bg-green-900/40 text-green-400' :
+                                    problemDetails.difficulty === 'Medium' ? 'bg-amber-900/40 text-amber-400' :
+                                    'bg-red-900/40 text-red-400'
+                                }`}>{problemDetails.difficulty}</span>
+                                <span className="text-[#c9d1d9] font-medium">{problemDetails.title}</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Center: Meta Pills */}
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-[11px]">
+                    <span className="px-2.5 py-1 rounded-full bg-[#1a2332] border border-[#1e2d3d] text-[#768390]">
+                        Language: <span className="text-[#58a6ff] font-semibold">C++</span>
+                    </span>
+                    <span className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
+                        traceMode
+                            ? 'bg-cyan-900/20 border-cyan-800/40 text-cyan-400'
+                            : 'bg-purple-900/20 border-purple-800/40 text-purple-400'
+                    }`}>
+                        Trace: {traceMode ? 'ON' : 'FLOWCHART'}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-full bg-[#1a2332] border border-[#1e2d3d] text-[#768390]">
+                        User: <span className="text-[#c9d1d9] font-semibold">Anshika</span>
+                    </span>
+                    {isConnected && (
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-900/20 border border-green-800/40 text-green-400 text-[11px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                            Live
+                        </span>
                     )}
                 </div>
-            )}
 
-            {showSaveToast && (
-                <div className="absolute top-16 right-1/2 translate-x-1/2 z-50 bg-green-500/10 border border-green-500 text-green-400 px-4 py-2 rounded-lg shadow-lg backdrop-blur-md flex items-center space-x-2 animate-slide-down">
-                    <span className="font-bold text-xs">Code Saved Successfully!</span>
+                {/* Right: Actions */}
+                <div className="flex items-center gap-2">
+                    {error && (
+                        <span className="text-[10px] text-red-400 max-w-[200px] truncate">{error}</span>
+                    )}
+                    {showSaveToast && (
+                        <span className="text-[10px] text-green-400 font-semibold animate-pulse">Saved!</span>
+                    )}
+                    <button
+                        onClick={() => setIsImportOpen(true)}
+                        className="px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] hover:border-[#58a6ff]/50 text-[#768390] hover:text-[#58a6ff] rounded-md transition-all"
+                    >
+                        Import LeetCode
+                    </button>
+                    <button
+                        onClick={handleSaveCode}
+                        className="px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] text-[#768390] hover:text-cyan-400 rounded-md transition-all"
+                    >
+                        Save
+                    </button>
+                    <button
+                        onClick={handleResetCode}
+                        className="px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] text-[#768390] hover:text-red-400 rounded-md transition-all"
+                    >
+                        Reset
+                    </button>
                 </div>
-            )}
+            </header>
 
-            <VisualizerHeader />
-            
-            {/* Action Bar Header Layer (beneath visualizer header but above workspace) */}
-            <div className="h-10 bg-bg-panel border-b border-border-subtle flex items-center px-4 justify-between z-30">
-                 <div className="flex items-center gap-4">
-                     {problemDetails && (
-                         <span className="text-sm font-semibold text-text-primary px-2 py-1 bg-bg-main rounded-md border border-border-subtle">
-                             {problemDetails.title}
-                             <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                                 problemDetails.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
-                                 problemDetails.difficulty === 'Medium' ? 'bg-orange-500/20 text-orange-400' :
-                                 'bg-red-500/20 text-red-400'
-                             }`}>
-                                 {problemDetails.difficulty}
-                             </span>
-                         </span>
-                     )}
-                 </div>
-                 <div>
-                     <button
-                         onClick={() => setIsImportOpen(true)}
-                         className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-white/5 hover:bg-white/10 text-text-primary rounded-md transition-colors border border-border-subtle"
-                     >
-                         <Download size={14} className="text-accent-purple" />
-                         Import LeetCode
-                     </button>
-                 </div>
-            </div>
+            {/* ── MAIN CONTENT SPLIT ──────────────────────────────────────── */}
+            <div className="flex flex-1 overflow-hidden min-h-0">
 
-            {/* Main Split Layout */}
-            <div className="flex-1 flex overflow-hidden relative bg-bg-main">
-                
-                {/* PANEL 1: Problem Description (Left View - Toggleable) */}
-                <div 
-                    className={`transition-all duration-300 ease-in-out flex flex-col border-r border-border-subtle bg-bg-panel z-20 shrink-0 ${leftPanelOpen ? 'w-[350px]' : 'w-0 overflow-hidden'}`}
-                >
-                    <div className="h-10 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-main/50 sticky top-0">
-                        <span className="text-xs font-bold text-text-primary uppercase tracking-wider">
-                            Problem Description
-                        </span>
-                        <button onClick={() => setLeftPanelOpen(false)} className="text-text-muted hover:text-text-primary">
-                            <PanelLeftClose size={16} />
-                        </button>
+                {/* ── LEFT PANEL: Code Editor + Test Cases ─────────────────── */}
+                <div className={`flex flex-col shrink-0 border-r border-[#1e2d3d] bg-[#0d1117] transition-all duration-300 ${
+                    leftPanelOpen ? 'w-[380px]' : 'w-0 overflow-hidden'
+                }`}>
+
+                    {/* Code Editor Section */}
+                    <div className="flex flex-col flex-1 min-h-0 border-b border-[#1e2d3d]">
+                        {/* Editor Header */}
+                        <div className="flex items-center justify-between px-4 py-2 bg-[#0d1117] border-b border-[#1e2d3d] shrink-0">
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-[#768390] uppercase tracking-widest">
+                                <Code2 size={12} />
+                                Code Editor
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={executeRealCode}
+                                    className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold bg-[#196127] hover:bg-[#1d7a30] text-green-300 rounded transition-colors"
+                                    title="Run Code"
+                                >
+                                    <Play size={10} fill="currentColor" />
+                                    RUN
+                                </button>
+                                <button
+                                    onClick={requestTrace}
+                                    className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] rounded border border-[#58a6ff]/30 transition-colors"
+                                    title="Generate Visualization Trace"
+                                >
+                                    <Sparkles size={10} />
+                                    TRACE
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Monaco Editor fills remaining */}
+                        <div className="flex-1 relative min-h-0">
+                            <CodeEditor />
+                        </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 prose prose-invert prose-sm max-w-none prose-pre:bg-bg-main prose-pre:border prose-pre:border-border-subtle prose-a:text-accent-primary">
-                        {problemDetails ? (
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {problemDetails.description}
-                            </ReactMarkdown>
-                        ) : (
-                            <div className="animate-pulse">
-                                <div className="h-6 bg-border-subtle rounded w-3/4 mb-4"></div>
-                                <div className="h-4 bg-bg-main rounded w-full mb-2"></div>
-                                <div className="h-4 bg-bg-main rounded w-5/6 mb-2"></div>
-                                <div className="h-4 bg-bg-main rounded w-full mb-6"></div>
-                                <div className="h-32 bg-bg-main rounded w-full mb-4 opacity-50"></div>
-                                <p className="text-text-muted text-sm text-center mt-10">Select a problem or click "Import LeetCode" to begin.</p>
+
+                    {/* Test Cases + Output Section */}
+                    <div className={`flex flex-col shrink-0 transition-all duration-300 ${testCasesOpen ? 'h-[300px]' : 'h-9'}`}>
+                        <div
+                            className="flex items-center justify-between px-4 cursor-pointer h-9 border-b border-[#1e2d3d] bg-[#0d1117] shrink-0 hover:bg-[#111827] transition-colors select-none"
+                            onClick={() => setTestCasesOpen(v => !v)}
+                        >
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-[#768390] uppercase tracking-widest">
+                                <Terminal size={12} />
+                                Test Cases & Output
+                            </div>
+                            {testCasesOpen ? <ChevronDown size={14} className="text-[#768390]"/> : <ChevronUp size={14} className="text-[#768390]"/>}
+                        </div>
+                        {testCasesOpen && (
+                            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                                {/* Input area — fixed height */}
+                                <div className="h-[100px] shrink-0 border-b border-[#1e2d3d]">
+                                    <InputPanel />
+                                </div>
+                                {/* Output area — takes remaining space, scrollable */}
+                                <div className="flex-1 min-h-0 overflow-hidden">
+                                    <OutputPanel />
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* PANEL 2: Code Editor (Middle View) */}
-                <div className="w-[400px] flex flex-col border-r border-border-subtle bg-bg-panel z-10 shrink-0 relative">
-                    {/* Toggle Button when Left Panel is Closed */}
-                    {!leftPanelOpen && (
-                        <button 
-                            onClick={() => setLeftPanelOpen(true)} 
-                            className="absolute -left-3 top-2 bg-border-subtle text-text-primary p-1 rounded-r-md z-50 hover:bg-accent-primary hover:text-bg-main shadow-md transition-colors"
+                {/* ── COLLAPSE TOGGLE ─────────────────────────────────────── */}
+                <button
+                    onClick={() => setLeftPanelOpen(v => !v)}
+                    className="flex-none self-stretch w-5 bg-[#0d1117] border-r border-[#1e2d3d] hover:bg-[#1a2332] flex items-center justify-center text-[#768390] hover:text-[#58a6ff] transition-all group z-10"
+                    title={leftPanelOpen ? 'Collapse Editor' : 'Expand Editor'}
+                >
+                    {leftPanelOpen
+                        ? <ChevronLeft size={12} className="group-hover:scale-110 transition-transform" />
+                        : <ChevronRight size={12} className="group-hover:scale-110 transition-transform" />
+                    }
+                </button>
+
+                {/* ── RIGHT PANEL: Main Blackboard Canvas + Logic Panel ─────── */}
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#0B1120]">
+
+                    {/* Canvas Header */}
+                    <div className="flex items-center justify-between px-5 py-2 border-b border-[#1e2d3d] bg-[#0d1117] shrink-0">
+                        <div className="flex items-center gap-3 text-xs">
+                            <span className="font-bold text-[#768390] uppercase tracking-widest text-[11px]">Main Blackboard</span>
+                            {hasSteps && currentTraceStep && (
+                                <>
+                                    <span className="text-[#768390]">·</span>
+                                    <span className="text-cyan-400 font-mono text-[11px]">
+                                        Step {currentStepIndex + 1} / {stepsArray.length}
+                                    </span>
+                                    {currentPattern && (
+                                        <>
+                                            <span className="text-[#768390]">·</span>
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                                                style={{ color: currentPattern.color, borderColor: currentPattern.color + '44', backgroundColor: currentPattern.color + '15' }}>
+                                                {currentPattern.name}
+                                            </span>
+                                        </>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                        {/* View Mode Toggle */}
+                        <div className="flex items-center gap-1 bg-[#1a2332] rounded-lg p-0.5 border border-[#1e2d3d]">
+                            <button
+                                onClick={() => setTraceMode(true)}
+                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${
+                                    traceMode ? 'bg-cyan-900/40 text-cyan-400 shadow' : 'text-[#768390] hover:text-white'
+                                }`}
+                            >Blackboard</button>
+                            <button
+                                onClick={() => setTraceMode(false)}
+                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${
+                                    !traceMode ? 'bg-purple-900/40 text-purple-400 shadow' : 'text-[#768390] hover:text-white'
+                                }`}
+                            >Flowchart</button>
+                        </div>
+                    </div>
+
+                    {/* Infinite Canvas */}
+                    <div className="flex-1 min-h-0 overflow-hidden relative">
+                        <WhiteboardPanel />
+                    </div>
+
+                    {/* ── LOGIC PANEL (toggle) ───────────────────────────────── */}
+                    <div className={`border-t border-[#1e2d3d] shrink-0 flex flex-col transition-all duration-300 ${logicPanelOpen ? 'h-[160px]' : 'h-9'}`}>
+                        <div
+                            className="flex items-center justify-between px-4 cursor-pointer h-9 bg-[#0d1117] shrink-0 hover:bg-[#111827] transition-colors select-none"
+                            onClick={() => setLogicPanelOpen(v => !v)}
                         >
-                            <PanelLeftOpen size={16} />
-                        </button>
-                    )}
-                    
-                    <div className="flex-[2] flex flex-col min-h-0">
-                        <div className="h-10 border-b border-border-subtle flex items-center justify-between pl-8 pr-4 bg-bg-main/50">
-                            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">
-                                Code Editor
-                            </span>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={executeRealCode}
-                                    className="p-1.5 bg-accent-green/10 text-accent-green hover:bg-accent-green/20 rounded-md transition-all flex items-center gap-1 px-3"
-                                    title="Run Code (Real Execution)"
-                                >
-                                    <Play size={14} fill="currentColor" />
-                                    <span className="text-xs font-bold">RUN</span>
-                                </button>
-                                <div className="w-px h-4 bg-border-subtle mx-1" />
-                                <button onClick={reset} className="p-1.5 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20 rounded-md transition-all" title="Clear Output & Traces">
-                                    <Eraser size={14} />
-                                </button>
-                                <button onClick={handleSaveCode} className="p-1.5 bg-accent-cyan/10 text-accent-cyan hover:bg-accent-cyan/20 rounded-md transition-all" title="Save Code Locally">
-                                    <Save size={14} />
-                                </button>
-                                <button onClick={handleResetCode} className="p-1.5 bg-accent-red/10 text-accent-red hover:bg-accent-red/20 rounded-md transition-all" title="Reset to Starter Code">
-                                    <RotateCw size={14} />
-                                </button>
+                            <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                                <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest">Written Logic Panel</span>
+                                <span className="ml-2 text-[10px] px-1.5 py-0.5 bg-cyan-900/20 text-cyan-400 rounded border border-cyan-800/30 font-semibold">
+                                    {logicPanelOpen ? 'ON' : 'OFF'}
+                                </span>
                             </div>
+                            {logicPanelOpen
+                                ? <ChevronDown size={14} className="text-[#768390]"/>
+                                : <ChevronUp size={14} className="text-[#768390]"/>
+                            }
                         </div>
-                        <div className="flex-1 relative">
-                            <CodeEditor />
-                        </div>
-                    </div>
 
-                    {/* Input Panel */}
-                    <div className="h-[200px] flex flex-col border-t border-border-subtle min-h-0">
-                        <div className="h-9 border-b border-border-subtle flex items-center px-4 bg-bg-main/50">
-                            <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Test Cases</span>
-                        </div>
-                        <div className="flex-1 relative">
-                            <InputPanel />
-                        </div>
+                        {logicPanelOpen && (
+                            <div className="flex-1 overflow-y-auto px-5 py-3 bg-[#0d1117] font-mono text-sm space-y-2">
+                                {currentTraceStep ? (
+                                    <>
+                                        <div className="flex gap-3 text-[#768390]">
+                                            <span className="text-cyan-400 font-bold shrink-0">&gt; ACTION:</span>
+                                            <span className="text-[#c9d1d9]">{currentTraceStep.teacherNote.what}</span>
+                                        </div>
+                                        <div className="flex gap-3 text-[#768390]">
+                                            <span className="text-amber-400 font-bold shrink-0">&gt; LOGIC:</span>
+                                            <span className="text-[#c9d1d9]">{currentTraceStep.teacherNote.why}</span>
+                                        </div>
+                                        <div className="flex gap-3 text-[#768390]">
+                                            <span className="text-green-400 font-bold shrink-0">&gt; NEXT:</span>
+                                            <span className="text-[#c9d1d9]">{currentTraceStep.teacherNote.next}</span>
+                                        </div>
+                                        {Object.keys(currentTraceStep.variables).length > 0 && (
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {Object.entries(currentTraceStep.variables).map(([k, v]) => (
+                                                    <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a2332] border border-[#1e2d3d] text-[11px]">
+                                                        <span className="text-[#58a6ff]">{k}</span>
+                                                        <span className="text-[#768390]">=</span>
+                                                        <span className="text-amber-300">{Array.isArray(v) ? `[${v.join(', ')}]` : String(v)}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-[#768390] italic text-xs">
+                                        Run a trace to see step-by-step logic explanations here...
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {/* PANEL 3: Visualizer & Output (Right View) */}
-                <div className="flex-1 flex flex-col relative min-w-0 bg-bg-main">
-                    <WhiteboardPanel />
-                    <OutputPanel />
-                </div>
-
-                <FixPermissionDialog />
-                <ImportProblemDialog 
-                    isOpen={isImportOpen} 
-                    onClose={() => setIsImportOpen(false)} 
-                    onImportSuccess={(data) => setProblemDetails(data)}
-                />
             </div>
 
-            <ScrubbingBar />
+            {/* ── BOTTOM PLAYBACK BAR ──────────────────────────────────────── */}
+            <footer className="flex-none h-14 bg-[#0d1117] border-t border-[#1e2d3d] flex items-center px-6 gap-6 z-30 shrink-0">
+
+                {/* Step Controls */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={prevStep}
+                        disabled={!hasSteps || currentStepIndex <= 0}
+                        title="Step Back (←)"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a2332] border border-[#1e2d3d] text-[#768390] hover:text-white hover:border-[#58a6ff]/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs font-semibold"
+                    >
+                        <SkipBack size={14} /> STEP BACK
+                    </button>
+
+                    <button
+                        onClick={togglePlay}
+                        disabled={!hasSteps}
+                        title="Play / Pause (Space)"
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed border ${
+                            isPlaying
+                                ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20'
+                                : 'bg-[#58a6ff]/10 border-[#58a6ff]/40 text-[#58a6ff] hover:bg-[#58a6ff]/20'
+                        }`}
+                    >
+                        {isPlaying ? <><Pause size={14} fill="currentColor" /> PAUSE</> : <><Play size={14} fill="currentColor" /> PLAY</>}
+                    </button>
+
+                    <button
+                        onClick={nextStep}
+                        disabled={!hasSteps || currentStepIndex >= stepsArray.length - 1}
+                        title="Step Forward (→)"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a2332] border border-[#1e2d3d] text-[#768390] hover:text-white hover:border-[#58a6ff]/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs font-semibold"
+                    >
+                        STEP FORWARD <SkipForward size={14} />
+                    </button>
+
+                    <div className="w-px h-5 bg-[#1e2d3d] mx-1" />
+
+                    <button
+                        onClick={reset}
+                        title="Reset (R)"
+                        className="p-2 rounded-lg bg-[#1a2332] border border-[#1e2d3d] text-[#768390] hover:text-red-400 hover:border-red-500/40 transition-all"
+                    >
+                        <RotateCcw size={14} />
+                    </button>
+                </div>
+
+                {/* Scrubbing Bar */}
+                <div className="flex-1 flex items-center gap-3 min-w-0">
+                    {hasSteps && (
+                        <>
+                            <span className="text-[10px] text-[#768390] font-mono whitespace-nowrap">
+                                {currentStepIndex + 1} / {stepsArray.length}
+                            </span>
+                            <div className="flex-1 relative h-1.5 rounded-full bg-[#1a2332] cursor-pointer group">
+                                <div
+                                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-100"
+                                    style={{ width: `${stepsArray.length > 1 ? (currentStepIndex / (stepsArray.length - 1)) * 100 : 0}%` }}
+                                />
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={stepsArray.length - 1}
+                                    value={currentStepIndex}
+                                    onChange={e => useExecutionStore.getState().setStep(Number(e.target.value))}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                {/* Thumb */}
+                                <div
+                                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-cyan-400 shadow-lg transition-all duration-100 pointer-events-none"
+                                    style={{ left: `${stepsArray.length > 1 ? (currentStepIndex / (stepsArray.length - 1)) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}
+                                />
+                            </div>
+                        </>
+                    )}
+                    {!hasSteps && (
+                        <div className="flex-1 h-1 rounded-full bg-[#1a2332] opacity-50" />
+                    )}
+                </div>
+
+                {/* Speed Control */}
+                <div className="flex items-center gap-3 shrink-0 border-l border-[#1e2d3d] pl-6">
+                    <span className="text-[11px] text-[#768390] font-bold">SPEED:</span>
+                    <span className="text-[11px] font-mono text-[#58a6ff] w-8">1.0x</span>
+                    <div className="relative w-28">
+                        <input
+                            type="range"
+                            min={50}
+                            max={1000}
+                            step={50}
+                            value={1050 - speed}
+                            onChange={e => setSpeed(1050 - Number(e.target.value))}
+                            className="w-full h-1 appearance-none bg-[#1a2332] rounded-full cursor-pointer
+                                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 
+                                       [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full 
+                                       [&::-webkit-slider-thumb]:bg-[#58a6ff] [&::-webkit-slider-thumb]:cursor-pointer
+                                       [&::-webkit-slider-thumb]:shadow-lg"
+                        />
+                    </div>
+                    <span className="text-[11px] font-mono text-[#768390] w-8">2.0x</span>
+                    <div className="ml-1 px-2 py-1 bg-[#1a2332] border border-[#1e2d3d] rounded text-[11px] font-mono font-bold text-cyan-400">
+                        {speedLabel}
+                    </div>
+                </div>
+            </footer>
+
+            {/* Dialogs */}
+            <FixPermissionDialog />
+            <ImportProblemDialog
+                isOpen={isImportOpen}
+                onClose={() => setIsImportOpen(false)}
+                onImportSuccess={(data) => setProblemDetails(data)}
+            />
         </div>
     );
 }

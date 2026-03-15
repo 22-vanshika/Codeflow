@@ -1,90 +1,108 @@
-import { Terminal, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Terminal, CheckCircle, AlertTriangle, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useExecutionStore } from '../../../../store/executionStore';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OutputPanel() {
-    const { traces, currentStepIndex, isPlaying, traceOutput, traceSteps, runOutput } = useExecutionStore();
+    const { traces, currentStepIndex, isPlaying, traceOutput, traceSteps, runOutput, reset } = useExecutionStore();
+    const [collapsed, setCollapsed] = useState(false);
 
     // Trace/Visualize Output
     const currentTrace = traces[currentStepIndex];
     const hasTraceData = traceSteps && traceSteps.length > 0;
     const vizOutput = hasTraceData ? (traceOutput || "") : (currentTrace?.output || "");
 
-    // Real Run Output (prioritized if exists)
     const showRunOutput = !!runOutput;
 
-    // If output is generated via Run Code button
-    if (showRunOutput && runOutput) {
-        return (
-            <AnimatePresence>
-                <motion.div
-                    initial={{ y: "100%" }}
-                    animate={{ y: 0 }}
-                    exit={{ y: "100%" }}
-                    className="absolute bottom-0 left-0 right-0 bg-bg-panel border-t border-border-subtle shadow-2xl z-50 flex flex-col max-h-[300px]"
-                >
-                    <div className="h-10 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-main">
-                        <div className="flex items-center gap-2">
-                            <Terminal className="w-4 h-4 text-accent-purple" />
-                            <span className="font-bold text-text-primary text-xs uppercase tracking-wider">Compiler Output</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs">
-                            {runOutput.code === 0 ? (
-                                <span className="text-accent-green flex items-center gap-1"><CheckCircle size={12} /> Success</span>
-                            ) : (
-                                runOutput.stderr ? (
-                                    <span className="text-accent-red flex items-center gap-1"><AlertTriangle size={12} /> Error (Exit Code: {runOutput.code})</span>
-                                ) : (
-                                    <span className="text-accent-orange flex items-center gap-1" title="Program calculation result used as exit code?"><AlertTriangle size={12} /> Fin (Code: {runOutput.code})</span>
-                                )
-                            )}
-                        </div>
-                    </div>
-                    <div className="p-4 font-mono text-sm overflow-auto whitespace-pre-wrap h-full">
-                        {runOutput.stdout && <div className="text-text-primary">{runOutput.stdout}</div>}
-                        {runOutput.stderr && <div className="text-accent-red mt-2">{runOutput.stderr}</div>}
-                        {runOutput.output && !runOutput.stdout && !runOutput.stderr && <div className="text-text-muted">{runOutput.output}</div>}
-                    </div>
-                </motion.div>
-            </AnimatePresence>
-        );
-    }
-
-    // Visualize Output Logic (Existing)
     const isFinished = hasTraceData
         ? (currentStepIndex === traceSteps.length - 1)
         : (currentStepIndex === traces.length - 1 && traces.length > 0 && !isPlaying);
 
     const displayOutput = vizOutput;
+    const hasAnything = showRunOutput || displayOutput || isFinished;
 
-    if (!displayOutput && !isFinished) return null;
+    if (!hasAnything) return null;
+
+    const isCompiler = showRunOutput && runOutput;
+    const isSuccess = isCompiler ? runOutput!.code === 0 : isFinished;
 
     return (
-        <AnimatePresence>
-            {(isFinished || displayOutput) && (
-                <motion.div
-                    initial={{ y: "100%" }}
-                    animate={{ y: 0 }}
-                    exit={{ y: "100%" }}
-                    transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                    className="absolute bottom-0 left-0 right-0 bg-bg-panel border-t border-border-subtle shadow-2xl z-50 flex flex-col max-h-[300px]"
-                >
-                    <div className="h-10 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-main">
-                        <div className="flex items-center gap-2">
-                            <Terminal className="w-4 h-4 text-accent-green" />
-                            <span className="font-bold text-text-primary text-xs uppercase tracking-wider">Execution Output</span>
+        <div className={`flex flex-col border-t border-[#1e2d3d] bg-[#0d1117] transition-all duration-300 ${collapsed ? 'h-9' : 'h-[160px]'} shrink-0`}>
+            {/* Header */}
+            <div
+                className="flex items-center justify-between px-3 h-9 cursor-pointer hover:bg-[#111827] transition-colors select-none shrink-0"
+                onClick={() => setCollapsed(v => !v)}
+            >
+                <div className="flex items-center gap-2">
+                    <Terminal size={13} className={isCompiler ? "text-purple-400" : "text-green-400"} />
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#768390]">
+                        {isCompiler ? "Compiler Output" : "Execution Output"}
+                    </span>
+                    {/* Status badge */}
+                    {isCompiler ? (
+                        isSuccess ? (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-900/30 border border-green-800/40 text-green-400 text-[10px] font-semibold">
+                                <CheckCircle size={9} /> OK
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-900/30 border border-red-800/40 text-red-400 text-[10px] font-semibold">
+                                <AlertTriangle size={9} /> ERR
+                            </span>
+                        )
+                    ) : isFinished && (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-900/30 border border-cyan-800/40 text-cyan-400 text-[10px] font-semibold">
+                            <CheckCircle size={9} /> Done
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={e => { e.stopPropagation(); reset(); }}
+                        className="p-0.5 hover:text-red-400 text-[#768390] transition-colors"
+                        title="Clear output"
+                    >
+                        <X size={12} />
+                    </button>
+                    {collapsed
+                        ? <ChevronUp size={13} className="text-[#768390]" />
+                        : <ChevronDown size={13} className="text-[#768390]" />
+                    }
+                </div>
+            </div>
+
+            {/* Scrollable Content */}
+            {!collapsed && (
+                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1e2d3d] scrollbar-track-transparent font-mono text-sm p-3 min-h-0">
+                    {isCompiler && runOutput ? (
+                        <div className="space-y-2">
+                            {runOutput.stdout && (
+                                <pre className="text-[#c9d1d9] whitespace-pre-wrap break-words text-xs leading-relaxed">{runOutput.stdout}</pre>
+                            )}
+                            {runOutput.stderr && (
+                                <pre className="text-red-400 whitespace-pre-wrap break-words text-xs leading-relaxed">{runOutput.stderr}</pre>
+                            )}
+                            {runOutput.output && !runOutput.stdout && !runOutput.stderr && (
+                                <pre className="text-[#768390] whitespace-pre-wrap break-words text-xs">{runOutput.output}</pre>
+                            )}
+                            {!runOutput.stdout && !runOutput.stderr && !runOutput.output && (
+                                <span className="italic text-[#768390] text-xs">No output produced.</span>
+                            )}
                         </div>
-                    </div>
-                    <div className="p-4 font-mono text-sm text-text-muted overflow-auto whitespace-pre-wrap">
-                        {displayOutput ? displayOutput : <span className="italic opacity-50">No output generated.</span>}
-                        {isFinished && (
-                            <div className="mt-4 pt-4 border-t border-border-subtle/50 text-accent-cyan text-xs">
-                                Program finished successfully.
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
+                    ) : (
+                        <div className="space-y-2">
+                            {displayOutput ? (
+                                <pre className="text-[#c9d1d9] whitespace-pre-wrap break-words text-xs leading-relaxed">{displayOutput}</pre>
+                            ) : (
+                                <span className="italic text-[#768390] text-xs">No output generated.</span>
+                            )}
+                            {isFinished && (
+                                <div className="pt-2 mt-2 border-t border-[#1e2d3d] text-cyan-400 text-[10px] font-semibold">
+                                    ✓ Program finished successfully.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
-        </AnimatePresence>
+        </div>
     );
 }

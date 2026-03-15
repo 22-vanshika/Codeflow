@@ -54,7 +54,7 @@ export default function TreeVisualizer({ visual, className = '' }: TreeVisualize
         const depthProcessed = new Map<number, number>();
 
         // Count nodes per depth
-        for (const [_, depth] of nodeDepth.entries()) {
+        for (const depth of nodeDepth.values()) {
             depthCount.set(depth, (depthCount.get(depth) || 0) + 1);
         }
 
