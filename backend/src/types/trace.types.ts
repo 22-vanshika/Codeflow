@@ -69,7 +69,14 @@ export interface CallStackVisual {
     activeFrame: number;
 }
 
-export type VisualInstruction = ArrayVisual | LinkedListVisual | TreeVisual | GraphVisual | StackQueueVisual | CallStackVisual;
+export interface HashMapVisual {
+    type: 'hash_map';
+    target: string;
+    entries: { key: any; value: any }[];
+    activeKeys?: any[];
+}
+
+export type VisualInstruction = ArrayVisual | LinkedListVisual | TreeVisual | GraphVisual | StackQueueVisual | CallStackVisual | HashMapVisual;
 
 export interface PatternInfo {
     name: string;           // e.g., "Two-Pointer", "Sliding Window"

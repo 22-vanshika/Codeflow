@@ -31,7 +31,7 @@ export class AiService {
                 messages: [{ role: 'user', content: prompt }],
                 model: this.MODEL,
                 temperature: 0.1,
-                max_tokens: 4096,
+                max_tokens: 8192,
                 response_format: jsonMode ? { type: 'json_object' } : undefined
             });
 
@@ -62,16 +62,25 @@ export class AiService {
 
     private getTracePrompt(code: string, input: string): string {
         return `
-        Analyze and trace the execution of this C++ code step by step.
-        You are a simulator generating a pedagogical execution trace. Maximum 40 steps.
+        You are a strict C++ execution simulator generating a step-by-step pedagogical trace for a code visualizer (like SWE180 or PythonTutor). 
+        You MUST simulate the code LINE-BY-LINE. Do NOT skip any loop iterations. Do NOT summarize steps. Every single time a line of code executes, you must generate a new step.
         
-        Input provided: "${input}"
+        CRITICAL RULES:
+        1. STRICTLY LINE-BY-LINE: If a loop runs 5 times, you must generate steps for the loop condition and loop body 5 times.
+        2. NO SKIPPING: Do not summarize "The loop finishes". Trace every exact iteration and comparison.
+        3. VARIABLE TRACKING: Update the 'variables' dictionary at every step with the current precise state of local variables.
+        4. POINTER VISUALS: If visualizing arrays/graphs, the 'pointers' array MUST continuously update its 'index' or 'nodeId' position to match the current variable state (e.g. if 'i' increments, the pointer for 'i' must have the new index).
+        5. HIGHLIGHTING: The 'line' number must accurately reflect the exact line currently executing.
+        6. CONDITIONALS: Log conditions being checked before entering if/else blocks.
         
-        Determine if the algorithm is dealing with a specific data structure:
-        - "graph": Needs {type: "graph", nodes: [{id, value, label}], edges: [{from, to, directed, label}], activeNodes, visitedNodes}
-        - "tree": Needs {type: "tree", nodes: [{id, value, parentId}], activeNodes, visitedNodes}
-        - "stack"/"queue": Needs {type: "stack"|"queue", target, elements: [], pointers: [{name, index}], activeIndices: []}
-        - "array_1d": Needs {type: "array_1d", target, values: [], pointers: [{name, index, color, action}], highlightIndices: []}
+        Input provided to the program (if any cin/scanf/arguments): "${input}"
+        
+        Determine if the algorithm is dealing with a specific data structure and provide a matching "visuals" object. Supported types:
+        - "graph": {type: "graph", nodes: [{id, value, label}], edges: [{from, to, directed, weight}], activeNodes: [], visitedNodes: []}
+        - "tree": {type: "tree", nodes: [{id, value, parentId}], activeNodes: [], visitedNodes: []}
+        - "stack" | "queue": {type: "stack"|"queue", target: string, elements: any[], pointers: [{name, index, color}], activeIndices: []}
+        - "array_1d": {type: "array_1d", target: string, values: any[], pointers: [{name, index, color, action}], highlightIndices: []}
+        - "hash_map": {type: "hash_map", target: string, entries: [{key, value}], activeKeys: []}
         
         Return a JSON object matching this TypeScript interface exactly:
         {
@@ -83,14 +92,14 @@ export class AiService {
                 step: number; 
                 line: number; 
                 lineContent: string; 
-                type: "assignment" | "condition" | "loop_start" | "loop_continue" | "loop_end" | "function_call" | "return";
+                type: "assignment" | "condition" | "loop_start" | "loop_continue" | "loop_end" | "function_call" | "return" | "comparison";
                 variables: Record<string, any>;
                 visuals?: object; // Must match one of the schema types described above based on current state
                 teacherNote: { what: string; why: string; next: string; };
             }[];
         }
 
-        Code:
+        Code to trace:
         ${code}
         `;
     }

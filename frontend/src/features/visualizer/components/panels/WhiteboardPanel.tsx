@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { useExecutionStore } from '../../../../store/executionStore';
 import { Network } from 'lucide-react';
-import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual } from '../../../../types';
-import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer } from '../visualizers';
+import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual, HashMapVisual } from '../../../../types';
+import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer } from '../visualizers';
 
 mermaid.initialize({
     startOnLoad: false,
@@ -117,6 +117,7 @@ export default function WhiteboardPanel() {
             case 'graph':      return <GraphVisualizer visual={v as GraphVisual} />;
             case 'stack':
             case 'queue':      return <StackQueueVisualizer visual={v as StackQueueVisual} />;
+            case 'hash_map':   return <HashMapVisualizer visual={v as HashMapVisual} />;
             default:           return null;
         }
     };
