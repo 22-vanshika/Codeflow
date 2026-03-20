@@ -1,4 +1,4 @@
-import { useExecutionStore } from '../../store/executionStore';
+import { useExecutionStore } from '../../../../store/executionStore';
 
 export default function InputPanel() {
     const { input, setInput } = useExecutionStore();

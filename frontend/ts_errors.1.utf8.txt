@@ -1,0 +1,18 @@
+﻿src/features/visualizer/components/panels/BeginnerExplanationPanel.tsx(2,35): error TS2307: Cannot find module '../../store/executionStore' or its corresponding type declarations.
+src/features/visualizer/components/panels/CallStackPanel.tsx(2,33): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/features/visualizer/components/panels/InputPanel.tsx(1,35): error TS2307: Cannot find module '../../store/executionStore' or its corresponding type declarations.
+src/features/visualizer/components/panels/OutputPanel.tsx(2,35): error TS2307: Cannot find module '../../store/executionStore' or its corresponding type declarations.
+src/features/visualizer/components/panels/VariablesPanel.tsx(2,33): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/features/visualizer/components/panels/WhiteboardPanel.tsx(4,35): error TS2307: Cannot find module '../../store/executionStore' or its corresponding type declarations.
+src/features/visualizer/components/panels/WhiteboardPanel.tsx(6,66): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/features/visualizer/components/visualizers/ArrayVisualizer.tsx(2,49): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/features/visualizer/components/visualizers/ArrayVisualizer.tsx(39,32): error TS7006: Parameter 'pointer' implicitly has an 'any' type.
+src/features/visualizer/components/visualizers/ArrayVisualizer.tsx(39,41): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/features/visualizer/components/visualizers/ArrayVisualizer.tsx(56,30): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/features/visualizer/components/visualizers/ArrayVisualizer.tsx(56,37): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/features/visualizer/components/visualizers/CallStackVisualizer.tsx(1,38): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/features/visualizer/components/visualizers/CallStackVisualizer.tsx(21,30): error TS7006: Parameter 'frame' implicitly has an 'any' type.
+src/features/visualizer/components/visualizers/CallStackVisualizer.tsx(21,37): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/features/visualizer/components/visualizers/TeacherNoteCard.tsx(1,47): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/features/workspace/components/ImportProblemDialog.tsx(3,35): error TS2307: Cannot find module '../../store/executionStore' or its corresponding type declarations.
+

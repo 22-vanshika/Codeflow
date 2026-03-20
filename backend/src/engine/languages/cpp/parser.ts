@@ -22,7 +22,7 @@ export const KEYWORDS = new Set([
     'true', 'false', 'null',
     'class', 'struct', 'public', 'private', 'protected',
     'new', 'delete', 'this',
-    'std', 'vector', 'map', 'set', 'pair', 'stack', 'queue', 'list',
+    'std',
     'using', 'namespace'
 ]);
 
@@ -64,13 +64,38 @@ export class Lexer {
                 continue;
             }
 
-            if (char === '"') {
+            if (char === '"' || char === "'") {
                 tokens.push(this.readString());
                 continue;
             }
 
+            // Comments
+            if (char === '/') {
+                const next = this.source[this.position + 1];
+                if (next === '/') {
+                    // Single line comment
+                    while (this.position < this.source.length && this.source[this.position] !== '\n') {
+                        this.position++;
+                    }
+                    continue;
+                }
+                if (next === '*') {
+                    // Block comment
+                    this.position += 2;
+                    while (this.position < this.source.length) {
+                        if (this.source[this.position] === '*' && this.source[this.position + 1] === '/') {
+                            this.position += 2;
+                            break;
+                        }
+                        if (this.source[this.position] === '\n') this.line++;
+                        this.position++;
+                    }
+                    continue;
+                }
+            }
+
             // Multi-char operators
-            if (['=', '!', '<', '>', '+', '-', '&', '|'].includes(char)) {
+            if (['=', '!', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^'].includes(char)) {
                 const next = this.source[this.position + 1];
                 if (next === '=') {
                     tokens.push({ type: 'OPERATOR', value: char + '=', line: this.line });
@@ -99,6 +124,21 @@ export class Lexer {
                 }
                 if ((char === '+' && next === '+') || (char === '-' && next === '-')) {
                     tokens.push({ type: 'OPERATOR', value: char + next, line: this.line });
+                    this.position += 2;
+                    continue;
+                }
+                if (next === '=' && ['+', '-', '*', '/', '%', '&', '|', '^'].includes(char)) {
+                    tokens.push({ type: 'OPERATOR', value: char + '=', line: this.line });
+                    this.position += 2;
+                    continue;
+                }
+                if (char === '&' && next === '&') {
+                    tokens.push({ type: 'OPERATOR', value: '&&', line: this.line });
+                    this.position += 2;
+                    continue;
+                }
+                if (char === '|' && next === '|') {
+                    tokens.push({ type: 'OPERATOR', value: '||', line: this.line });
                     this.position += 2;
                     continue;
                 }
@@ -140,9 +180,10 @@ export class Lexer {
     }
 
     private readString(): Token {
+        const quoteType = this.source[this.position]; // " or '
         this.position++; // Skip quote
         let value = '';
-        while (this.position < this.source.length && this.source[this.position] !== '"') {
+        while (this.position < this.source.length && this.source[this.position] !== quoteType) {
             value += this.source[this.position++];
         }
         this.position++; // Skip closing quote
@@ -234,6 +275,11 @@ export class Parser {
                 }
             }
 
+            // Skip pointers/refs
+            while (this.peek(offset).value === '*' || this.peek(offset).value === '&') {
+                offset++;
+            }
+
             // Now we should be at Name
             if (this.peek(offset).type === 'IDENTIFIER') {
                 offset++;
@@ -311,9 +357,57 @@ export class Parser {
                 type += ', ';
                 type += this.parseTypeString();
             }
-            this.consume('OPERATOR', '>');
-            type += '>';
+
+            // Handle > or >>
+            if (this.check('OPERATOR', '>')) {
+                this.consume('OPERATOR', '>');
+                type += '>';
+            } else if (this.check('OPERATOR', '>>')) {
+                // Split >> into > and >. 
+                // We consume one > here, and leave one > for the outer loop/caller?
+                // Actually, if we are in nested calls, the inner one needs one >, the outer needs one >.
+                // We can mutate the token?
+                // Or just:
+                // type += '>';
+                // Change current token from >> to > and NOT advance position?
+                // Yes, hacky but works.
+                this.tokens[this.current].value = '>'; // Change >> to >
+                // Don't advance, effectively "consuming" the first > of >> by transforming it to > for the *next* consumer.
+                // Wait, if I change it to >, then I *should* consume this one, and the *next* consumer sees... wait.
+                // If I have >>, I want to consume one >, leave one >.
+                // So I append > to type.
+                type += '>';
+                // Now I need to ensure the NEXT consumer sees a >.
+                // Currently token is >>.
+                // If I change it to >, and don't advance...
+                // The NEXT consumer calls check('>'). It sees >. It consumes it.
+                // So correct flow: 
+                // Inner parseTypeString sees >>. It wants >.
+                // It takes "half".
+                // We change token to >. We return.
+                // Outer parseTypeString wants >. It sees >. It consumes it.
+
+                // ISSUE: We need to consume the "first half" now?
+                // No, `parseTypeString` returns the type string.
+                // We just need to ensure `type` gets `>`.
+                // And the token stream allows the outer loop to see `>`.
+                // So: Change >> to >. Do NOT advance.
+                // But wait, if I don't advance, I processed nothing?
+                // No, I processed the "closing of this template".
+                // But I didn't verify I found a >?
+                // I checked >>.
+                // So: I found "closing".
+                // I change >> to > for the *next* guy.
+            } else {
+                throw new Error(`Expected '>' or '>>' at line ${this.peek()!.line}`);
+            }
         }
+
+        // Handle Pointers/Refs (* or &)
+        while (this.check('OPERATOR', '*') || this.check('OPERATOR', '&')) {
+            type += this.advance().value;
+        }
+
         return type;
     }
 
@@ -324,7 +418,7 @@ export class Parser {
         const params: { name: string; type: string }[] = [];
         if (!this.check('PUNCTUATION', ')')) {
             do {
-                const pType = this.consume('KEYWORD').value;
+                const pType = this.parseTypeString(); // Use parseTypeString instead of consume KEYWORD
                 const pName = this.consume('IDENTIFIER').value;
                 params.push({ name: pName, type: pType });
             } while (this.match('PUNCTUATION', ','));
@@ -357,6 +451,9 @@ export class Parser {
             const type = this.parseTypeString();
             return this.parseVariableDeclarationList(type);
         }
+        if (this.check('PUNCTUATION', '{')) {
+            return this.parseBlock();
+        }
 
         if (this.match('KEYWORD', 'return')) {
             return this.parseReturnStatement();
@@ -367,38 +464,22 @@ export class Parser {
         if (this.match('KEYWORD', 'while')) {
             return this.parseWhileStatement();
         }
-        if (this.match('KEYWORD', 'while')) {
-            return this.parseWhileStatement();
-        }
         if (this.match('KEYWORD', 'for')) {
             return this.parseForStatement();
         }
-        if (this.check('IDENTIFIER')) {
-            // Assignment or Function Call or Update?
-            const next = this.peek(1);
-            if (next.value === '(') {
-                const expr = this.parseExpression();
-                this.consume('PUNCTUATION', ';');
-                return { type: 'ExpressionStatement', expression: expr, line: expr.line };
-            }
-            if (next.value === '=' || next.value === '+=') { // Simplified assignment support
-                return this.parseAssignment();
-            }
-            if (next.value === '++' || next.value === '--') {
-                const name = this.consume('IDENTIFIER').value;
-                const operator = this.consume('OPERATOR').value as '++' | '--';
-                this.consume('PUNCTUATION', ';');
-                return {
-                    type: 'UpdateExpression',
-                    operator,
-                    argument: { type: 'Identifier', name, line: this.previous().line },
-                    prefix: false,
-                    line: this.previous().line
-                } as UpdateExpression;
-            }
+        if (this.check('KEYWORD', 'struct') || this.check('KEYWORD', 'class')) {
+            return this.parseClassDeclaration();
+        }
+        if (this.match('KEYWORD', 'break')) {
+            this.consume('PUNCTUATION', ';');
+            // We'll treat break as a minimal specific BreakStatement
+            return { type: 'BreakStatement', line: this.previous().line } as any; // Cast as ASTNode
         }
 
-        // Fallback expression statement (e.g. i++;)
+        return this.parseExpressionStatement();
+    }
+
+    private parseExpressionStatement(): ExpressionStatement {
         const expr = this.parseExpression();
         this.consume('PUNCTUATION', ';');
         return { type: 'ExpressionStatement', expression: expr, line: expr.line };
@@ -421,7 +502,7 @@ export class Parser {
             // Since we don't have transaction/rollback easily, implement peephole.
 
             // Simple heuristic: If starts with keyword (int/bool/etc) -> VarDecl.
-            if (KEYWORDS.has(this.peek().value) && !['return', 'if', 'while', 'for', 'break'].includes(this.peek().value)) {
+            if (KEYWORDS.has(this.peek().value) && !['return', 'if', 'while', 'for', 'break', 'struct', 'class', 'using', 'namespace'].includes(this.peek().value)) {
                 // Excluding control keywords. 
                 // Includes 'vector', 'map' if in KEYWORDS.
                 return true;
@@ -430,11 +511,46 @@ export class Parser {
             // If starts with identifier, check next.
             if (this.peek().type === 'IDENTIFIER') {
                 // T name;
-                // If next is Identifier (name), and next is ; or = or (, it is likely VarDecl.
-                // But could be "a * b;" (mult). C++ ambiguity!
-                // We mock. Assume Capitalized is Type? No.
-                // Assume if followed by name then ;/=, it is decl.
+                const nextVal = this.peek(1).value;
+                const nextType = this.peek(1).type;
 
+                // Handle template: vector<int> v;
+                if (nextVal === '<') {
+                    // ID < ...
+                    // Assume it's a type.
+                    // It could be comparison: a < b;
+                    // But at statement start, likely decl?
+                    // "a < b;" is valid expression statement.
+                    // "vector<int> v;" is decl.
+                    // Use simple heuristic: if it looks like type<...> Name, it's decl.
+                    // Checking for matching > and then Identifier.
+                    let offset = 2; // after <
+                    let depth = 1;
+                    while (offset < 100 && depth > 0) { // arbitrary limit
+                        const t = this.peek(offset).value;
+                        if (t === '<') depth++;
+                        if (t === '>') depth--;
+                        if (this.check('EOF')) break;
+                        offset++;
+                    }
+                    if (depth === 0) {
+                        // We found closing >, check next
+                        if (this.peek(offset).type === 'IDENTIFIER') return true;
+                    }
+                }
+
+                // T name;
+                if (nextType === 'IDENTIFIER') {
+                    // ID ID -> likely decl.
+                    // But could be "obj prop" (invalid syntax unless macro?)
+                    // "a b;" -> valid if a is type.
+                    return true;
+                }
+
+                // T * name; (Pointer)
+                if (nextVal === '*' || nextVal === '&') {
+                    return true;
+                }
                 // Let's rely on parseStatement order.
                 // If we fail to parse as Statement constructs, check Expr.
                 // But VarDecl IS a statement.
@@ -509,11 +625,39 @@ export class Parser {
 
     private parseVariableDeclarationList(type: string): ASTNode {
         // Parse: name [= init], name2 [= init2];
+        // Also supports: name[size] = {...}
         const decls: VariableDeclaration[] = [];
 
         do {
             const name = this.consume('IDENTIFIER').value;
+            let arraySize: number | undefined;
             let init: ASTNode | undefined;
+
+            // Check for array declaration: int arr[5][5]
+            const dimensions: number[] = [];
+            while (this.match('PUNCTUATION', '[')) {
+                // Parse array size
+                if (this.check('NUMBER')) {
+                    dimensions.push(parseInt(this.consume('NUMBER').value));
+                } else {
+                    // Could be expression like arr[n], but for simplicity we'll parse as expression
+                    // For visualization, we really want a number to allocate.
+                    // If it's an Identifier, we might not know value yet.
+                    // Let's assume Expression evaluating to number, but we can't eval here.
+                    // We'll store 0 or skip? 
+                    // Better: Executor handles sizing? 
+                    // We'll try to parse expression and if Literal use value.
+                    const sizeExpr = this.parseExpression();
+                    if (sizeExpr.type === 'Literal') {
+                        dimensions.push((sizeExpr as any).value);
+                    } else {
+                        dimensions.push(0); // Dynamic size
+                    }
+                }
+                this.consume('PUNCTUATION', ']');
+            }
+            if (dimensions.length > 0) arraySize = dimensions[0]; // Legacy support for now
+
             if (this.match('OPERATOR', '=')) {
                 if (this.check('PUNCTUATION', '{')) {
                     init = this.parseArrayExpression();
@@ -529,7 +673,14 @@ export class Parser {
                 init = { type: 'NewExpression', className: type, arguments: args, line: this.previous().line } as NewExpression;
             }
 
-            decls.push({ type: 'VariableDeclaration', varType: type, name, init, line: this.previous().line });
+            decls.push({
+                type: 'VariableDeclaration',
+                varType: dimensions.length > 0 ? `${type}${dimensions.map(() => '[]').join('')}` : type,
+                name,
+                arrayDimensions: dimensions.length > 0 ? dimensions : undefined,
+                init,
+                line: this.previous().line
+            });
 
         } while (this.match('PUNCTUATION', ','));
 
@@ -560,26 +711,42 @@ export class Parser {
         return { type: 'ArrayExpression', elements, line: this.previous().line };
     }
 
-    private parseAssignment(): Assignment {
-        // We need to parse LValue. It could be Identifier or MemberExpression (a.b = 1) or Index (a[0] = 1).
-        // parseExpression() usually parses RValues.
-        // We can parseExpression(), checking that it is a valid LValue target?
-        // Or we parsePrimary and chain MemberAccess.
+    private parseAssignment(): ASTNode {
+        const left = this.parseLogicalOr(); // Was parseEquality, now parseLogicalOr
 
-        const target = this.parseExpression();
-        // Check if next is =
-        if (this.match('OPERATOR', '=')) {
-            const value = this.parseExpression();
-            this.consume('PUNCTUATION', ';');
-            // Extract name if simple ID
+        // Check if next is = or compound assignment (+=, -=, *=, /=, %=)
+        if (this.match('OPERATOR', '=') || this.match('OPERATOR', '+=') || this.match('OPERATOR', '-=') ||
+            this.match('OPERATOR', '*=') || this.match('OPERATOR', '/=') || this.match('OPERATOR', '%=')) {
+
+            const operator = this.previous().value;
+            const value = this.parseAssignment(); // Right-associative
+
+            // Handle simple assignment
+            if (operator === '=') {
+                let name = '';
+                if (left.type === 'Identifier') name = (left as Identifier).name;
+
+                return { type: 'Assignment', name, left, value, line: this.previous().line };
+            }
+
+            // Handle compound assignment (+=, etc.)
+            // Convert c += a to c = c + a
+            const binaryOp = operator.slice(0, -1);
+            const binaryExpr = {
+                type: 'BinaryExpression',
+                operator: binaryOp,
+                left,
+                right: value,
+                line: this.previous().line
+            } as BinaryExpression;
+
             let name = '';
-            if (target.type === 'Identifier') name = (target as Identifier).name;
-            else name = 'Expr'; // Fallback
+            if (left.type === 'Identifier') name = (left as Identifier).name;
 
-            return { type: 'Assignment', name, left: target, value, line: this.previous().line };
+            return { type: 'Assignment', name, left, value: binaryExpr, line: this.previous().line };
         }
 
-        throw new Error(`Expected assignment operator '=' at line ${this.previous().line}`);
+        return left;
     }
 
     private parseReturnStatement(): ReturnStatement {
@@ -595,12 +762,12 @@ export class Parser {
         this.consume('PUNCTUATION', '(');
         const test = this.parseExpression();
         this.consume('PUNCTUATION', ')');
-        const consequent = this.parseBlock();
-        let alternate: Block | undefined;
+        const consequent = this.parseStatement();
+        let alternate: ASTNode | undefined;
         if (this.match('KEYWORD', 'else')) {
-            alternate = this.parseBlock();
+            alternate = this.parseStatement();
         }
-        return { type: 'IfStatement', test, consequent, alternate, line: this.previous().line };
+        return { type: 'IfStatement', test, consequent, alternate, line: this.previous().line } as IfStatement;
     }
 
     private parseWhileStatement(): WhileStatement {
@@ -612,7 +779,27 @@ export class Parser {
     }
 
     private parseExpression(): ASTNode {
-        return this.parseEquality();
+        return this.parseAssignment();
+    }
+
+    private parseLogicalOr(): ASTNode {
+        let expr = this.parseLogicalAnd();
+        while (this.match('OPERATOR', '||')) {
+            const operator = this.previous().value;
+            const right = this.parseLogicalAnd();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
+    }
+
+    private parseLogicalAnd(): ASTNode {
+        let expr = this.parseEquality();
+        while (this.match('OPERATOR', '&&')) {
+            const operator = this.previous().value;
+            const right = this.parseEquality();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
     }
 
     private parseEquality(): ASTNode {
@@ -627,7 +814,9 @@ export class Parser {
 
     private parseComparison(): ASTNode {
         let expr = this.parseShift();
-        while (this.match('OPERATOR', '<') || this.match('OPERATOR', '>')) {
+        // console.log(`DEBUG: Checking comparison op. Token: ${this.peek().value} Type: ${this.peek().type}`);
+        while (this.match('OPERATOR', '<') || this.match('OPERATOR', '>') ||
+            this.match('OPERATOR', '<=') || this.match('OPERATOR', '>=')) {
             const operator = this.previous().value;
             const right = this.parseShift();
             expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
@@ -656,13 +845,46 @@ export class Parser {
     }
 
     private parseFactor(): ASTNode {
-        let expr = this.parsePrimary();
-        while (this.match('OPERATOR', '*') || this.match('OPERATOR', '/')) {
+        let expr = this.parseUnary();
+        while (this.match('OPERATOR', '*') || this.match('OPERATOR', '/') || this.match('OPERATOR', '%')) {
             const operator = this.previous().value;
-            const right = this.parsePrimary();
+            const right = this.parseUnary();
             expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
         }
         return expr;
+    }
+
+    private parseUnary(): ASTNode {
+        if (this.match('OPERATOR', '-') || this.match('OPERATOR', '!')) {
+            const operator = this.previous().value;
+            const argument = this.parseUnary();
+            // Simplify unary minus to binary 0 - x for now if types allow, or implement UnaryExpression
+            // For now, implementing simple UnaryExpression (need to add type support if not exists)
+            // Or cheat: 0 - x for '-'
+            if (operator === '-') {
+                return {
+                    type: 'BinaryExpression',
+                    operator: '-',
+                    left: { type: 'Literal', value: 0, valueType: 'int', line: this.previous().line },
+                    right: argument,
+                    line: this.previous().line
+                } as BinaryExpression;
+            }
+            // Handle !
+            if (operator === '!') {
+                // We don't have UnaryExpression in executor? 
+                // Using x == false for !x? Or just add Unary support
+                // Let's create a Binary expression: x == false
+                return {
+                    type: 'BinaryExpression',
+                    operator: '==',
+                    left: argument,
+                    right: { type: 'Literal', value: false, valueType: 'bool', line: this.previous().line },
+                    line: this.previous().line
+                } as BinaryExpression;
+            }
+        }
+        return this.parsePrimary();
     }
 
     private parsePrimary(): ASTNode {
@@ -753,6 +975,22 @@ export class Parser {
                     arguments: args,
                     line: this.previous().line
                 } as CallExpression;
+            } else if (this.match('OPERATOR', '++')) {
+                expr = {
+                    type: 'UpdateExpression',
+                    operator: '++',
+                    argument: expr,
+                    prefix: false,
+                    line: this.previous().line
+                } as UpdateExpression;
+            } else if (this.match('OPERATOR', '--')) {
+                expr = {
+                    type: 'UpdateExpression',
+                    operator: '--',
+                    argument: expr,
+                    prefix: false,
+                    line: this.previous().line
+                } as UpdateExpression;
             } else {
                 break;
             }

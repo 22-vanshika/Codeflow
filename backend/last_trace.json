@@ -1,0 +1,469 @@
+{
+  "success": true,
+  "pattern": {
+    "name": "Binary Search",
+    "description": "Divide and Conquer algorithm to find an element in a sorted array",
+    "color": "blue"
+  },
+  "totalSteps": 8,
+  "steps": [
+    {
+      "step": 1,
+      "line": 5,
+      "lineContent": "int arr[] = {1, 3, 5, 7, 9, 11, 13};",
+      "type": "assignment",
+      "explainMath": "arr = [1, 3, 5, 7, 9, 11, 13]",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ]
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": []
+      },
+      "teacherNote": {
+        "what": "Initialize the array",
+        "why": "To store the elements to be searched",
+        "next": "Initialize the variables for the search"
+      }
+    },
+    {
+      "step": 2,
+      "line": 6,
+      "lineContent": "int n = 7;",
+      "type": "assignment",
+      "explainMath": "n = 7",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": []
+      },
+      "teacherNote": {
+        "what": "Initialize the size of the array",
+        "why": "To know the bounds of the search",
+        "next": "Initialize the target and the search boundaries"
+      }
+    },
+    {
+      "step": 3,
+      "line": 7,
+      "lineContent": "int target = 7;",
+      "type": "assignment",
+      "explainMath": "target = 7",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7,
+        "target": 7
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": []
+      },
+      "teacherNote": {
+        "what": "Initialize the target to be searched",
+        "why": "To know what to search for",
+        "next": "Initialize the search boundaries"
+      }
+    },
+    {
+      "step": 4,
+      "line": 8,
+      "lineContent": "int low = 0, high = n - 1;",
+      "type": "assignment",
+      "explainMath": "low = 0, high = n - 1 = 7 - 1 = 6",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7,
+        "target": 7,
+        "low": 0,
+        "high": 6
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": []
+      },
+      "teacherNote": {
+        "what": "Initialize the search boundaries",
+        "why": "To know where to start and end the search",
+        "next": "Start the search loop"
+      }
+    },
+    {
+      "step": 5,
+      "line": 10,
+      "lineContent": "while (low <= high) {",
+      "type": "loop_start",
+      "explainMath": "low <= high = 0 <= 6 = true",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7,
+        "target": 7,
+        "low": 0,
+        "high": 6
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": []
+      },
+      "teacherNote": {
+        "what": "Start the search loop",
+        "why": "To repeatedly divide the search space",
+        "next": "Calculate the midpoint"
+      }
+    },
+    {
+      "step": 6,
+      "line": 11,
+      "lineContent": "int mid = low + (high - low) / 2;",
+      "type": "assignment",
+      "explainMath": "mid = low + (high - low) / 2 = 0 + (6 - 0) / 2 = 0 + 6 / 2 = 0 + 3 = 3",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7,
+        "target": 7,
+        "low": 0,
+        "high": 6,
+        "mid": 3
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          },
+          {
+            "name": "mid",
+            "index": 3,
+            "color": "blue",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": [
+          3
+        ]
+      },
+      "teacherNote": {
+        "what": "Calculate the midpoint",
+        "why": "To divide the search space",
+        "next": "Compare the midpoint to the target"
+      }
+    },
+    {
+      "step": 7,
+      "line": 12,
+      "lineContent": "cout << \"low=\" << low << \" mid=\" << mid << \" high=\" << high << \" arr[mid]=\" << arr[mid] << endl;",
+      "type": "function_call",
+      "explainMath": "arr[mid] = arr[3] = 7",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7,
+        "target": 7,
+        "low": 0,
+        "high": 6,
+        "mid": 3
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          },
+          {
+            "name": "mid",
+            "index": 3,
+            "color": "blue",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": [
+          3
+        ]
+      },
+      "teacherNote": {
+        "what": "Print the current state",
+        "why": "To visualize the search process",
+        "next": "Compare the midpoint to the target"
+      }
+    },
+    {
+      "step": 8,
+      "line": 13,
+      "lineContent": "if (arr[mid] == target) {",
+      "type": "condition",
+      "explainMath": "arr[mid] == target = 7 == 7 = true",
+      "variables": {
+        "arr": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "n": 7,
+        "target": 7,
+        "low": 0,
+        "high": 6,
+        "mid": 3
+      },
+      "visuals": {
+        "type": "array_1d",
+        "target": "arr",
+        "values": [
+          1,
+          3,
+          5,
+          7,
+          9,
+          11,
+          13
+        ],
+        "pointers": [
+          {
+            "name": "low",
+            "index": 0,
+            "color": "green",
+            "action": "none"
+          },
+          {
+            "name": "high",
+            "index": 6,
+            "color": "red",
+            "action": "none"
+          },
+          {
+            "name": "mid",
+            "index": 3,
+            "color": "blue",
+            "action": "none"
+          }
+        ],
+        "highlightIndices": [
+          3
+        ]
+      },
+      "teacherNote": {
+        "what": "Compare the midpoint to the target",
+        "why": "To determine if the target is found",
+        "next": "Return the result"
+      }
+    }
+  ]
+}

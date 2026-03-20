@@ -1,0 +1,11 @@
+src/features/visualizer/components/AnalysisInfoButton.tsx(7,13): error TS2339: Property 'analysis' does not exist on type 'ExecutionState'.
+src/features/visualizer/components/CodeEditor.tsx(6,28): error TS2339: Property 'traces' does not exist on type 'ExecutionState'.
+src/features/visualizer/components/ExecutionControls.tsx(7,74): error TS2339: Property 'traces' does not exist on type 'ExecutionState'.
+src/features/visualizer/components/panels/BeginnerExplanationPanel.tsx(6,13): error TS2339: Property 'traces' does not exist on type 'ExecutionState'.
+src/features/visualizer/components/panels/OutputPanel.tsx(6,13): error TS2339: Property 'traces' does not exist on type 'ExecutionState'.
+src/features/visualizer/components/panels/WhiteboardPanel.tsx(2,21): error TS6133: 'useRef' is declared but its value is never read.
+src/features/visualizer/components/panels/WhiteboardPanel.tsx(10,9): error TS2339: Property 'analysis' does not exist on type 'ExecutionState'.
+src/features/visualizer/components/ScrubbingBar.tsx(5,13): error TS2339: Property 'traces' does not exist on type 'ExecutionState'.
+src/store/executionStore.ts(2,15): error TS6196: 'ExecutionTrace' is declared but never used.
+src/store/executionStore.ts(2,31): error TS6196: 'AlgorithmAnalysis' is declared but never used.
+src/store/executionStore.ts(2,50): error TS6196: 'FlowchartData' is declared but never used.

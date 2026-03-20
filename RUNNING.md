@@ -1,5 +1,4 @@
 # How to Run CodeFlow Locally
-
 CodeFlow consists of two parts: a **Backend** executer (Node.js/C++) and a **Frontend** interface (React). You need to run both concurrently.
 
 ## Prerequisites

@@ -4,10 +4,14 @@ import { WebSocketServer } from 'ws';
 import { setupWebSocket } from './websocket/server';
 import cors from 'cors';
 import { PORT } from './config';
+import problemRoutes from './routes/problem.route';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Routes
+app.use('/api/problems', problemRoutes);
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server });

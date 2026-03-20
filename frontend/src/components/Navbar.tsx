@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Github, BookOpen, Sun, Moon, Cpu } from 'lucide-react';
+import { Github, BookOpen, Cpu } from 'lucide-react';
 
 export default function Navbar() {
     const location = useLocation();
@@ -31,20 +31,14 @@ export default function Navbar() {
 
             {/* Right: Actions */}
             <div className="flex items-center space-x-4">
-                <a href="#" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
+                <Link to="/sheet" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
                     <BookOpen size={16} />
-                    <span className="hidden sm:inline">Docs</span>
-                </a>
-                <a href="#" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
+                    <span className="hidden sm:inline">SWE180</span>
+                </Link>
+                <a href="https://github.com/anshikaasati/codeflow" target="_blank" rel="noreferrer" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
                     <Github size={16} />
                     <span className="hidden sm:inline">GitHub</span>
                 </a>
-
-                <div className="h-6 w-px bg-white/10 mx-2"></div>
-
-                <button className="p-2 rounded-full hover:bg-white/5 text-text-muted hover:text-warning transition-colors">
-                    <Sun size={18} />
-                </button>
             </div>
         </nav>
     );

@@ -1,0 +1,314 @@
+/* Visualizer Component Styles */
+
+/* Array Visualizer Grid */
+.array-grid {
+    display: flex;
+    gap: 4px;
+    padding: 20px;
+    justify-content: center;
+    align-items: flex-end;
+    position: relative;
+    min-height: 120px;
+}
+
+.array-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.array-cell-value {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+    border: 2px solid #585b70;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: #cdd6f4;
+    transition: all 0.3s ease;
+}
+
+.array-cell-value.highlighted {
+    background: linear-gradient(135deg, #fab387 0%, #f9e2af 100%);
+    border-color: #fab387;
+    color: #1e1e2e;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(250, 179, 135, 0.4);
+}
+
+.array-cell-value.swap-left,
+.array-cell-value.swap-right {
+    animation: swap-pulse 0.5s ease;
+}
+
+@keyframes swap-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+        background: #f38ba8;
+    }
+}
+
+.array-cell-index {
+    font-size: 11px;
+    color: #6c7086;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Pointer Arrows */
+.pointer-container {
+    position: absolute;
+    top: -45px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 10;
+}
+
+.pointer-label {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pointer-label.red {
+    background: linear-gradient(135deg, #f38ba8 0%, #eb6f92 100%);
+    color: #1e1e2e;
+}
+
+.pointer-label.blue {
+    background: linear-gradient(135deg, #89b4fa 0%, #74b3fa 100%);
+    color: #1e1e2e;
+}
+
+.pointer-label.green {
+    background: linear-gradient(135deg, #a6e3a1 0%, #94e2d5 100%);
+    color: #1e1e2e;
+}
+
+.pointer-label.orange {
+    background: linear-gradient(135deg, #fab387 0%, #f9e2af 100%);
+    color: #1e1e2e;
+}
+
+.pointer-label.purple {
+    background: linear-gradient(135deg, #cba6f7 0%, #b4befe 100%);
+    color: #1e1e2e;
+}
+
+.pointer-arrow {
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 12px solid currentColor;
+}
+
+.pointer-arrow.red {
+    color: #f38ba8;
+}
+
+.pointer-arrow.blue {
+    color: #89b4fa;
+}
+
+.pointer-arrow.green {
+    color: #a6e3a1;
+}
+
+.pointer-arrow.orange {
+    color: #fab387;
+}
+
+.pointer-arrow.purple {
+    color: #cba6f7;
+}
+
+/* Teacher Note Card */
+.teacher-note-card {
+    background: linear-gradient(135deg, rgba(30, 30, 46, 0.95) 0%, rgba(40, 40, 60, 0.95) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(88, 91, 112, 0.5);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+    animation: fadeSlideIn 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.teacher-note-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.teacher-note-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #fab387 0%, #f9e2af 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.teacher-note-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #cdd6f4;
+    flex: 1;
+}
+
+.teacher-note-section {
+    margin-bottom: 12px;
+}
+
+.teacher-note-section:last-child {
+    margin-bottom: 0;
+}
+
+.teacher-note-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+}
+
+.teacher-note-label.what {
+    color: #89b4fa;
+}
+
+.teacher-note-label.why {
+    color: #a6e3a1;
+}
+
+.teacher-note-label.next {
+    color: #fab387;
+}
+
+.teacher-note-text {
+    font-size: 14px;
+    color: #cdd6f4;
+    line-height: 1.5;
+}
+
+/* Pattern Badge */
+.pattern-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pattern-badge-icon {
+    font-size: 14px;
+}
+
+/* Call Stack Visualizer */
+.call-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    padding: 20px;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.call-stack-frame {
+    background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+    border: 2px solid #585b70;
+    border-radius: 10px;
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.call-stack-frame.active {
+    border-color: #89b4fa;
+    background: linear-gradient(135deg, rgba(137, 180, 250, 0.1) 0%, rgba(137, 180, 250, 0.05) 100%);
+    box-shadow: 0 0 20px rgba(137, 180, 250, 0.2);
+}
+
+.call-stack-func-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: #f9e2af;
+}
+
+.call-stack-args {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #a6adc8;
+    margin-top: 4px;
+}
+
+/* Variables Panel in Visualizer */
+.variables-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(30, 30, 46, 0.5);
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.variable-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(88, 91, 112, 0.3);
+    border: 1px solid rgba(88, 91, 112, 0.5);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+}
+
+.variable-name {
+    color: #89b4fa;
+}
+
+.variable-value {
+    color: #a6e3a1;
+    font-weight: 600;
+}

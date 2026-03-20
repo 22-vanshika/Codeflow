@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import type { StackFrame } from '../../store/executionStore';
+import { AnimatePresence } from 'framer-motion';
+import type { StackFrame } from '../../../../types';
 
 interface Props {
     stack: StackFrame[];
