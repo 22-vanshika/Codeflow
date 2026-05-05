@@ -7,7 +7,9 @@ import WhiteboardPanel from '../features/visualizer/components/panels/Whiteboard
 import OutputPanel from '../features/visualizer/components/panels/OutputPanel';
 import FixPermissionDialog from '../components/dialogs/FixPermissionDialog';
 import ImportProblemDialog from '../features/workspace/components/ImportProblemDialog';
-import { Play, Pause, SkipBack, SkipForward, RotateCcw, ChevronLeft, ChevronRight, Sparkles, Terminal, ChevronDown, ChevronUp, Code2 } from 'lucide-react';
+import SaveVisualizationDialog from '../features/workspace/components/SaveVisualizationDialog';
+import GitHubImportDialog from '../features/workspace/components/GitHubImportDialog';
+import { Play, Pause, SkipBack, SkipForward, RotateCcw, ChevronLeft, ChevronRight, Sparkles, Terminal, ChevronDown, ChevronUp, Code2, Save, Github } from 'lucide-react';
 
 interface ProblemData {
     id: string;
@@ -22,7 +24,7 @@ interface ProblemData {
 
 export default function ProblemWorkspace() {
     const {
-        connect, isConnected, reset, executeRealCode, error, setCode, code,
+        connect, isConnected, reset, executeRealCode, error, setCode,
         requestTrace, nextStep, prevStep, togglePlay, isPlaying,
         currentStepIndex, traceSteps, traces, traceMode, setTraceMode,
         currentPattern, speed, setSpeed
@@ -31,22 +33,18 @@ export default function ProblemWorkspace() {
     const [leftPanelOpen, setLeftPanelOpen] = useState(true);
     const [testCasesOpen, setTestCasesOpen] = useState(true);
     const [isImportOpen, setIsImportOpen] = useState(false);
+    const [isSaveOpen, setIsSaveOpen] = useState(false);
+    const [isGithubImportOpen, setIsGithubImportOpen] = useState(false);
     const [problemDetails, setProblemDetails] = useState<ProblemData | null>(null);
     const [logicPanelOpen, setLogicPanelOpen] = useState(true);
     const location = useLocation();
     const hasAutoImported = useRef(false);
-    const [showSaveToast, setShowSaveToast] = useState(false);
 
     const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
     const hasSteps = stepsArray.length > 0;
     const currentTraceStep = traceSteps[currentStepIndex];
 
-    const handleSaveCode = () => {
-        const id = problemDetails?.id || 'scratchpad';
-        localStorage.setItem(`codeflow_saved_code_${id}`, code);
-        setShowSaveToast(true);
-        setTimeout(() => setShowSaveToast(false), 2000);
-    };
+
 
     const handleResetCode = () => {
         if (problemDetails?.starterCode?.cpp) {
@@ -90,7 +88,7 @@ export default function ProblemWorkspace() {
     const speedLabel = speedMultiplier.toFixed(1) + 'x';
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-[#0B1120] overflow-hidden font-sans text-[#c9d1d9]">
+        <div className="h-[calc(100vh-56px)] mt-[56px] w-screen flex flex-col bg-[#0B1120] overflow-hidden font-sans text-[#c9d1d9]">
 
             {/* ── TOP STATUS BAR ─────────────────────────────────────────── */}
             <header className="flex-none h-12 bg-[#0d1117] border-b border-[#1e2d3d] flex items-center justify-between px-5 z-30 shrink-0">
@@ -100,13 +98,11 @@ export default function ProblemWorkspace() {
                         <div className="w-7 h-7 rounded-lg bg-[#1e2d3d] flex items-center justify-center">
                             <Code2 size={14} className="text-[#58a6ff]" />
                         </div>
-                        <span className="font-bold text-sm text-white tracking-tight">CodeFlow</span>
-                    </div>
-                    <div className="h-4 w-px bg-[#1e2d3d]" />
-                    <div className="flex items-center gap-2 text-xs text-[#768390]">
-                        <span className="text-[#58a6ff] font-mono">
+                        <span className="text-[#58a6ff] font-mono text-sm ml-1">
                             {problemDetails ? `${problemDetails.id}.cpp` : 'main.cpp'}
                         </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-[#768390]">
                         {problemDetails && (
                             <>
                                 <span>·</span>
@@ -149,19 +145,25 @@ export default function ProblemWorkspace() {
                     {error && (
                         <span className="text-[10px] text-red-400 max-w-[200px] truncate">{error}</span>
                     )}
-                    {showSaveToast && (
-                        <span className="text-[10px] text-green-400 font-semibold animate-pulse">Saved!</span>
-                    )}
+                    <button
+                        onClick={() => setIsGithubImportOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] hover:border-[#58a6ff]/50 text-[#768390] hover:text-white rounded-md transition-all"
+                        title="Import from GitHub"
+                    >
+                        <Github size={12} />
+                        GitHub
+                    </button>
                     <button
                         onClick={() => setIsImportOpen(true)}
                         className="px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] hover:border-[#58a6ff]/50 text-[#768390] hover:text-[#58a6ff] rounded-md transition-all"
                     >
-                        Import LeetCode
+                        LeetCode
                     </button>
                     <button
-                        onClick={handleSaveCode}
-                        className="px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] text-[#768390] hover:text-cyan-400 rounded-md transition-all"
+                        onClick={() => setIsSaveOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold bg-[#1a2332] border border-[#1e2d3d] hover:border-cyan-500/50 text-cyan-500 hover:text-cyan-400 rounded-md transition-all"
                     >
+                        <Save size={12} />
                         Save
                     </button>
                     <button
@@ -471,6 +473,14 @@ export default function ProblemWorkspace() {
                 isOpen={isImportOpen}
                 onClose={() => setIsImportOpen(false)}
                 onImportSuccess={(data) => setProblemDetails(data)}
+            />
+            <SaveVisualizationDialog
+                isOpen={isSaveOpen}
+                onClose={() => setIsSaveOpen(false)}
+            />
+            <GitHubImportDialog
+                isOpen={isGithubImportOpen}
+                onClose={() => setIsGithubImportOpen(false)}
             />
         </div>
     );

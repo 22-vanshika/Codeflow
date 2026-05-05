@@ -30,13 +30,21 @@ export default function HeroSection() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                    <Link
-                        to="/workspace"
+                    <button
+                        onClick={() => document.dispatchEvent(new CustomEvent('open-auth-modal'))}
                         className="group relative inline-flex items-center justify-center px-8 py-4 text-base font-bold text-white transition-all duration-200 bg-primary rounded-lg hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-gray-900"
                     >
-                        <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-g from-transparent via-transparent to-gray-700"></span>
+                        <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-gray-700"></span>
                         <span className="relative flex items-center">
-                            Start Visualizing <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                            Get Started <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                    </button>
+                    <Link
+                        to="/workspace"
+                        className="group relative inline-flex items-center justify-center px-8 py-4 text-base font-bold text-white transition-all duration-200 bg-white/10 rounded-lg hover:bg-white/20 border border-white/10"
+                    >
+                        <span className="relative flex items-center">
+                            Try Demo Sandbox
                         </span>
                     </Link>
                 </div>

@@ -27,7 +27,6 @@ export default function WhiteboardPanel() {
         traces,
         traceSteps,
         traceMode,
-        currentPattern,
         togglePlay,
         nextStep,
         prevStep,

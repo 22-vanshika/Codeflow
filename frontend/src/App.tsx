@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import ProblemWorkspace from './pages/ProblemWorkspace';
 import CuratedSheet from './pages/CuratedSheet';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/workspace" element={<ProblemWorkspace />} />
         <Route path="/sheet" element={<CuratedSheet />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
   );
