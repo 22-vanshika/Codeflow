@@ -45,12 +45,8 @@ export default function Navbar() {
             <div className="flex items-center space-x-4">
                 <Link to="/sheet" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
                     <BookOpen size={16} />
-                    <span className="hidden sm:inline">SWE180</span>
+                    <span className="hidden sm:inline">DSA Sheet</span>
                 </Link>
-                <a href="https://github.com/anshikaasati/codeflow" target="_blank" rel="noreferrer" className="text-text-muted hover:text-primary transition-colors flex items-center space-x-1 text-sm font-medium">
-                    <Github size={16} />
-                    <span className="hidden sm:inline">GitHub</span>
-                </a>
                 
                 {/* Auth / Profile */}
                 {user ? (
