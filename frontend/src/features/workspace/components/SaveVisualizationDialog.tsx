@@ -40,7 +40,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose }: SaveVisuali
 
         try {
             const token = await user.getIdToken();
-            const response = await fetch('http://localhost:3000/api/visualizations/save', {
+            const response = await fetch('http://localhost:5000/api/visualizations/save', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

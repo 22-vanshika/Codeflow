@@ -27,7 +27,7 @@ export default function ImportProblemDialog({ isOpen, onClose, onImportSuccess }
 
         try {
             // Using absolute URL to ensure it hits the backend correctly in dev
-            const response = await fetch('http://localhost:3000/api/problems/import', {
+            const response = await fetch('http://localhost:5000/api/problems/import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url: url.trim() })

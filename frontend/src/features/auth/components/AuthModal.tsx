@@ -35,7 +35,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             await syncUserWithBackend(result.user);
             onClose();
         } catch (err: any) {
-            setError(err.message);
+            const errorCode = err.code;
+            if (errorCode === 'auth/account-exists-with-different-credential') {
+                setError('An account already exists with the same email. Please use your email and password.');
+            } else if (errorCode === 'auth/popup-closed-by-user') {
+                setError('');
+            } else {
+                setError('Failed to sign in with GitHub. Please try again.');
+            }
         }
     };
 
@@ -54,14 +61,24 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             await syncUserWithBackend(userCredential.user);
             onClose();
         } catch (err: any) {
-            setError(err.message);
+            const errorCode = err.code;
+            if (errorCode === 'auth/email-already-in-use') {
+                setError('Account already exists! Please log in instead.');
+                setIsLogin(true);
+            } else if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found') {
+                setError('Invalid email or password.');
+            } else if (errorCode === 'auth/weak-password') {
+                setError('Password must be at least 6 characters long.');
+            } else {
+                setError('Authentication failed. Please try again.');
+            }
         }
     };
 
     const syncUserWithBackend = async (firebaseUser: any) => {
         try {
             const token = await firebaseUser.getIdToken();
-            await fetch('http://localhost:3000/api/users/sync', {
+            await fetch('http://localhost:5000/api/users/sync', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

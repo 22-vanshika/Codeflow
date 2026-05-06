@@ -66,7 +66,7 @@ export default function ProblemWorkspace() {
         const url = location.state?.autoImportUrl;
         if (url && !hasAutoImported.current) {
             hasAutoImported.current = true;
-            fetch('http://localhost:3000/api/problems/import', {
+            fetch('http://localhost:5000/api/problems/import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url })

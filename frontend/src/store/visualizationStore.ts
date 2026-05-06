@@ -30,7 +30,7 @@ export const useVisualizationStore = create<VisualizationState>((set) => ({
     fetchUserVisualizations: async (token: string) => {
         set({ isLoading: true, error: null });
         try {
-            const res = await fetch('http://localhost:3000/api/visualizations/user', {
+            const res = await fetch('http://localhost:5000/api/visualizations/user', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
