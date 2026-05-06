@@ -24,9 +24,9 @@ interface ProblemData {
 
 export default function ProblemWorkspace() {
     const {
-        connect, isConnected, reset, executeRealCode, error, setCode,
+        connect, reset, executeRealCode, error, setCode,
         requestTrace, nextStep, prevStep, togglePlay, isPlaying,
-        currentStepIndex, traceSteps, traces, traceMode, setTraceMode,
+        currentStepIndex, traceSteps, traces,
         currentPattern, speed, setSpeed
     } = useExecutionStore();
 
@@ -123,22 +123,6 @@ export default function ProblemWorkspace() {
                     <span className="px-2.5 py-1 rounded-full bg-[#1a2332] border border-[#1e2d3d] text-[#768390]">
                         Language: <span className="text-[#58a6ff] font-semibold">C++</span>
                     </span>
-                    <span className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold ${
-                        traceMode
-                            ? 'bg-cyan-900/20 border-cyan-800/40 text-cyan-400'
-                            : 'bg-purple-900/20 border-purple-800/40 text-purple-400'
-                    }`}>
-                        Trace: {traceMode ? 'ON' : 'FLOWCHART'}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-[#1a2332] border border-[#1e2d3d] text-[#768390]">
-                        User: <span className="text-[#c9d1d9] font-semibold">Anshika</span>
-                    </span>
-                    {isConnected && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-900/20 border border-green-800/40 text-green-400 text-[11px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                            Live
-                        </span>
-                    )}
                 </div>
 
                 {/* Right: Actions */}
@@ -282,21 +266,7 @@ export default function ProblemWorkspace() {
                                 </>
                             )}
                         </div>
-                        {/* View Mode Toggle */}
-                        <div className="flex items-center gap-1 bg-[#1a2332] rounded-lg p-0.5 border border-[#1e2d3d]">
-                            <button
-                                onClick={() => setTraceMode(true)}
-                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${
-                                    traceMode ? 'bg-cyan-900/40 text-cyan-400 shadow' : 'text-[#768390] hover:text-white'
-                                }`}
-                            >Blackboard</button>
-                            <button
-                                onClick={() => setTraceMode(false)}
-                                className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all ${
-                                    !traceMode ? 'bg-purple-900/40 text-purple-400 shadow' : 'text-[#768390] hover:text-white'
-                                }`}
-                            >Flowchart</button>
-                        </div>
+                        {/* View Mode: Blackboard only */}
                     </div>
 
                     {/* Infinite Canvas */}

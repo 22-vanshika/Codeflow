@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Github, BookOpen, Cpu, User } from 'lucide-react';
+import { BookOpen, Cpu, User } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useState, useEffect } from 'react';
 import AuthModal from '../features/auth/components/AuthModal';
