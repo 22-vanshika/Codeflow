@@ -30,7 +30,8 @@ export const useVisualizationStore = create<VisualizationState>((set) => ({
     fetchUserVisualizations: async (token: string) => {
         set({ isLoading: true, error: null });
         try {
-            const res = await fetch('http://localhost:5000/api/visualizations/user', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${API_URL}/api/visualizations/user`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

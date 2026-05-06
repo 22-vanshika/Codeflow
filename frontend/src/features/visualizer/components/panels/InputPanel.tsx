@@ -1,6 +1,8 @@
 import { useExecutionStore } from '../../../../store/executionStore';
 
-export default function InputPanel() {
+import React from 'react';
+
+const InputPanel = React.memo(function InputPanel() {
     const { input, setInput } = useExecutionStore();
 
     return (
@@ -16,4 +18,6 @@ export default function InputPanel() {
             />
         </div>
     );
-}
+});
+
+export default InputPanel;

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Terminal, CheckCircle, AlertTriangle, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useExecutionStore } from '../../../../store/executionStore';
 
-export default function OutputPanel() {
+const OutputPanel = React.memo(function OutputPanel() {
     const { traces, currentStepIndex, isPlaying, traceOutput, traceSteps, runOutput, reset } = useExecutionStore();
     const [collapsed, setCollapsed] = useState(false);
 
@@ -105,4 +105,6 @@ export default function OutputPanel() {
             )}
         </div>
     );
-}
+});
+
+export default OutputPanel;

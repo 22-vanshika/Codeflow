@@ -66,7 +66,8 @@ export default function ProblemWorkspace() {
         const url = location.state?.autoImportUrl;
         if (url && !hasAutoImported.current) {
             hasAutoImported.current = true;
-            fetch('http://localhost:5000/api/problems/import', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            fetch(`${API_URL}/api/problems/import`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url })

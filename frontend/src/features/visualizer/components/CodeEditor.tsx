@@ -1,8 +1,8 @@
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import { useExecutionStore } from '@/store/executionStore';
 
-export default function CodeEditor() {
+const CodeEditor = React.memo(function CodeEditor() {
     const { code, setCode, traces, currentStepIndex } = useExecutionStore();
     const editorRef = useRef<any>(null);
     const monacoRef = useRef<Monaco | null>(null);
@@ -64,4 +64,6 @@ export default function CodeEditor() {
             />
         </div>
     );
-}
+});
+
+export default CodeEditor;

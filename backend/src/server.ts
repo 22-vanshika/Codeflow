@@ -3,6 +3,8 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { setupWebSocket } from './websocket/server';
 import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
 import { PORT } from './config';
 import problemRoutes from './routes/problem.route';
 import userRoutes from './routes/user.routes';
@@ -11,6 +13,11 @@ import { connectDB } from './config/db';
 import { initFirebaseAdmin } from './config/firebase';
 
 const app = express();
+
+// Security and Optimization Middlewares
+app.use(helmet());
+app.use(compression());
+
 app.use(cors());
 app.use(express.json());
 

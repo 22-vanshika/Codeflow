@@ -78,7 +78,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const syncUserWithBackend = async (firebaseUser: any) => {
         try {
             const token = await firebaseUser.getIdToken();
-            await fetch('http://localhost:5000/api/users/sync', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            await fetch(`${API_URL}/api/users/sync`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

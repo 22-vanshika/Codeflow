@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { useExecutionStore } from '../../../../store/executionStore';
 import { Network } from 'lucide-react';
@@ -19,7 +19,7 @@ mermaid.initialize({
     securityLevel: 'loose',
 });
 
-export default function WhiteboardPanel() {
+const WhiteboardPanel = React.memo(function WhiteboardPanel() {
     const {
         flowchart,
         analysis,
@@ -205,4 +205,6 @@ export default function WhiteboardPanel() {
             )}
         </div>
     );
-}
+});
+
+export default WhiteboardPanel;
