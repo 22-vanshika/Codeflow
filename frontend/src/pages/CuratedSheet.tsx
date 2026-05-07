@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, CheckCircle, ExternalLink, Play, Search, Trophy, Zap, ChevronRight } from 'lucide-react';
+import { BookOpen, CheckCircle, ExternalLink, Play, Search, Trophy, Zap, ChevronRight, ChevronDown } from 'lucide-react';
 import { problemsList, type ProblemDefinition } from '../data/problems/index';
 import { useProgressStore } from '../store/progressStore';
 import { useAuthStore } from '../store/authStore';
@@ -30,6 +30,7 @@ export default function CuratedSheet() {
     const { completed, toggleCompletion } = useProgressStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
     
     // Group problems by category
     const groupedProblems = useMemo(() => {
@@ -45,6 +46,13 @@ export default function CuratedSheet() {
             return acc;
         }, {} as Record<string, ProblemDefinition[]>);
     }, [searchQuery, activeFilter]);
+
+    const toggleCategory = (category: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [category]: !prev[category]
+        }));
+    };
 
     const handleToggle = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -176,25 +184,29 @@ export default function CuratedSheet() {
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
-                    className="space-y-12"
+                    className="space-y-6"
                 >
                     {Object.entries(groupedProblems).map(([category, problems]) => {
                         const catSolved = problems.filter(p => completed[p.id]).length;
                         const catProgress = Math.round((catSolved / problems.length) * 100);
+                        const isExpanded = expandedCategories[category] || false;
                         
                         return (
                             <motion.div 
                                 key={category} 
                                 variants={itemVariants}
-                                className="glass-morphism rounded-3xl border border-white/10 overflow-hidden shadow-2xl"
+                                className="glass-morphism rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-300"
                             >
                                 {/* Category Header */}
-                                <div className="px-8 py-6 bg-white/5 border-b border-white/10 flex items-center justify-between flex-wrap gap-4">
+                                <button 
+                                    onClick={() => toggleCategory(category)}
+                                    className="w-full px-8 py-6 bg-white/5 hover:bg-white/[0.08] border-b border-white/10 flex items-center justify-between flex-wrap gap-4 transition-all"
+                                >
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-white/10">
                                             <BookOpen size={20} className="text-primary" />
                                         </div>
-                                        <div>
+                                        <div className="text-left">
                                             <h2 className="text-xl font-black text-white tracking-tight">{category}</h2>
                                             <p className="text-xs font-bold text-text-muted uppercase tracking-widest">
                                                 {problems.length} Problems
@@ -202,85 +214,102 @@ export default function CuratedSheet() {
                                         </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-4">
-                                        <div className="hidden sm:block w-32 h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                            <motion.div 
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${catProgress}%` }}
-                                                className="h-full bg-secondary"
-                                            />
-                                        </div>
-                                        <span className="px-4 py-1.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-xs font-black">
-                                            {catSolved} / {problems.length}
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                {/* Problem Items */}
-                                <div className="divide-y divide-white/5">
-                                    {problems.map((problem) => (
-                                        <motion.div 
-                                            key={problem.id} 
-                                            whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-                                            className="group px-8 py-5 flex items-center justify-between cursor-pointer transition-all"
-                                            onClick={() => handleSolve(problem)}
-                                        >
-                                            <div className="flex items-center gap-6">
-                                                {/* Custom Checkbox */}
-                                                <button 
-                                                    onClick={(e) => handleToggle(problem.id, e)}
-                                                    className={`relative w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 border-2 ${
-                                                        completed[problem.id] 
-                                                        ? 'bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
-                                                        : 'border-white/10 text-transparent hover:border-white/30'
-                                                    }`}
-                                                >
-                                                    <CheckCircle size={18} className={completed[problem.id] ? "scale-100" : "scale-0"} />
-                                                </button>
-                                                
-                                                <div className="flex flex-col">
-                                                    <h4 className={`text-lg font-bold transition-all duration-300 ${
-                                                        completed[problem.id] 
-                                                        ? 'text-text-muted line-through opacity-50' 
-                                                        : 'text-white group-hover:text-primary'
-                                                    }`}>
-                                                        {problem.title}
-                                                    </h4>
-                                                    <div className="flex items-center gap-3 mt-1">
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
-                                                            problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
-                                                            problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
-                                                            'border-red-500/30 text-red-400 bg-red-500/5'
-                                                        }`}>
-                                                            {problem.difficulty}
-                                                        </span>
-                                                        <a 
-                                                            href={problem.url} 
-                                                            target="_blank" 
-                                                            rel="noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="text-[10px] font-bold text-text-muted hover:text-white flex items-center gap-1.5 transition-colors uppercase tracking-widest"
-                                                        >
-                                                            LeetCode <ExternalLink size={10} />
-                                                        </a>
-                                                    </div>
-                                                </div>
+                                    <div className="flex items-center gap-6">
+                                        <div className="hidden md:flex items-center gap-4">
+                                            <div className="w-32 h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                <motion.div 
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${catProgress}%` }}
+                                                    className="h-full bg-secondary"
+                                                />
                                             </div>
-                                            
-                                            <div className="flex items-center gap-4">
-                                                <motion.button 
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className="opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs font-black text-white bg-primary px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20"
-                                                >
-                                                    <Play size={14} fill="currentColor" /> 
-                                                    <span>Visualize</span>
-                                                    <ChevronRight size={14} />
-                                                </motion.button>
+                                            <span className="px-4 py-1.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-xs font-black min-w-[70px] text-center">
+                                                {catSolved} / {problems.length}
+                                            </span>
+                                        </div>
+                                        <div className={`p-2 rounded-full bg-white/5 text-text-muted transition-transform duration-300 ${isExpanded ? 'rotate-180 text-white' : ''}`}>
+                                            <ChevronDown size={20} />
+                                        </div>
+                                    </div>
+                                </button>
+                                
+                                {/* Problem Items (Collapsible) */}
+                                <AnimatePresence initial={false}>
+                                    {isExpanded && (
+                                        <motion.div 
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="divide-y divide-white/5">
+                                                {problems.map((problem) => (
+                                                    <motion.div 
+                                                        key={problem.id} 
+                                                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+                                                        className="group px-8 py-5 flex items-center justify-between cursor-pointer transition-all"
+                                                        onClick={() => handleSolve(problem)}
+                                                    >
+                                                        <div className="flex items-center gap-6">
+                                                            {/* Custom Checkbox */}
+                                                            <button 
+                                                                onClick={(e) => handleToggle(problem.id, e)}
+                                                                className={`relative w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 border-2 ${
+                                                                    completed[problem.id] 
+                                                                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
+                                                                    : 'border-white/10 text-transparent hover:border-white/30'
+                                                                }`}
+                                                            >
+                                                                <CheckCircle size={18} className={completed[problem.id] ? "scale-100" : "scale-0"} />
+                                                            </button>
+                                                            
+                                                            <div className="flex flex-col">
+                                                                <h4 className={`text-lg font-bold transition-all duration-300 ${
+                                                                    completed[problem.id] 
+                                                                    ? 'text-text-muted line-through opacity-50' 
+                                                                    : 'text-white group-hover:text-primary'
+                                                                }`}>
+                                                                    {problem.title}
+                                                                </h4>
+                                                                <div className="flex items-center gap-3 mt-1">
+                                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
+                                                                        problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
+                                                                        problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
+                                                                        'border-red-500/30 text-red-400 bg-red-500/5'
+                                                                    }`}>
+                                                                        {problem.difficulty}
+                                                                    </span>
+                                                                    <a 
+                                                                        href={problem.url} 
+                                                                        target="_blank" 
+                                                                        rel="noreferrer"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="text-[10px] font-bold text-text-muted hover:text-white flex items-center gap-1.5 transition-colors uppercase tracking-widest"
+                                                                    >
+                                                                        LeetCode <ExternalLink size={10} />
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center gap-4">
+                                                            <motion.button 
+                                                                whileHover={{ scale: 1.05 }}
+                                                                whileTap={{ scale: 0.95 }}
+                                                                className="opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs font-black text-white bg-primary px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20"
+                                                            >
+                                                                <Play size={14} fill="currentColor" /> 
+                                                                <span>Visualize</span>
+                                                                <ChevronRight size={14} />
+                                                            </motion.button>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
                                             </div>
                                         </motion.div>
-                                    ))}
-                                </div>
+                                    )}
+                                </AnimatePresence>
                             </motion.div>
                         );
                     })}
