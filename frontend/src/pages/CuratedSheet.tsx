@@ -1,37 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, CheckCircle, ExternalLink, Play } from 'lucide-react';
-import swe180Data from '../data/swe180.json';
+import { problemsList, type ProblemDefinition } from '../data/problems/index';
 
-
-interface Problem {
-    id: string;
-    title: string;
-    difficulty: string;
-    category: string;
-    url: string;
-}
 
 export default function CuratedSheet() {
     const navigate = useNavigate();
     
-    // Group problems by category
-    const groupedProblems = swe180Data.reduce((acc, problem) => {
-        if (!acc[problem.category]) {
-            acc[problem.category] = [];
-        }
-        acc[problem.category].push(problem);
-        return acc;
-    }, {} as Record<string, Problem[]>);
+    // Group problems by category (defensive: never blank the page)
+    let groupedProblems: Record<string, ProblemDefinition[]> = {};
+    let fatalError: Error | null = null;
+    try {
+        groupedProblems = (problemsList ?? []).reduce((acc, problem) => {
+            const category = problem?.category || 'Uncategorized';
+            if (!acc[category]) acc[category] = [];
+            acc[category].push(problem);
+            return acc;
+        }, {} as Record<string, ProblemDefinition[]>);
+    } catch (e) {
+        fatalError = e instanceof Error ? e : new Error(String(e));
+        groupedProblems = {};
+        // eslint-disable-next-line no-console
+        console.error('[CuratedSheet] Failed to build groupedProblems', e);
+    }
 
     // Local storage for progress
     const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
-        const saved = localStorage.getItem('codeflow_swe180_progress');
+        const saved = localStorage.getItem('codeflow_dsa_progress');
         return saved ? JSON.parse(saved) : {};
     });
 
     useEffect(() => {
-        localStorage.setItem('codeflow_swe180_progress', JSON.stringify(completed));
+        localStorage.setItem('codeflow_dsa_progress', JSON.stringify(completed));
     }, [completed]);
 
     const toggleCompletion = (id: string, e: React.MouseEvent) => {
@@ -39,14 +39,25 @@ export default function CuratedSheet() {
         setCompleted(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const handleSolve = async (problem: Problem) => {
-        // We will pass the URL to the workspace as state, which will trigger the auto-import
-        navigate('/workspace', { state: { autoImportUrl: problem.url } });
+    const handleSolve = (problem: ProblemDefinition) => {
+        navigate('/workspace', {
+            state: {
+                problemData: {
+                    id: problem.id,
+                    title: problem.title,
+                    difficulty: problem.difficulty,
+                    category: problem.category,
+                    starterCode: { cpp: problem.starterCode },
+                    source: 'SWE180',
+                    url: problem.url,
+                }
+            }
+        });
     };
 
-    const totalProblems = swe180Data.length;
+    const totalProblems = problemsList?.length ?? 0;
     const solvedCount = Object.values(completed).filter(Boolean).length;
-    const progressPercent = Math.round((solvedCount / totalProblems) * 100);
+    const progressPercent = totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0;
 
     return (
         <div className="min-h-screen pt-[56px] pb-20 bg-bg-main text-text-primary overflow-y-auto">
@@ -84,6 +95,14 @@ export default function CuratedSheet() {
 
                 {/* Category Lists */}
                 <div className="space-y-10">
+                    {fatalError && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-200">
+                            <div className="font-bold mb-1">Something crashed while loading the sheet.</div>
+                            <div className="text-red-200/80">
+                                Open the browser console for the exact error. This page should still render, but the problem list may be empty until it’s fixed.
+                            </div>
+                        </div>
+                    )}
                     {Object.entries(groupedProblems).map(([category, problems]) => {
                         const catSolved = problems.filter(p => completed[p.id]).length;
                         return (

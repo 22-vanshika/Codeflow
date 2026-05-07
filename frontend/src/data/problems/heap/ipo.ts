@@ -1,0 +1,34 @@
+import type { ProblemDefinition } from '../types';
+const problem: ProblemDefinition = {
+  id: 'ipo',
+  title: 'IPO',
+  difficulty: 'Hard',
+  category: 'Heap / Priority Queue',
+  url: 'https://leetcode.com/problems/ipo/',
+  starterCode: `#include <bits/stdc++.h>
+using namespace std;
+class Solution {
+public:
+    int findMaximizedCapital(int k, int w, vector<int>& profits, vector<int>& capital){
+        int n=profits.size();
+        vector<pair<int,int>> projects(n);
+        for(int i=0;i<n;i++) projects[i]={capital[i],profits[i]};
+        sort(projects.begin(),projects.end());
+        priority_queue<int> pq;
+        int i=0;
+        for(int j=0;j<k;j++){
+            while(i<n&&projects[i].first<=w){ pq.push(projects[i].second); i++; }
+            if(pq.empty()) break;
+            w+=pq.top(); pq.pop();
+        }
+        return w;
+    }
+};
+int main(){
+    Solution sol;
+    vector<int> p={1,2,3}, c={0,1,1};
+    cout<<sol.findMaximizedCapital(2,0,p,c)<<endl; // 4
+    return 0;
+}`,
+};
+export default problem;

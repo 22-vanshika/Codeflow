@@ -14,11 +14,12 @@ import { Play, Pause, SkipBack, SkipForward, RotateCcw, ChevronLeft, ChevronRigh
 interface ProblemData {
     id: string;
     title: string;
-    description: string;
+    description?: string;
     difficulty: 'Easy' | 'Medium' | 'Hard';
-    topicTags: string[];
+    topicTags?: string[];
+    category?: string;
     starterCode: { cpp: string };
-    source: 'LeetCode' | 'Custom';
+    source: 'LeetCode' | 'Custom' | 'SWE180';
     url?: string;
 }
 
@@ -63,24 +64,12 @@ export default function ProblemWorkspace() {
     useEffect(() => { connect(); }, [connect]);
 
     useEffect(() => {
-        const url = location.state?.autoImportUrl;
-        if (url && !hasAutoImported.current) {
+        const problemData = location.state?.problemData;
+        if (problemData && !hasAutoImported.current) {
             hasAutoImported.current = true;
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            fetch(`${API_URL}/api/problems/import`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            })
-            .then(r => r.json())
-            .then(result => {
-                if (result.success) {
-                    const saved = localStorage.getItem(`codeflow_saved_code_${result.data.id}`);
-                    setCode(saved || result.data.starterCode.cpp);
-                    setProblemDetails(result.data);
-                }
-            })
-            .catch(console.error);
+            const saved = localStorage.getItem(`codeflow_saved_code_${problemData.id}`);
+            setCode(saved || problemData.starterCode.cpp);
+            setProblemDetails(problemData);
         }
     }, [location, setCode]);
 
@@ -138,12 +127,7 @@ export default function ProblemWorkspace() {
                         <Github size={12} />
                         GitHub
                     </button>
-                    <button
-                        onClick={() => setIsImportOpen(true)}
-                        className="px-3 py-1.5 text-[11px] font-semibold bg-[#1a2332] border border-[#1e2d3d] hover:border-[#58a6ff]/50 text-[#768390] hover:text-[#58a6ff] rounded-md transition-all"
-                    >
-                        LeetCode
-                    </button>
+
                     <button
                         onClick={() => setIsSaveOpen(true)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold bg-[#1a2332] border border-[#1e2d3d] hover:border-cyan-500/50 text-cyan-500 hover:text-cyan-400 rounded-md transition-all"
