@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, githubProvider } from '../../../config/firebase';
 import { useAuthStore } from '../../../store/authStore';
-import { X, Github, Mail, Lock, User as UserIcon } from 'lucide-react';
+import { X, Github, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AuthModalProps {
@@ -16,44 +16,41 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     
     const { setUser } = useAuthStore();
 
-    if (!isOpen) return null;
-
     const handleGithubAuth = async () => {
+        setIsLoading(true);
         try {
             setError('');
             const result = await signInWithPopup(auth, githubProvider);
-            
-            // Sync with backend FIRST
             await syncUserWithBackend(result.user);
-            
-            // Then set user in store
             setUser(result.user);
             onClose();
         } catch (err: any) {
             const errorCode = err.code;
             if (errorCode === 'auth/account-exists-with-different-credential') {
-                setError('An account already exists with the same email. Please use your email and password.');
-            } else if (errorCode === 'auth/popup-closed-by-user') {
-                setError('');
-            } else {
-                setError('Failed to sign in with GitHub. Please try again.');
+                setError('An account already exists with the same email.');
+            } else if (errorCode !== 'auth/popup-closed-by-user') {
+                setError('Failed to sign in with GitHub.');
             }
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
         try {
             let userCredential;
             if (isLogin) {
                 userCredential = await signInWithEmailAndPassword(auth, email, password);
             } else {
                 userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                // Can also update profile with name here using updateProfile
             }
             
             await syncUserWithBackend(userCredential.user);
@@ -62,15 +59,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         } catch (err: any) {
             const errorCode = err.code;
             if (errorCode === 'auth/email-already-in-use') {
-                setError('Account already exists! Please log in instead.');
+                setError('Account already exists! Please log in.');
                 setIsLogin(true);
-            } else if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found') {
+            } else if (errorCode === 'auth/invalid-credential') {
                 setError('Invalid email or password.');
-            } else if (errorCode === 'auth/weak-password') {
-                setError('Password must be at least 6 characters long.');
             } else {
                 setError('Authentication failed. Please try again.');
             }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -97,118 +94,180 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative w-full max-w-md bg-surface border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
-                >
-                    <button 
+            {isOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute top-4 right-4 p-2 text-text-muted hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                        className="absolute inset-0 bg-bg-main/80 backdrop-blur-md"
+                    />
+
+                    {/* Modal */}
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="relative w-full max-w-[440px] glass-morphism border border-white/10 rounded-[32px] shadow-2xl overflow-hidden z-10"
                     >
-                        <X size={20} />
-                    </button>
+                        {/* Internal Decorative Blobs */}
+                        <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-primary/20 blur-[80px] rounded-full" />
+                        <div className="absolute bottom-[-10%] left-[-10%] w-40 h-40 bg-secondary/20 blur-[80px] rounded-full" />
 
-                    <div className="p-8">
-                        <div className="text-center mb-8">
-                            <h2 className="text-2xl font-bold text-white mb-2">
-                                {isLogin ? 'Welcome back' : 'Create an account'}
-                            </h2>
-                            <p className="text-text-muted text-sm">
-                                {isLogin ? 'Enter your details to access your dashboard' : 'Join CodeFlow to save and share visualizations'}
-                            </p>
-                        </div>
+                        <div className="relative p-10">
+                            {/* Close Button */}
+                            <button 
+                                onClick={onClose}
+                                className="absolute top-6 right-6 p-2 text-text-muted hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/5"
+                            >
+                                <X size={18} />
+                            </button>
 
-                        {error && (
-                            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                                {error}
+                            {/* Header */}
+                            <div className="text-center mb-10">
+                                <motion.div 
+                                    initial={{ y: -10, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-2xl shadow-lg shadow-primary/20 mb-6"
+                                >
+                                    <ShieldCheck size={24} className="text-white" />
+                                </motion.div>
+                                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">
+                                    {isLogin ? 'Welcome Back' : 'Create Account'}
+                                </h2>
+                                <p className="text-text-muted text-sm font-medium">
+                                    {isLogin ? 'Sign in to sync your DSA progress' : 'Join CodeFlow to master your patterns'}
+                                </p>
                             </div>
-                        )}
 
-                        <button 
-                            onClick={handleGithubAuth}
-                            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-[#24292e] hover:bg-[#2f363d] text-white font-medium transition-colors mb-6 border border-white/5"
-                        >
-                            <Github size={20} />
-                            Continue with GitHub
-                        </button>
+                            {/* Error Message */}
+                            <AnimatePresence>
+                                {error && (
+                                    <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        className="mb-6 overflow-hidden"
+                                    >
+                                        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center gap-3">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                            {error}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
-                        <div className="relative flex items-center py-2 mb-6">
-                            <div className="flex-grow border-t border-white/10"></div>
-                            <span className="flex-shrink-0 mx-4 text-text-muted text-sm">or</span>
-                            <div className="flex-grow border-t border-white/10"></div>
-                        </div>
+                            {/* Social Auth */}
+                            <button 
+                                onClick={handleGithubAuth}
+                                disabled={isLoading}
+                                className="group relative w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold transition-all border border-white/10 overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500" />
+                                <Github size={20} className="relative z-10" />
+                                <span className="relative z-10">Continue with GitHub</span>
+                            </button>
 
-                        <form onSubmit={handleEmailAuth} className="space-y-4">
-                            {!isLogin && (
-                                <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-text-secondary">Name</label>
-                                    <div className="relative">
-                                        <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                            <div className="relative flex items-center py-8">
+                                <div className="flex-grow border-t border-white/5"></div>
+                                <span className="flex-shrink-0 mx-4 text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">or email</span>
+                                <div className="flex-grow border-t border-white/5"></div>
+                            </div>
+
+                            {/* Email Form */}
+                            <form onSubmit={handleEmailAuth} className="space-y-4">
+                                <AnimatePresence mode="popLayout">
+                                    {!isLogin && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -20 }}
+                                            className="space-y-2"
+                                        >
+                                            <label className="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Display Name</label>
+                                            <div className="relative group">
+                                                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
+                                                <input 
+                                                    type="text" 
+                                                    value={name}
+                                                    onChange={(e) => setName(e.target.value)}
+                                                    className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-white font-bold placeholder:text-text-muted/50 outline-none transition-all"
+                                                    placeholder="Example: John Doe"
+                                                    required={!isLogin}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                                
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Email Address</label>
+                                    <div className="relative group">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
                                         <input 
-                                            type="text" 
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2.5 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-white outline-none transition-all"
-                                            placeholder="John Doe"
-                                            required={!isLogin}
+                                            type="email" 
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-white font-bold placeholder:text-text-muted/50 outline-none transition-all"
+                                            placeholder="Example: user@codeflow.com"
+                                            required
                                         />
                                     </div>
                                 </div>
-                            )}
-                            
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-text-secondary">Email</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
-                                    <input 
-                                        type="email" 
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-white outline-none transition-all"
-                                        placeholder="you@example.com"
-                                        required
-                                    />
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Password</label>
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
+                                        <input 
+                                            type={showPassword ? 'text' : 'password'} 
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full pl-12 pr-14 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-white font-bold placeholder:text-text-muted/50 outline-none transition-all"
+                                            placeholder="••••••••"
+                                            required
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-text-muted hover:text-white transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
+
+                                <button 
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="group relative w-full py-4 px-6 rounded-2xl bg-primary text-white font-black transition-all mt-4 overflow-hidden shadow-lg shadow-primary/20 hover:shadow-primary/40"
+                                >
+                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                    <span className="relative flex items-center justify-center gap-2">
+                                        {isLoading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
+                                        {!isLoading && <ArrowRight size={18} />}
+                                    </span>
+                                </button>
+                            </form>
+
+                            {/* Footer */}
+                            <div className="mt-10 text-center">
+                                <p className="text-sm font-bold text-text-muted">
+                                    {isLogin ? "New to CodeFlow? " : "Already have an account? "}
+                                    <button 
+                                        onClick={() => setIsLogin(!isLogin)}
+                                        className="text-primary hover:text-white transition-colors font-black inline-flex items-center gap-1"
+                                    >
+                                        {isLogin ? 'Create Account' : 'Sign In'}
+                                        <Sparkles size={14} />
+                                    </button>
+                                </p>
                             </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-text-secondary">Password</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
-                                    <input 
-                                        type="password" 
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-white outline-none transition-all"
-                                        placeholder="••••••••"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <button 
-                                type="submit"
-                                className="w-full py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-colors mt-2 shadow-lg shadow-primary/20"
-                            >
-                                {isLogin ? 'Sign In' : 'Create Account'}
-                            </button>
-                        </form>
-
-                        <div className="mt-6 text-center text-sm text-text-muted">
-                            {isLogin ? "Don't have an account? " : "Already have an account? "}
-                            <button 
-                                onClick={() => setIsLogin(!isLogin)}
-                                className="text-primary hover:text-primary/80 font-medium transition-colors"
-                            >
-                                {isLogin ? 'Sign up' : 'Log in'}
-                            </button>
                         </div>
-                    </div>
-                </motion.div>
-            </div>
+                    </motion.div>
+                </div>
+            )}
         </AnimatePresence>
     );
 }
