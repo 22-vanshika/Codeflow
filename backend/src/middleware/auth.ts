@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import admin from 'firebase-admin';
 import { adminAuth } from '../config/firebase';
 import { User } from '../models/User';
 
@@ -11,23 +12,22 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            res.status(401).json({ message: 'Unauthorized' });
+            res.status(401).json({ message: 'Unauthorized: Missing or invalid token' });
             return;
         }
 
-        const token = authHeader.split('Bearer ')[1];
+        const token = authHeader.split(' ')[1];
         
-        // If we don't have Firebase Admin configured correctly (e.g. in dev), 
-        // we might mock this or return an error
-        if (!adminAuth) {
-            console.warn('Firebase Admin not initialized, mocking auth for dev...');
+        // If Firebase Admin is not initialized, fallback to mock for dev
+        if (admin.apps.length === 0) {
+            console.warn('[AuthMiddleware] Firebase Admin not initialized. Falling back to mock auth.');
             req.firebaseUid = 'dev-mock-uid';
             const user = await User.findOne({ firebaseUid: 'dev-mock-uid' });
             req.user = user;
             return next();
         }
 
-        const decodedToken = await adminAuth().verifyIdToken(token);
+        const decodedToken = await admin.auth().verifyIdToken(token);
         req.firebaseUid = decodedToken.uid;
 
         const user = await User.findOne({ firebaseUid: decodedToken.uid });
@@ -35,7 +35,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
         next();
     } catch (error) {
-        console.error('Auth error:', error);
-        res.status(401).json({ message: 'Unauthorized' });
+        console.error('[AuthMiddleware] Verification failed:', error);
+        res.status(401).json({ message: 'Unauthorized: Token verification failed' });
     }
 };

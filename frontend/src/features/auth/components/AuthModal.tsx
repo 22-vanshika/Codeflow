@@ -25,14 +25,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         try {
             setError('');
             const result = await signInWithPopup(auth, githubProvider);
-            setUser(result.user);
             
-            // Extract GitHub access token from credential if available
-            // Note: Firebase may not return the OAuth access token directly in standard signInWithPopup
-            // depending on the exact configuration. For now we just sync the user profile.
-            
-            // Sync with backend
+            // Sync with backend FIRST
             await syncUserWithBackend(result.user);
+            
+            // Then set user in store
+            setUser(result.user);
             onClose();
         } catch (err: any) {
             const errorCode = err.code;
@@ -57,8 +55,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 // Can also update profile with name here using updateProfile
             }
-            setUser(userCredential.user);
+            
             await syncUserWithBackend(userCredential.user);
+            setUser(userCredential.user);
             onClose();
         } catch (err: any) {
             const errorCode = err.code;

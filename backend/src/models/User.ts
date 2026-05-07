@@ -6,6 +6,7 @@ export interface IUser extends Document {
     displayName: string;
     photoURL?: string;
     githubAccessToken?: string;
+    progress: Map<string, boolean>;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -17,6 +18,7 @@ const UserSchema = new Schema<IUser>(
         displayName: { type: String, required: true },
         photoURL: { type: String },
         githubAccessToken: { type: String },
+        progress: { type: Map, of: Boolean, default: {} },
     },
     { timestamps: true }
 );

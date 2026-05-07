@@ -45,16 +45,53 @@ router.post('/sync', requireAuth, async (req: AuthRequest, res: Response): Promi
     }
 });
 
-// Get user profile
-router.get('/profile', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+// Get user DSA progress
+router.get('/progress', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        if (!req.user) {
-             res.status(404).json({ message: 'User not found' });
-             return;
+        const firebaseUid = req.firebaseUid;
+        console.log('[GET /progress] Fetching for UID:', firebaseUid);
+        const user = await User.findOne({ firebaseUid });
+        if (!user) {
+            console.warn('[GET /progress] User not found in DB for UID:', firebaseUid);
+            res.status(404).json({ message: 'User not found' });
+            return;
         }
-        res.json(req.user);
+        const progressObj = Object.fromEntries(user.progress || new Map());
+        console.log('[GET /progress] Success. Items found:', Object.keys(progressObj).length);
+        res.json({ progress: progressObj });
     } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('[GET /progress] Error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update user DSA progress
+router.post('/progress', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const firebaseUid = req.firebaseUid;
+        const { progress } = req.body;
+        console.log('[POST /progress] Updating for UID:', firebaseUid, 'Items:', Object.keys(progress || {}).length);
+        
+        if (!progress || typeof progress !== 'object') {
+            res.status(400).json({ message: 'Invalid progress data' });
+            return;
+        }
+
+        let user = await User.findOne({ firebaseUid });
+        if (!user) {
+            console.warn('[POST /progress] User not found for UID:', firebaseUid);
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        // Update Map correctly for Mongoose
+        user.progress = new Map(Object.entries(progress));
+        await user.save();
+
+        console.log('[POST /progress] Successfully saved.');
+        res.json({ message: 'Progress updated', progress: Object.fromEntries(user.progress) });
+    } catch (error) {
+        console.error('[POST /progress] Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

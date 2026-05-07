@@ -4,8 +4,16 @@ import { BookOpen, CheckCircle, ExternalLink, Play } from 'lucide-react';
 import { problemsList, type ProblemDefinition } from '../data/problems/index';
 
 
+import { useProgressStore } from '../store/progressStore';
+
+
+import { useAuthStore } from '../store/authStore';
+
+
 export default function CuratedSheet() {
     const navigate = useNavigate();
+    const { user } = useAuthStore();
+    const { completed, toggleCompletion } = useProgressStore();
     
     // Group problems by category (defensive: never blank the page)
     let groupedProblems: Record<string, ProblemDefinition[]> = {};
@@ -24,19 +32,9 @@ export default function CuratedSheet() {
         console.error('[CuratedSheet] Failed to build groupedProblems', e);
     }
 
-    // Local storage for progress
-    const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
-        const saved = localStorage.getItem('codeflow_dsa_progress');
-        return saved ? JSON.parse(saved) : {};
-    });
-
-    useEffect(() => {
-        localStorage.setItem('codeflow_dsa_progress', JSON.stringify(completed));
-    }, [completed]);
-
-    const toggleCompletion = (id: string, e: React.MouseEvent) => {
+    const handleToggle = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        setCompleted(prev => ({ ...prev, [id]: !prev[id] }));
+        toggleCompletion(id, user);
     };
 
     const handleSolve = (problem: ProblemDefinition) => {
@@ -125,7 +123,7 @@ export default function CuratedSheet() {
                                         >
                                             <div className="flex items-center gap-4">
                                                 <button 
-                                                    onClick={(e) => toggleCompletion(problem.id, e)}
+                                                    onClick={(e) => handleToggle(problem.id, e)}
                                                     className={`p-1 rounded-full transition-colors ${completed[problem.id] ? 'text-accent-green' : 'text-text-muted hover:text-white'}`}
                                                 >
                                                     <CheckCircle size={22} className={completed[problem.id] ? "fill-accent-green/20" : ""} />
