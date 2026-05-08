@@ -45,7 +45,7 @@ export default function Navbar() {
 
     return (
         <>
-        <nav className="fixed top-0 left-0 right-0 h-[64px] z-50 bg-bg-main/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 shadow-2xl">
+        <nav className="fixed top-0 left-0 right-0 h-[60px] z-50 bg-bg-main/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 shadow-2xl">
             {/* Left: Logo */}
             <Link to="/" className="flex items-center space-x-3 group">
                 <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 group-hover:scale-105 transition-all duration-300">
