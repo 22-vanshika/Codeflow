@@ -6,6 +6,22 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Arrays & Hashing',
   url: 'https://leetcode.com/problems/top-k-frequent-elements/',
+  description: 'Given an integer array `nums` and an integer `k`, return the `k` most frequent elements. You may return the answer in any order.',
+  examples: [
+    {
+      input: 'nums = [1,1,1,2,2,3], k = 2',
+      output: '[1,2]'
+    },
+    {
+      input: 'nums = [1], k = 1',
+      output: '[1]'
+    }
+  ],
+  constraints: [
+    '1 <= nums.length <= 10^5',
+    'k is in the range [1, the number of unique elements in the array].',
+    'It is guaranteed that the answer is unique.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

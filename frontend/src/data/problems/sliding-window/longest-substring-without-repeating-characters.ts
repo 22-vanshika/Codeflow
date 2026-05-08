@@ -6,6 +6,28 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Sliding Window',
   url: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/',
+  description: 'Given a string `s`, find the length of the longest substring without repeating characters.',
+  examples: [
+    {
+      input: 's = "abcabcbb"',
+      output: '3',
+      explanation: 'The answer is "abc", with the length of 3.'
+    },
+    {
+      input: 's = "bbbbb"',
+      output: '1',
+      explanation: 'The answer is "b", with the length of 1.'
+    },
+    {
+      input: 's = "pwwkew"',
+      output: '3',
+      explanation: 'The answer is "wke", with the length of 3. Note that the answer must be a substring, "pwke" is a subsequence and not a substring.'
+    }
+  ],
+  constraints: [
+    '0 <= s.length <= 5 * 10^4',
+    's consists of English letters, digits, symbols and spaces.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

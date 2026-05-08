@@ -6,6 +6,22 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Two Pointers',
   url: 'https://leetcode.com/problems/3sum/',
+  description: 'Given an integer array nums, return all the triplets `[nums[i], nums[j], nums[k]]` such that `i != j`, `i != k`, and `j != k`, and `nums[i] + nums[j] + nums[k] == 0`.\n\nNotice that the solution set must not contain duplicate triplets.',
+  examples: [
+    {
+      input: 'nums = [-1,0,1,2,-1,-4]',
+      output: '[[-1,-1,2],[-1,0,1]]',
+      explanation: 'nums[0] + nums[1] + nums[2] = (-1) + 0 + 1 = 0.\nnums[1] + nums[2] + nums[4] = 0 + 1 + (-1) = 0.\nnums[0] + nums[3] + nums[4] = (-1) + 2 + (-1) = 0.\nThe distinct triplets are [-1,0,1] and [-1,-1,2].'
+    },
+    {
+      input: 'nums = [0,1,1]',
+      output: '[]'
+    }
+  ],
+  constraints: [
+    '3 <= nums.length <= 3000',
+    '-10^5 <= nums[i] <= 10^5'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

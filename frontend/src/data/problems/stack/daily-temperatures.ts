@@ -6,6 +6,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Stack',
   url: 'https://leetcode.com/problems/daily-temperatures/',
+  description: 'Given an array of integers `temperatures` represents the daily temperatures, return an array `answer` such that `answer[i]` is the number of days you have to wait after the `i-th` day to get a warmer temperature. If there is no future day for which this is possible, keep `answer[i] == 0` instead.',
+  examples: [
+    {
+      input: 'temperatures = [73,74,75,71,69,72,76,73]',
+      output: '[1,1,4,2,1,1,0,0]'
+    },
+    {
+      input: 'temperatures = [30,40,50,60]',
+      output: '[1,1,1,0]'
+    }
+  ],
+  constraints: [
+    '1 <= temperatures.length <= 10^5',
+    '30 <= temperatures[i] <= 100'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

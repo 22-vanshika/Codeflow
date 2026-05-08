@@ -6,6 +6,25 @@ const problem: ProblemDefinition = {
   difficulty: 'Easy',
   category: 'Linked List',
   url: 'https://leetcode.com/problems/reverse-linked-list/',
+  description: 'Given the `head` of a singly linked list, reverse the list, and return the reversed list.',
+  examples: [
+    {
+      input: 'head = [1,2,3,4,5]',
+      output: '[5,4,3,2,1]'
+    },
+    {
+      input: 'head = [1,2]',
+      output: '[2,1]'
+    },
+    {
+      input: 'head = []',
+      output: '[]'
+    }
+  ],
+  constraints: [
+    'The number of nodes in the list is the range [0, 5000].',
+    '-5000 <= Node.val <= 5000'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

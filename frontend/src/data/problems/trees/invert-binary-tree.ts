@@ -6,6 +6,25 @@ const problem: ProblemDefinition = {
   difficulty: 'Easy',
   category: 'Trees',
   url: 'https://leetcode.com/problems/invert-binary-tree/',
+  description: 'Given the `root` of a binary tree, invert the tree, and return its root.',
+  examples: [
+    {
+      input: 'root = [4,2,7,1,3,6,9]',
+      output: '[4,7,2,9,6,3,1]'
+    },
+    {
+      input: 'root = [2,1,3]',
+      output: '[2,3,1]'
+    },
+    {
+      input: 'root = []',
+      output: '[]'
+    }
+  ],
+  constraints: [
+    'The number of nodes in the tree is in the range [0, 100].',
+    '-100 <= Node.val <= 100'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

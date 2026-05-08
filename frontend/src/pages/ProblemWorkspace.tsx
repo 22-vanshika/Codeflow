@@ -26,6 +26,12 @@ interface ProblemData {
     difficulty: 'Easy' | 'Medium' | 'Hard';
     topicTags?: string[];
     category?: string;
+    examples?: {
+        input: string;
+        output: string;
+        explanation?: string;
+    }[];
+    constraints?: string[];
     starterCode: { cpp: string };
     source: 'LeetCode' | 'Custom' | 'SWE180';
     url?: string;

@@ -5,4 +5,11 @@ export interface ProblemDefinition {
   category: string;
   url: string;
   starterCode: string;
+  description?: string;
+  examples?: {
+    input: string;
+    output: string;
+    explanation?: string;
+  }[];
+  constraints?: string[];
 }

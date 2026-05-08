@@ -6,6 +6,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Easy',
   category: 'Arrays & Hashing',
   url: 'https://leetcode.com/problems/valid-anagram/',
+  description: 'Given two strings `s` and `t`, return `true` if `t` is an anagram of `s`, and `false` otherwise.\n\nAn Anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.',
+  examples: [
+    {
+      input: 's = "anagram", t = "nagaram"',
+      output: 'true'
+    },
+    {
+      input: 's = "rat", t = "car"',
+      output: 'false'
+    }
+  ],
+  constraints: [
+    '1 <= s.length, t.length <= 5 * 10^4',
+    's and t consist of lowercase English letters.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

@@ -68,6 +68,9 @@ export default function CuratedSheet() {
                     difficulty: problem.difficulty,
                     category: problem.category,
                     starterCode: { cpp: problem.starterCode },
+                    description: problem.description,
+                    examples: problem.examples,
+                    constraints: problem.constraints,
                     source: 'SWE180',
                     url: problem.url,
                 }

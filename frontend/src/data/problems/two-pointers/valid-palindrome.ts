@@ -6,6 +6,23 @@ const problem: ProblemDefinition = {
   difficulty: 'Easy',
   category: 'Two Pointers',
   url: 'https://leetcode.com/problems/valid-palindrome/',
+  description: 'A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward. Alphanumeric characters include letters and numbers.\n\nGiven a string `s`, return `true` if it is a palindrome, or `false` otherwise.',
+  examples: [
+    {
+      input: 's = "A man, a plan, a canal: Panama"',
+      output: 'true',
+      explanation: '"amanaplanacanalpanama" is a palindrome.'
+    },
+    {
+      input: 's = "race a car"',
+      output: 'false',
+      explanation: '"raceacar" is not a palindrome.'
+    }
+  ],
+  constraints: [
+    '1 <= s.length <= 2 * 10^5',
+    's consists only of printable ASCII characters.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
