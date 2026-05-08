@@ -1,12 +1,29 @@
 import type { ProblemDefinition } from '../types';
+
 const problem: ProblemDefinition = {
   id: 'n-queens',
   title: 'N-Queens',
   difficulty: 'Hard',
   category: 'Backtracking',
   url: 'https://leetcode.com/problems/n-queens/',
+  description: 'The **n-queens** puzzle is the problem of placing `n` queens on an `n x n` chessboard such that no two queens attack each other.\n\nGiven an integer `n`, return *all distinct solutions to the **n-queens puzzle***. You may return the answer in **any order**.\n\nEach solution contains a distinct board configuration of the n-queens\' placement, where `\'Q\'` and `\'.\'` both indicate a queen and an empty space, respectively.',
+  examples: [
+    {
+      input: 'n = 4',
+      output: '[ [".Q..","...Q","Q...","..Q."], ["..Q.","Q...","...Q",".Q.."] ]',
+      explanation: 'There exist two distinct solutions to the 4-queens puzzle as shown above.'
+    },
+    {
+      input: 'n = 1',
+      output: '[ ["Q"] ]'
+    }
+  ],
+  constraints: [
+    '1 <= n <= 9'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
+
 class Solution {
     vector<vector<string>> res;
     void bt(int row, int n, vector<string>& board,
@@ -21,11 +38,13 @@ class Solution {
     }
 public:
     vector<vector<string>> solveNQueens(int n){
+        res.clear();
         vector<string> board(n,string(n,'.'));
         unordered_set<int> c,d1,d2;
         bt(0,n,board,c,d1,d2); return res;
     }
 };
+
 int main(){
     Solution sol;
     auto r=sol.solveNQueens(4);
@@ -34,4 +53,5 @@ int main(){
     return 0;
 }`,
 };
+
 export default problem;

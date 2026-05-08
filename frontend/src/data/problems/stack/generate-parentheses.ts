@@ -1,12 +1,28 @@
 import type { ProblemDefinition } from '../types';
+
 const problem: ProblemDefinition = {
   id: 'generate-parentheses',
   title: 'Generate Parentheses',
   difficulty: 'Medium',
   category: 'Stack',
   url: 'https://leetcode.com/problems/generate-parentheses/',
+  description: 'Given `n` pairs of parentheses, write a function to *generate all combinations of well-formed parentheses*.',
+  examples: [
+    {
+      input: 'n = 3',
+      output: '["((()))","(()())","(())()","()(())","()()()"]'
+    },
+    {
+      input: 'n = 1',
+      output: '["()"]'
+    }
+  ],
+  constraints: [
+    '1 <= n <= 8'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
+
 class Solution {
     void bt(int open, int close, int n, string& cur, vector<string>& res) {
         if ((int)cur.size()==2*n) { res.push_back(cur); return; }
@@ -19,6 +35,7 @@ public:
         bt(0,0,n,cur,res); return res;
     }
 };
+
 int main() {
     Solution sol;
     for (auto& s:sol.generateParenthesis(3)) cout<<s<<" ";
@@ -26,4 +43,5 @@ int main() {
     return 0;
 }`,
 };
+
 export default problem;

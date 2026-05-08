@@ -1,12 +1,30 @@
 import type { ProblemDefinition } from '../types';
+
 const problem: ProblemDefinition = {
   id: '4sum',
   title: '4Sum',
   difficulty: 'Medium',
   category: 'Two Pointers',
   url: 'https://leetcode.com/problems/4sum/',
+  description: 'Given an array `nums` of `n` integers, return an array of all the **unique** quadruplets `[nums[a], nums[b], nums[c], nums[d]]` such that:\n- `0 <= a, b, c, d < n`\n- `a, b, c, and d` are **distinct**.\n- `nums[a] + nums[b] + nums[c] + nums[d] == target`\n\nYou may return the answer in **any order**.',
+  examples: [
+    {
+      input: 'nums = [1,0,-1,0,-2,2], target = 0',
+      output: '[[-2,-1,1,2],[-2,0,0,2],[-1,0,0,1]]'
+    },
+    {
+      input: 'nums = [2,2,2,2,2], target = 8',
+      output: '[ [2,2,2,2] ]'
+    }
+  ],
+  constraints: [
+    '1 <= nums.length <= 200',
+    '-10^9 <= nums[i] <= 10^9',
+    '-10^9 <= target <= 10^9'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
+
 class Solution {
 public:
     vector<vector<int>> fourSum(vector<int>& nums, int target) {
@@ -33,6 +51,7 @@ public:
         return res;
     }
 };
+
 int main() {
     Solution sol;
     vector<int> nums={1,0,-1,0,-2,2};
@@ -42,4 +61,5 @@ int main() {
     return 0;
 }`,
 };
+
 export default problem;

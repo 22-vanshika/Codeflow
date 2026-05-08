@@ -1,12 +1,30 @@
 import type { ProblemDefinition } from '../types';
+
 const problem: ProblemDefinition = {
   id: 'longest-palindromic-substring',
   title: 'Longest Palindromic Substring',
   difficulty: 'Medium',
   category: 'Dynamic Programming',
   url: 'https://leetcode.com/problems/longest-palindromic-substring/',
+  description: 'Given a string `s`, return the **longest palindromic substring** in `s`.',
+  examples: [
+    {
+      input: 's = "babad"',
+      output: '"bab"',
+      explanation: '"aba" is also a valid answer.'
+    },
+    {
+      input: 's = "cbbd"',
+      output: '"bb"'
+    }
+  ],
+  constraints: [
+    '1 <= s.length <= 1000',
+    's consist of only digits and English letters.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
+
 class Solution {
     string expand(string&s, int l, int r){
         while(l>=0&&r<(int)s.size()&&s[l]==s[r]){l--;r++;}
@@ -23,6 +41,7 @@ public:
         return res;
     }
 };
+
 int main(){
     Solution sol;
     cout<<sol.longestPalindrome("babad")<<endl; // bab
@@ -30,4 +49,5 @@ int main(){
     return 0;
 }`,
 };
+
 export default problem;

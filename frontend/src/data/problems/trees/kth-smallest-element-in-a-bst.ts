@@ -6,6 +6,22 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Trees',
   url: 'https://leetcode.com/problems/kth-smallest-element-in-a-bst/',
+  description: 'Given the `root` of a binary search tree, and an integer `k`, return the `kth` smallest value (**1-indexed**) of all the values of the nodes in the tree.',
+  examples: [
+    {
+      input: 'root = [3,1,4,null,2], k = 1',
+      output: '1'
+    },
+    {
+      input: 'root = [5,3,6,2,4,null,null,1], k = 3',
+      output: '3'
+    }
+  ],
+  constraints: [
+    'The number of nodes in the tree is n.',
+    '1 <= k <= n <= 10^4',
+    '0 <= Node.val <= 10^4'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -24,6 +40,7 @@ class Solution {
     }
 public:
     int kthSmallest(TreeNode* root, int k) {
+        count = 0;
         inorder(root, k);
         return result;
     }

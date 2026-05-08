@@ -1,12 +1,29 @@
 import type { ProblemDefinition } from '../types';
+
 const problem: ProblemDefinition = {
   id: 'reorganize-string',
   title: 'Reorganize String',
   difficulty: 'Medium',
   category: 'Heap / Priority Queue',
   url: 'https://leetcode.com/problems/reorganize-string/',
+  description: 'Given a string `s`, rearrange the characters of `s` so that any two adjacent characters are not the same.\n\nReturn any possible rearrangement of `s` or return `""` if not possible.',
+  examples: [
+    {
+      input: 's = "aab"',
+      output: '"aba"'
+    },
+    {
+      input: 's = "aaab"',
+      output: '""'
+    }
+  ],
+  constraints: [
+    '1 <= s.length <= 500',
+    's consists of lowercase English letters.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
+
 class Solution {
 public:
     string reorganizeString(string s){
@@ -29,6 +46,7 @@ public:
         return res;
     }
 };
+
 int main(){
     Solution sol;
     cout<<sol.reorganizeString("aab")<<endl; // aba
@@ -36,4 +54,5 @@ int main(){
     return 0;
 }`,
 };
+
 export default problem;
