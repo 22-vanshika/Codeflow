@@ -13,8 +13,10 @@ export default function Navbar() {
     const { getSolvedCount, getProgressPercent, fetchFromBackend, reset } = useProgressStore();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    const isWorkspace = location.pathname === '/workspace';
     const totalProblems = problemsList?.length ?? 0;
     const progressPercent = getProgressPercent(totalProblems);
 
@@ -45,7 +47,21 @@ export default function Navbar() {
 
     return (
         <>
-        <nav className="fixed top-0 left-0 right-0 h-[60px] z-50 bg-bg-main/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 shadow-2xl">
+        {/* Hover Trigger Zone for Workspace */}
+        {isWorkspace && (
+            <div 
+                className="fixed top-0 left-0 right-0 h-4 z-[100]" 
+                onMouseEnter={() => setIsHovered(true)}
+            />
+        )}
+
+        <nav 
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`fixed top-0 left-0 right-0 h-[60px] z-50 bg-bg-main/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 shadow-2xl transition-transform duration-500 ease-in-out ${
+                isWorkspace && !isHovered ? '-translate-y-full' : 'translate-y-0'
+            }`}
+        >
             {/* Left: Logo */}
             <Link to="/" className="flex items-center space-x-3 group">
                 <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl shadow-lg shadow-primary/20 group-hover:shadow-primary/40 group-hover:scale-105 transition-all duration-300">
@@ -154,7 +170,6 @@ export default function Navbar() {
                     </button>
                 )}
             </div>
-
         </nav>
         <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
         </>

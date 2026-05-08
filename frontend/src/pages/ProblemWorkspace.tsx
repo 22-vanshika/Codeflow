@@ -105,7 +105,7 @@ export default function ProblemWorkspace() {
     const speedLabel = speedMultiplier.toFixed(1) + 'x';
 
     return (
-        <div className="h-[calc(100vh-56px)] mt-[56px] w-screen flex flex-col bg-bg-main overflow-hidden font-sans text-text-primary">
+        <div className="h-screen w-screen flex flex-col bg-bg-main overflow-hidden font-sans text-text-primary">
 
             {/* ── PREMIUM HEADER ─────────────────────────────────────────── */}
             <header className="flex-none h-14 glass-morphism border-b border-white/5 flex items-center justify-between px-6 z-40 shrink-0">
