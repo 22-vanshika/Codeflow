@@ -5,6 +5,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Hard',
   category: 'Dynamic Programming',
   url: 'https://leetcode.com/problems/edit-distance/',
+  description: 'Given two strings `word1` and `word2`, return the minimum number of operations required to convert `word1` to `word2`.\\n\\nYou have the following three operations permitted on a word:\\n- Insert a character\\n- Delete a character\\n- Replace a character',
+  examples: [
+    {
+      input: 'word1 = "horse", word2 = "ros"',
+      output: '3'
+    },
+    {
+      input: 'word1 = "intention", word2 = "execution"',
+      output: '5'
+    }
+  ],
+  constraints: [
+    '0 <= word1.length, word2.length <= 500',
+    'word1 and word2 consist of lowercase English letters.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {

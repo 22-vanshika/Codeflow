@@ -5,6 +5,25 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Arrays & Hashing',
   url: 'https://leetcode.com/problems/next-permutation/',
+  description: 'A **permutation** of an array of integers is an arrangement of its members into a sequence or linear order. The **next permutation** of an array of integers is the next lexicographically greater permutation of its integer. If such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order).',
+  examples: [
+    {
+      input: 'nums = [1,2,3]',
+      output: '[1,3,2]'
+    },
+    {
+      input: 'nums = [3,2,1]',
+      output: '[1,2,3]'
+    },
+    {
+      input: 'nums = [1,1,5]',
+      output: '[1,5,1]'
+    }
+  ],
+  constraints: [
+    '1 <= nums.length <= 100',
+    '0 <= nums[i] <= 100'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {

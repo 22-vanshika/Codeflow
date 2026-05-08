@@ -6,6 +6,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Hard',
   category: 'Stack',
   url: 'https://leetcode.com/problems/largest-rectangle-in-histogram/',
+  description: 'Given an array of integers `heights` representing the histogram\'s bar height where the width of each bar is `1`, return the area of the largest rectangle in the histogram.',
+  examples: [
+    {
+      input: 'heights = [2,1,5,6,2,3]',
+      output: '10'
+    },
+    {
+      input: 'heights = [2,4]',
+      output: '4'
+    }
+  ],
+  constraints: [
+    '1 <= heights.length <= 10^5',
+    '0 <= heights[i] <= 10^4'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 

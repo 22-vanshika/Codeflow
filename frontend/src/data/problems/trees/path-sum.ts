@@ -5,6 +5,26 @@ const problem: ProblemDefinition = {
   difficulty: 'Easy',
   category: 'Trees',
   url: 'https://leetcode.com/problems/path-sum/',
+  description: 'Given the `root` of a binary tree and an integer `targetSum`, return `true` if the tree has a **root-to-leaf** path such that adding up all the values along the path equals `targetSum`.\\n\\nA **leaf** is a node with no children.',
+  examples: [
+    {
+      input: 'root = [5,4,8,11,null,13,4,7,2,null,null,null,1], targetSum = 22',
+      output: 'true'
+    },
+    {
+      input: 'root = [1,2,3], targetSum = 5',
+      output: 'false'
+    },
+    {
+      input: 'root = [], targetSum = 0',
+      output: 'false'
+    }
+  ],
+  constraints: [
+    'The number of nodes in the tree is in the range [0, 5000].',
+    '-1000 <= Node.val <= 1000',
+    '-1000 <= targetSum <= 1000'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 struct TreeNode{int val;TreeNode*left,*right;TreeNode(int x):val(x),left(nullptr),right(nullptr){}};

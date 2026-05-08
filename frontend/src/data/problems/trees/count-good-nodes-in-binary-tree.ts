@@ -5,6 +5,25 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Trees',
   url: 'https://leetcode.com/problems/count-good-nodes-in-binary-tree/',
+  description: 'Given a binary tree `root`, a node `X` in the tree is named **good** if in the path from root to `X`, there are no nodes with a value greater than `X`.\\n\\nReturn the number of **good** nodes in the binary tree.',
+  examples: [
+    {
+      input: 'root = [3,1,4,3,null,1,5]',
+      output: '4'
+    },
+    {
+      input: 'root = [3,3,null,4,2]',
+      output: '3'
+    },
+    {
+      input: 'root = [1]',
+      output: '1'
+    }
+  ],
+  constraints: [
+    'The number of nodes in the binary tree is in the range [1, 10^5].',
+    'Each node\'s value is between [-10^4, 10^4].'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 struct TreeNode{int val;TreeNode*left,*right;TreeNode(int x):val(x),left(nullptr),right(nullptr){}};

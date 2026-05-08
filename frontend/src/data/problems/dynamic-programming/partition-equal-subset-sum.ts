@@ -5,6 +5,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Dynamic Programming',
   url: 'https://leetcode.com/problems/partition-equal-subset-sum/',
+  description: 'Given an integer array `nums`, return `true` if you can partition the array into two subsets such that the sum of the elements in both subsets is equal or `false` otherwise.',
+  examples: [
+    {
+      input: 'nums = [1,5,11,5]',
+      output: 'true'
+    },
+    {
+      input: 'nums = [1,2,3,5]',
+      output: 'false'
+    }
+  ],
+  constraints: [
+    '1 <= nums.length <= 200',
+    '1 <= nums[i] <= 100'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {

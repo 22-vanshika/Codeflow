@@ -5,6 +5,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Backtracking',
   url: 'https://leetcode.com/problems/subsets-ii/',
+  description: 'Given an integer array `nums` that may contain duplicates, return all possible **subsets** (the power set). The solution set **must not** contain duplicate subsets. Return the solution in **any order**.',
+  examples: [
+    {
+      input: 'nums = [1,2,2]',
+      output: '[[],[1],[1,2],[1,2,2],[2],[2,2]]'
+    },
+    {
+      input: 'nums = [0]',
+      output: '[[],[0]]'
+    }
+  ],
+  constraints: [
+    '1 <= nums.length <= 10',
+    '-10 <= nums[i] <= 10'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {

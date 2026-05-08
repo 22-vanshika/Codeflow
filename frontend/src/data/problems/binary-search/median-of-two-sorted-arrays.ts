@@ -5,6 +5,24 @@ const problem: ProblemDefinition = {
   difficulty: 'Hard',
   category: 'Binary Search',
   url: 'https://leetcode.com/problems/median-of-two-sorted-arrays/',
+  description: 'Given two sorted arrays `nums1` and `nums2` of size `m` and `n` respectively, return **the median** of the two sorted arrays. The overall run time complexity should be `O(log (m+n))`.',
+  examples: [
+    {
+      input: 'nums1 = [1,3], nums2 = [2]',
+      output: '2.00000'
+    },
+    {
+      input: 'nums1 = [1,2], nums2 = [3,4]',
+      output: '2.50000'
+    }
+  ],
+  constraints: [
+    'nums1.length == m',
+    'nums2.length == n',
+    '0 <= m, n <= 1000',
+    '1 <= m + n <= 2000',
+    '-10^6 <= nums1[i], nums2[i] <= 10^6'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {

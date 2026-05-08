@@ -5,6 +5,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Medium',
   category: 'Dynamic Programming',
   url: 'https://leetcode.com/problems/jump-game/',
+  description: 'You are given an integer array `nums`. You are initially positioned at the array\'s **first index**, and each element in the array represents your maximum jump length at that position.\\n\\nReturn `true` if you can reach the last index, or `false` otherwise.',
+  examples: [
+    {
+      input: 'nums = [2,3,1,1,4]',
+      output: 'true'
+    },
+    {
+      input: 'nums = [3,2,1,0,4]',
+      output: 'false'
+    }
+  ],
+  constraints: [
+    '1 <= nums.length <= 10^4',
+    '0 <= nums[i] <= 10^5'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {

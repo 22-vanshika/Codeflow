@@ -5,6 +5,21 @@ const problem: ProblemDefinition = {
   difficulty: 'Hard',
   category: 'Dynamic Programming',
   url: 'https://leetcode.com/problems/distinct-subsequences/',
+  description: 'Given two strings `s` and `t`, return the number of distinct **subsequences** of `s` which equals `t`.',
+  examples: [
+    {
+      input: 's = "rabbbit", t = "rabbit"',
+      output: '3'
+    },
+    {
+      input: 's = "babgbag", t = "bag"',
+      output: '5'
+    }
+  ],
+  constraints: [
+    '1 <= s.length, t.length <= 1000',
+    's and t consist of English letters.'
+  ],
   starterCode: `#include <bits/stdc++.h>
 using namespace std;
 class Solution {
