@@ -42,8 +42,8 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
     const hasSteps = stepsArray.length > 0;
     const activeStep = stepsArray[currentStepIndex];
     const activeLine = activeStep?.line;
-    const currentTraceStep = traceSteps[currentStepIndex];
-    const currentTrace = traces[currentStepIndex];
+    const currentTraceStep = stepsArray[currentStepIndex];
+    const currentTrace = stepsArray[currentStepIndex];
     const currentNodeId = currentTrace?.visualization?.nodeId;
     const pathTaken = currentTrace?.visualization?.pathTaken;
 

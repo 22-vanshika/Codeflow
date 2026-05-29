@@ -32,6 +32,7 @@ export interface ExecutionTrace {
     output?: string;
     explanation?: string;
     visualization?: VisualizationHint;  // Enhanced visualization data
+    visuals?: any;                      // Deterministic data structure visual instructions
 }
 
 export interface StackFrame {
@@ -128,12 +129,33 @@ export type ASTNode =
     | MemberExpression
     | NewExpression
     | ThisExpression
-    | ThisExpression
     | ArrayExpression
-    | BreakStatement;
+    | BreakStatement
+    | ConditionalExpression
+    | CastExpression
+    | UnaryExpression;
 
 export interface BreakStatement extends BaseNode {
     type: 'BreakStatement';
+}
+
+export interface ConditionalExpression extends BaseNode {
+    type: 'ConditionalExpression';
+    test: ASTNode;
+    consequent: ASTNode;
+    alternate: ASTNode;
+}
+
+export interface CastExpression extends BaseNode {
+    type: 'CastExpression';
+    castType: string;
+    argument: ASTNode;
+}
+
+export interface UnaryExpression extends BaseNode {
+    type: 'UnaryExpression';
+    operator: string;
+    argument: ASTNode;
 }
 
 export interface BaseNode {

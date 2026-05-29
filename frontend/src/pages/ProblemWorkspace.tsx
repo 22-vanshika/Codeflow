@@ -62,7 +62,7 @@ export default function ProblemWorkspace() {
 
     const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
     const hasSteps = stepsArray.length > 0;
-    const currentTraceStep = traceSteps[currentStepIndex];
+    const currentTraceStep = stepsArray[currentStepIndex];
 
     const handleResetCode = () => {
         if (problemDetails?.starterCode?.cpp) {
