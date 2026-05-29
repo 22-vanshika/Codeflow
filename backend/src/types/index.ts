@@ -131,12 +131,31 @@ export type ASTNode =
     | ThisExpression
     | ArrayExpression
     | BreakStatement
+    | ContinueStatement
+    | StructuredBindingDeclaration
     | ConditionalExpression
     | CastExpression
-    | UnaryExpression;
+    | UnaryExpression
+    | DeleteStatement;
+
+export interface DeleteStatement extends BaseNode {
+    type: 'DeleteStatement';
+    argument: ASTNode;
+}
 
 export interface BreakStatement extends BaseNode {
     type: 'BreakStatement';
+}
+
+export interface ContinueStatement extends BaseNode {
+    type: 'ContinueStatement';
+}
+
+export interface StructuredBindingDeclaration extends BaseNode {
+    type: 'StructuredBindingDeclaration';
+    names: string[];
+    varType: string;
+    init?: ASTNode;
 }
 
 export interface ConditionalExpression extends BaseNode {
