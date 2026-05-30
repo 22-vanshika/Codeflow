@@ -4,7 +4,7 @@ import mermaid from 'mermaid';
 import { useExecutionStore } from '../../../../store/executionStore';
 import { Network } from 'lucide-react';
 import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual, HashMapVisual } from '../../../../types';
-import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer } from '../visualizers';
+import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer, MatrixVisualizer, PriorityQueueVisualizer } from '../visualizers';
 
 mermaid.initialize({
     startOnLoad: false,
@@ -21,6 +21,7 @@ mermaid.initialize({
 
 const WhiteboardPanel = React.memo(function WhiteboardPanel() {
     const {
+        code,
         flowchart,
         analysis,
         currentStepIndex,
@@ -106,68 +107,154 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
         });
     }, [svgContent, currentStepIndex, currentNodeId, visitedNodes, pathTaken, flowchart, activeLine, traceMode]);
 
-    const renderVisualizer = () => {
-        if (!currentTraceStep?.visuals) return null;
-        const v = currentTraceStep.visuals;
+    // Universal Assignment / Travel Animation Hook
+    useEffect(() => {
+        if (!currentTraceStep || !traceMode) return;
+        const detail = (currentTraceStep as any).assignmentDetail;
+        if (!detail || !detail.dest) return;
+
+        // Give a tiny amount of time for cells/variables to mount/update positions
+        const timer = setTimeout(() => {
+            const dest = detail.dest;
+            let destEl: HTMLElement | null = null;
+            if (dest.index !== undefined) {
+                destEl = document.querySelector(`[data-array-name="${dest.name}"][data-cell-index="${dest.index}"]`);
+            } else {
+                destEl = document.querySelector(`[data-var-name="${dest.name}"]`);
+            }
+
+            if (!destEl) return;
+
+            const sources = detail.sources || [];
+            sources.forEach((src: any) => {
+                let srcEl: HTMLElement | null = null;
+                if (src.index !== undefined) {
+                    srcEl = document.querySelector(`[data-array-name="${src.name}"][data-cell-index="${src.index}"]`);
+                } else {
+                    srcEl = document.querySelector(`[data-var-name="${src.name}"]`);
+                }
+
+                if (srcEl && destEl) {
+                    triggerTravelAnimation(srcEl, destEl, src.value);
+                }
+            });
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [currentStepIndex, traceMode, currentTraceStep]);
+
+    // Compute sortedUntil: detect if step type is loop_end / return meaning a
+    // sort pass just completed — track the minimum swap index seen so far
+    const sortedUntilRef = React.useRef<number | undefined>(undefined);
+    const prevStepIndexRef = React.useRef<number>(-1);
+    if (currentStepIndex < prevStepIndexRef.current) {
+        // Rewinding — reset sorted boundary
+        sortedUntilRef.current = undefined;
+    }
+    prevStepIndexRef.current = currentStepIndex;
+
+    const arrayStepType = (currentTraceStep as any)?.type as string | undefined;
+
+    const renderVisualizerItem = (v: any) => {
+        if (!v) return null;
         switch (v.type) {
-            case 'array_1d':   return <ArrayVisualizer visual={v as ArrayVisual} />;
+            case 'array_1d': {
+                const av = v as ArrayVisual;
+                return (
+                    <ArrayVisualizer
+                        visual={av}
+                        stepType={arrayStepType as any}
+                    />
+                );
+            }
+            case 'matrix': {
+                return <MatrixVisualizer visual={v as any} />;
+            }
+            case 'priority_queue': {
+                return <PriorityQueueVisualizer visual={v as any} />;
+            }
             case 'call_stack': return <CallStackVisualizer visual={v as CallStackVisual} />;
             case 'tree':       return <TreeVisualizer visual={v as TreeVisual} />;
             case 'graph':      return <GraphVisualizer visual={v as GraphVisual} />;
             case 'stack':
-            case 'queue':      return <StackQueueVisualizer visual={v as StackQueueVisual} />;
+            case 'queue':
+            case 'deque':      return <StackQueueVisualizer visual={v as StackQueueVisual} />;
             case 'hash_map':   return <HashMapVisualizer visual={v as HashMapVisual} />;
             default:           return null;
         }
     };
 
+    const renderVisualizer = () => {
+        if (!currentTraceStep?.visuals) return null;
+        const v = currentTraceStep.visuals;
+        if (v.type === 'multi_visuals') {
+            return (
+                <div className="flex flex-col gap-6 w-full items-center">
+                    {(v as any).visuals.map((subV: any, idx: number) => (
+                        <div key={subV.target || idx} className="w-full flex justify-center">
+                            {renderVisualizerItem(subV)}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+        return renderVisualizerItem(v);
+    };
+
+    const showEmptyState = traceMode ? !hasSteps : !flowchart;
+
+    if (showEmptyState) {
+        return (
+            <div className="flex-1 w-full h-full flex flex-col bg-[#0B1120] relative text-white overflow-hidden items-center justify-center">
+                {/* Dot-grid background */}
+                <div className="absolute inset-0 pointer-events-none"
+                    style={{ backgroundImage: 'radial-gradient(#1e2d3d 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+
+                <div className="flex flex-col items-center justify-center text-[#768390] gap-4 z-20 select-none">
+                    <div className="w-16 h-16 rounded-2xl bg-[#0d1117] border border-[#1e2d3d] flex items-center justify-center">
+                        <Network className="w-8 h-8 opacity-40" />
+                    </div>
+                    <div className="text-center">
+                        <p className="font-semibold text-sm text-white/60">Canvas is empty</p>
+                        <p className="text-xs mt-1 text-[#768390]">
+                            {traceMode 
+                                ? <>Click <span className="text-cyan-400 font-mono">GENERATE TRACE</span> to visualize your code step-by-step</>
+                                : <>No flowchart data available. Click <span className="text-cyan-400 font-mono">GENERATE TRACE</span> to run code</>}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] mt-2 text-[#768390]/70">
+                        <span>Space = Play/Pause</span>
+                        <span>·</span>
+                        <span>← / → = Step</span>
+                        <span>·</span>
+                        <span>R = Reset</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 w-full h-full flex flex-col bg-[#0B1120] relative text-white overflow-hidden">
-
             {/* Dot-grid background */}
             <div className="absolute inset-0 pointer-events-none"
                 style={{ backgroundImage: 'radial-gradient(#1e2d3d 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
-            {/* Main Canvas Area */}
-            <div
-                className="flex-1 overflow-auto flex items-center justify-center p-10 relative z-10"
-                style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
-            >
-                {traceMode ? (
-                    /* Blackboard Mode */
-                    <div className="flex flex-col items-center gap-6 w-full max-w-3xl">
-                        {/* Variables Chips */}
-                        {currentTraceStep && Object.keys(currentTraceStep.variables).length > 0 && (
-                            <div className="flex flex-wrap gap-2 justify-center">
-                                {Object.entries(currentTraceStep.variables).map(([name, value]) => (
-                                    <div key={name} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0d1117] border border-[#1e2d3d] rounded-lg text-xs font-mono">
-                                        <span className="text-[#58a6ff]">{name}</span>
-                                        <span className="text-[#768390]">=</span>
-                                        <span className="text-amber-300 font-semibold">
-                                            {Array.isArray(value) ? `[${value.join(', ')}]` : String(value)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Dynamic DSA Visualizer */}
-                        <div className="w-full flex justify-center">
+            {traceMode ? (
+                /* Primary Data Visualization Area takes 100% of height */
+                <div className="flex-1 w-full h-full flex flex-col min-h-0 relative z-10">
+                    <div className="flex-1 w-full min-h-0 flex items-center justify-center p-6 overflow-auto">
+                        <div className="w-full flex justify-center max-w-4xl">
                             {renderVisualizer()}
                         </div>
-
-                        {/* Current Line Badge */}
-                        {currentTraceStep && (
-                            <div className="flex items-center gap-2 bg-[#0d1117]/80 backdrop-blur-sm border border-[#1e2d3d] rounded-lg px-4 py-2 font-mono text-sm">
-                                <span className="text-[#768390]">Line {currentTraceStep.line}:</span>
-                                <span className="text-cyan-400">{currentTraceStep.lineContent}</span>
-                            </div>
-                        )}
-
-
                     </div>
-                ) : (
-                    /* Flowchart Mode */
+                </div>
+            ) : (
+                /* Flowchart Mode */
+                <div
+                    className="flex-1 overflow-auto flex items-center justify-center p-10 relative z-10"
+                    style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
+                >
                     <div className="flex flex-col items-center gap-6">
                         <div
                             ref={containerRef}
@@ -181,26 +268,6 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
                             </div>
                         )}
                     </div>
-                )}
-            </div>
-
-            {/* Empty State */}
-            {!hasSteps && !flowchart && !analysis && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#768390] gap-4 z-20">
-                    <div className="w-16 h-16 rounded-2xl bg-[#0d1117] border border-[#1e2d3d] flex items-center justify-center">
-                        <Network className="w-8 h-8 opacity-40" />
-                    </div>
-                    <div className="text-center">
-                        <p className="font-semibold text-sm text-white/60">Canvas is empty</p>
-                        <p className="text-xs mt-1 text-[#768390]">Click <span className="text-cyan-400 font-mono">TRACE</span> to visualize your code step-by-step</p>
-                    </div>
-                    <div className="flex items-center gap-3 text-[10px] mt-2 text-[#768390]/70">
-                        <span>Space = Play/Pause</span>
-                        <span>·</span>
-                        <span>← / → = Step</span>
-                        <span>·</span>
-                        <span>R = Reset</span>
-                    </div>
                 </div>
             )}
         </div>
@@ -208,3 +275,73 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
 });
 
 export default WhiteboardPanel;
+
+function triggerTravelAnimation(sourceEl: HTMLElement, destEl: HTMLElement, value: any) {
+    const srcRect = sourceEl.getBoundingClientRect();
+    const destRect = destEl.getBoundingClientRect();
+
+    // Create particle element
+    const particle = document.createElement('div');
+    particle.className = 'av-flying-particle';
+    particle.innerText = String(value);
+
+    // Style particle
+    Object.assign(particle.style, {
+        position: 'fixed',
+        top: `${srcRect.top}px`,
+        left: `${srcRect.left}px`,
+        width: `${srcRect.width}px`,
+        height: `${srcRect.height}px`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(6, 182, 212, 0.3)',
+        border: '2px solid rgb(6, 182, 212)',
+        borderRadius: '12px',
+        color: '#fff',
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        fontWeight: 'bold',
+        zIndex: '9999',
+        pointerEvents: 'none',
+        boxShadow: '0 0 12px rgba(6, 182, 212, 0.6)',
+        transition: 'all 0.55s cubic-bezier(0.25, 1, 0.5, 1)'
+    });
+
+    document.body.appendChild(particle);
+
+    // Trigger animation frame to transition
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            Object.assign(particle.style, {
+                top: `${destRect.top}px`,
+                left: `${destRect.left}px`,
+                width: `${destRect.width}px`,
+                height: `${destRect.height}px`,
+                background: 'rgba(251, 146, 60, 0.35)',
+                borderColor: 'rgb(251, 146, 60)',
+                boxShadow: '0 0 15px rgba(251, 146, 60, 0.7)',
+                transform: 'scale(1.05)'
+            });
+        });
+    });
+
+    // Cleanup after animation completes
+    setTimeout(() => {
+        // Landing pulse effect using native Web Animations API
+        try {
+            destEl.animate([
+                { transform: 'scale(1)', boxShadow: '0 0 0 rgba(251, 146, 60, 0)' },
+                { transform: 'scale(1.08)', boxShadow: '0 0 16px rgba(251, 146, 60, 0.8)', borderColor: 'rgb(251, 146, 60)' },
+                { transform: 'scale(1)', boxShadow: '0 0 0 rgba(251, 146, 60, 0)' }
+            ], {
+                duration: 400,
+                easing: 'ease-out'
+            });
+        } catch (e) {
+            console.error('Error playing landing pulse animation:', e);
+        }
+
+        particle.remove();
+    }, 550);
+}

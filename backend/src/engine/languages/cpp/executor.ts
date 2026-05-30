@@ -59,6 +59,10 @@ class Environment {
         this.vars.set(name, value);
     }
 
+    public has(name: string): boolean {
+        return this.vars.has(name);
+    }
+
     public assign(name: string, value: any) {
         if (this.vars.has(name)) {
             this.vars.set(name, value);
@@ -176,7 +180,12 @@ export class Executor implements IExecutor {
 
     // Visualization context for step-by-step drawing
     private currentNodeId: string = 'start';
+    private currentLine: number = 0;
+    private sourceLines: string[] = [];
     private loopIterations: Map<number, number> = new Map();  // line -> iteration count
+    private activeSwapArrayName?: string;
+    private activeSwapIndices?: [number, number];
+    private pointerToContainer: Map<string, string> = new Map();
 
     constructor() {
         this.globals.heap = this.heap;
@@ -330,15 +339,21 @@ export class Executor implements IExecutor {
         this.globals.define('min_element', minElem);
         this.globals.define('std::min_element', minElem);
 
-        const revIt = (startIt: any, endIt: any) => {
+        const revIt = function*(this: Executor, startIt: any, endIt: any) {
             if (startIt && startIt.container) {
                 const arr = startIt.container;
+                const containerName = startIt.containerName || 'array';
                 let l = startIt.index || 0;
                 let r = (endIt.index !== undefined ? endIt.index : arr.length) - 1;
                 while (l < r) {
                     const tmp = arr[l];
                     arr[l] = arr[r];
                     arr[r] = tmp;
+                    this.activeSwapArrayName = containerName;
+                    this.activeSwapIndices = [l, r];
+                    yield this.createTrace(this.currentLine || 0, 'assignment', `Reversing array: swapped index ${l} and ${r} (${arr[r]} ⇄ ${arr[l]})`);
+                    this.activeSwapArrayName = undefined;
+                    this.activeSwapIndices = undefined;
                     l++; r--;
                 }
             }
@@ -456,15 +471,17 @@ export class Executor implements IExecutor {
 
     private *executeInternal(source: string, input: string = ""): Generator<ExecutionTrace> {
         this.parseInput(input);
+        this.pointerToContainer.clear();
+        this.sourceLines = source.split('\n');
 
         const lexer = new Lexer(source);
         const tokens = lexer.tokenize();
         const parser = new Parser(tokens);
-        console.log("DEBUG: Tokens:", tokens.slice(0, 50).map(t => t.value));
+
         const ast = parser.parse();
 
         if (ast.type === 'Program') {
-            console.log("DEBUG: Program Body Types:", ast.body.map(n => n.type));
+
             for (const node of ast.body) {
                 if (node.type === 'FunctionDeclaration') {
                     const func = node as FunctionDeclaration;
@@ -506,6 +523,102 @@ export class Executor implements IExecutor {
         }
     }
 
+    private getDefaultValueForDeclaration(decl: VariableDeclaration): any {
+        if (decl.arrayDimensions && decl.arrayDimensions.length > 0) {
+            const createArray = (dims: number[]): any[] => {
+                if (dims.length === 0) return 0 as any;
+                const size = dims[0];
+                const arr = new Array(size);
+                if (dims.length === 1) {
+                    for (let i = 0; i < size; i++) {
+                        const t = decl.varType || '';
+                        if (t.includes('int') || t.includes('float') || t.includes('double') || t.includes('long')) arr[i] = 0;
+                        else if (t.includes('bool')) arr[i] = false;
+                        else if (t.includes('string')) arr[i] = "";
+                        else if (t.includes('char')) arr[i] = '\0';
+                        else if (t.includes('*')) arr[i] = null;
+                        else arr[i] = {};
+                    }
+                } else {
+                    for (let i = 0; i < size; i++) {
+                        arr[i] = createArray(dims.slice(1));
+                    }
+                }
+                return arr;
+            };
+            return createArray(decl.arrayDimensions);
+        }
+        if (decl.varType) {
+            const t = decl.varType;
+            if (isPriorityQueue(t)) {
+                return { __type: 'std::priority_queue', elements: [], isMinHeap: t.includes('greater') };
+            } else if (isVector(t) || isStack(t) || isList(t)) {
+                const value: any[] = [];
+                if (isList(t)) (value as any).__type = 'std::list';
+                else if (isStack(t)) (value as any).__type = 'std::stack';
+                else if (isVector(t)) (value as any).__type = 'std::vector';
+                return value;
+            } else if (isQueue(t)) {
+                const value: any[] = [];
+                (value as any).__type = 'std::queue';
+                return value;
+            } else if (isDeque(t)) {
+                const value: any[] = [];
+                (value as any).__type = 'std::deque';
+                return value;
+            } else if (isMap(t)) {
+                return createMapWithValType(t);
+            } else if (isSet(t)) {
+                return new Set();
+            } else if (isType(t, 'pair')) {
+                return { first: 0, second: 0 };
+            } else if (isType(t, 'string')) {
+                return "";
+            } else if (isType(t, 'int') || isType(t, 'double') || isType(t, 'float') || isType(t, 'bool') || isType(t, 'char') || isType(t, 'long') || isType(t, 'size_t') || isType(t, 'unsigned')) {
+                return 0;
+            }
+        }
+        return undefined;
+    }
+
+    private preAllocateVariables(block: Block, env: Environment) {
+        const self = this;
+        function scan(node: ASTNode) {
+            if (!node) return;
+            if (node.type === 'VariableDeclaration') {
+                const decl = node as VariableDeclaration;
+                if (!env.has(decl.name)) {
+                    const val = self.getDefaultValueForDeclaration(decl);
+                    env.define(decl.name, val);
+                }
+            } else if (node.type === 'MultiVariableDeclaration') {
+                const multi = node as MultiVariableDeclaration;
+                for (const decl of multi.declarations) {
+                    if (!env.has(decl.name)) {
+                        const val = self.getDefaultValueForDeclaration(decl);
+                        env.define(decl.name, val);
+                    }
+                }
+            } else {
+                for (const key of Object.keys(node)) {
+                    const child = (node as any)[key];
+                    if (child && typeof child === 'object') {
+                        if (Array.isArray(child)) {
+                            child.forEach(scan);
+                        } else if (child.type) {
+                            scan(child);
+                        }
+                    }
+                }
+            }
+        }
+        if (block && block.body) {
+            for (const stmt of block.body) {
+                scan(stmt);
+            }
+        }
+    }
+
     private *executeFunction(func: FunctionDeclaration, args: any[], thisObj?: any): Generator<ExecutionTrace> {
         if (this.callDepth >= this.MAX_CALL_DEPTH) {
             throw new Error(`Runtime Error: Maximum recursion depth exceeded (${this.MAX_CALL_DEPTH} levels). Check for infinite recursion.`);
@@ -523,6 +636,7 @@ export class Executor implements IExecutor {
         });
 
         this.callStack.push(env);
+        this.preAllocateVariables(func.body, env);
         yield this.createTrace(func.line || 0, 'function_call', `Called ${func.name}`);
 
         try {
@@ -600,6 +714,7 @@ export class Executor implements IExecutor {
     }
 
     private *executeStatement(node: ASTNode): Generator<ExecutionTrace> {
+        this.currentLine = node.line || this.currentLine || 0;
         switch (node.type) {
             case 'VariableDeclaration': {
                 const decl = node as VariableDeclaration;
@@ -668,6 +783,8 @@ export class Executor implements IExecutor {
                     } else if (isVector(t) || isStack(t) || isList(t)) {
                         value = [];
                         if (isList(t)) (value as any).__type = 'std::list';
+                        else if (isStack(t)) (value as any).__type = 'std::stack';
+                        else if (isVector(t)) (value as any).__type = 'std::vector';
                     } else if (isQueue(t)) {
                         value = [];
                         (value as any).__type = 'std::queue';
@@ -722,6 +839,8 @@ export class Executor implements IExecutor {
                                  if (isVector(tVar) || isStack(tVar) || isList(tVar)) {
                                      const arr: any[] = [];
                                      if (isList(tVar)) (arr as any).__type = 'std::list';
+                                     else if (isStack(tVar)) (arr as any).__type = 'std::stack';
+                                     else if (isVector(tVar)) (arr as any).__type = 'std::vector';
                                      return arr;
                                  }
                                  if (isQueue(tVar)) {
@@ -768,7 +887,14 @@ export class Executor implements IExecutor {
                     }
                 }
                 this.currentEnv().define(decl.name, value);
-                yield this.createTrace(decl.line || 0, 'definition', `Declared ${decl.name} = ${value !== undefined ? safeStringify(value) : '?'}`);
+                yield this.createTrace(decl.line || 0, 'definition', `Declared ${decl.name} = ${value !== undefined ? safeStringify(value) : '?'}`, {
+                    astNode: decl.init || undefined,
+                    assignmentDetail: {
+                        sources: decl.init ? this.extractSources(decl.init) : [],
+                        dest: { name: decl.name },
+                        value: value
+                    }
+                });
                 break;
             }
             case 'MultiVariableDeclaration': {
@@ -792,7 +918,9 @@ export class Executor implements IExecutor {
                     }
                     this.currentEnv().define(name, val);
                 }
-                yield this.createTrace(sb.line || 0, 'definition', `Unpacked ${sb.names.join(', ')}`);
+                yield this.createTrace(sb.line || 0, 'definition', `Unpacked ${sb.names.join(', ')}`, {
+                    astNode: sb.init || undefined
+                });
                 break;
             }
             case 'ClassDeclaration': {
@@ -818,7 +946,9 @@ export class Executor implements IExecutor {
                 if (ret.argument) {
                     value = yield* this.evaluate(ret.argument);
                 }
-                yield this.createTrace(ret.line || 0, 'return', `Returned ${value}`);
+                yield this.createTrace(ret.line || 0, 'return', `Returned ${value}`, {
+                    astNode: ret.argument || undefined
+                });
                 throw new ReturnException(value);
             }
             case 'ExpressionStatement': {
@@ -830,18 +960,20 @@ export class Executor implements IExecutor {
                 const ifStmt = node as IfStatement;
                 const test = yield* this.evaluate(ifStmt.test);
                 const pathTaken = test ? 'true' : 'false';
-
+ 
                 yield this.createTrace(ifStmt.line || 0, 'condition', `If condition: ${test}`, {
                     pathTaken: pathTaken as 'true' | 'false',
-                    what: `We checked if the condition is true or false.`,
                     why: test
-                        ? `The condition evaluated to TRUE, so we take the Yes ✓ branch.`
-                        : `The condition evaluated to FALSE, so we take the No ✗ branch.`,
-                    next: test
-                        ? `We'll execute the code inside the if block.`
+                        ? `Condition is TRUE → entering if-block`
                         : ifStmt.alternate
-                            ? `We'll execute the code inside the else block.`
-                            : `We'll skip the if block and continue after it.`
+                            ? `Condition is FALSE → entering else-block`
+                            : `Condition is FALSE → skipping if-block`,
+                    next: test
+                        ? `Execute if-block.`
+                        : ifStmt.alternate
+                            ? `Execute else-block.`
+                            : `Skip to after the if-block.`,
+                    astNode: ifStmt.test
                 });
 
                 if (test) {
@@ -852,20 +984,18 @@ export class Executor implements IExecutor {
                 break;
             }
             case 'BreakStatement': {
-                yield this.createTrace(node.line || 0, 'condition', 'Breaking out of the loop', {
+                yield this.createTrace(node.line || 0, 'condition', 'break — exiting loop', {
                     pathTaken: 'true',
-                    what: 'We encountered a break statement.',
-                    why: 'The program explicitly requested to stop the loop.',
-                    next: 'We will exit the loop immediately.'
+                    why: 'break statement → exits loop immediately',
+                    next: 'Continue after the loop.'
                 });
                 throw new BreakException();
             }
             case 'ContinueStatement': {
-                yield this.createTrace(node.line || 0, 'condition', 'Continuing the loop', {
+                yield this.createTrace(node.line || 0, 'condition', 'continue — skip to next iteration', {
                     pathTaken: 'true',
-                    what: 'We encountered a continue statement.',
-                    why: 'The program explicitly requested to skip the rest of this iteration.',
-                    next: 'We will jump to the next loop iteration.'
+                    why: 'continue statement → skips rest of this iteration',
+                    next: 'Jump to the next loop iteration.'
                 });
                 throw new ContinueException();
             }
@@ -890,26 +1020,23 @@ export class Executor implements IExecutor {
 
                     if (test) {
                         yield this.createTrace(loopLine, iteration === 1 ? 'loop_start' : 'loop_continue',
-                            `While condition: ${test} (iteration ${iteration})`, {
+                            `while: condition = true (iteration ${iteration})`, {
                             loopIteration: iteration,
                             pathTaken: 'true',
-                            what: iteration === 1
-                                ? `We're entering the loop for the first time.`
-                                : `We go back to the loop because the condition is still true.`,
-                            why: `The condition '${test}' is TRUE, so the loop continues.`,
-                            next: `We'll execute the loop body (iteration ${iteration}).`
+                            why: `Iteration ${iteration}: condition is true → entering loop body`,
+                            next: `Run loop body (iteration ${iteration}).`,
+                            astNode: loop.test
                         });
                         try {
                             yield* this.visitStatement(loop.body);
                         } catch (e: any) {
                             if (e instanceof BreakException) {
                                 yield this.createTrace(loopLine, 'loop_end',
-                                    `Loop broken - exiting`, {
+                                    `while: break — exiting after iteration ${iteration}`, {
                                     loopIteration: iteration,
                                     pathTaken: 'true',
-                                    what: `We are exiting the loop due to a break statement.`,
-                                    why: `A break statement was executed inside the loop.`,
-                                    next: `We'll continue with the code after the loop.`
+                                    why: `break statement executed → loop exits`,
+                                    next: `Continue after the loop.`
                                 });
                                 break;
                             }
@@ -920,12 +1047,12 @@ export class Executor implements IExecutor {
                         }
                     } else {
                         yield this.createTrace(loopLine, 'loop_end',
-                            `While condition: ${test} - Loop ends`, {
+                            `while: condition = false — loop exits after ${iteration - 1} iteration(s)`, {
                             loopIteration: iteration,
                             pathTaken: 'false',
-                            what: `The loop has finished because the condition became false.`,
-                            why: `The condition is now FALSE after ${iteration - 1} iteration(s).`,
-                            next: `We'll continue with the code after the loop.`
+                            why: `Condition is false after ${iteration - 1} iteration(s) → loop done`,
+                            next: `Continue after the loop.`,
+                            astNode: loop.test
                         });
                         break;
                     }
@@ -972,13 +1099,18 @@ export class Executor implements IExecutor {
                             ? `[${(rangeVar as any).names.join(', ')}]` 
                             : rangeVar.name;
 
+                        // Store the current iteration index so generateVisuals can highlight it
+                        env.define('__rangeForIndex', iteration - 1);
+                        env.define('__rangeForArray', rangeVar.type !== 'StructuredBindingDeclaration' ? rangeVar.name : '');
+
+                        const itemStr = typeof item === 'object' && item !== null ? safeStringify(item) : item;
                         yield this.createTrace(loopLine, iteration === 1 ? 'loop_start' : 'loop_continue',
-                            `Iterating: ${iterLabel} = ${typeof item === 'object' && item !== null ? safeStringify(item) : item} (iteration ${iteration})`, {
+                            `for: ${iterLabel} = ${itemStr} (iteration ${iteration})`, {
                             loopIteration: iteration,
                             pathTaken: 'true',
-                            what: `We are iterating over the container. Current element: ${iterLabel} = ${typeof item === 'object' && item !== null ? safeStringify(item) : item}`,
-                            why: `Range-based for loop is processing next item in the container.`,
-                            next: `Execute the loop body.`
+                            why: `Iteration ${iteration}: ${iterLabel} = ${itemStr}`,
+                            next: `Run loop body.`,
+                            astNode: (loop as any).rangeContainer || undefined
                         });
 
                         try {
@@ -986,12 +1118,11 @@ export class Executor implements IExecutor {
                         } catch (e: any) {
                             if (e instanceof BreakException) {
                                 yield this.createTrace(loopLine, 'loop_end',
-                                    `Loop broken - exiting`, {
+                                    `for: break — exiting after iteration ${iteration}`, {
                                     loopIteration: iteration,
                                     pathTaken: 'true',
-                                    what: `We are exiting the loop due to a break statement.`,
-                                    why: `A break statement was executed inside the loop.`,
-                                    next: `We'll continue with the code after the loop.`
+                                    why: `break executed → loop exits`,
+                                    next: `Continue after the loop.`
                                 });
                                 this.callStack.pop();
                                 break;
@@ -1008,12 +1139,11 @@ export class Executor implements IExecutor {
                     }
 
                     yield this.createTrace(loopLine, 'loop_end',
-                        `Range-based loop ends`, {
+                        `for: all ${iteration} element(s) processed — loop done`, {
                         loopIteration: iteration,
                         pathTaken: 'false',
-                        what: `The range-based for loop has finished iterating.`,
-                        why: `All items in the container have been processed.`,
-                        next: `We'll continue with the code after the loop.`
+                        why: `All ${iteration} element(s) processed → loop exits`,
+                        next: `Continue after the loop.`
                     });
                     break;
                 }
@@ -1032,23 +1162,21 @@ export class Executor implements IExecutor {
 
                         if (test) {
                             yield this.createTrace(loopLine, iteration === 1 ? 'loop_start' : 'loop_continue',
-                                `For condition: ${test} (iteration ${iteration})`, {
+                                `for: condition = true (iteration ${iteration})`, {
                                 loopIteration: iteration,
                                 pathTaken: 'true',
-                                what: iteration === 1
-                                    ? `We're entering the for loop for the first time.`
-                                    : `We go back to the loop because the condition is still true.`,
-                                why: `The condition is TRUE, so we continue looping.`,
-                                next: `We'll execute the loop body (iteration ${iteration}).`
+                                why: `Iteration ${iteration}: condition is true → run loop body`,
+                                next: `Run loop body (iteration ${iteration}).`,
+                                astNode: loop.test
                             });
                         } else {
                             yield this.createTrace(loopLine, 'loop_end',
-                                `For condition: ${test} - Loop ends`, {
+                                `for: condition = false — loop exits after ${iteration - 1} iteration(s)`, {
                                 loopIteration: iteration,
                                 pathTaken: 'false',
-                                what: `The for loop has finished.`,
-                                why: `The condition is now FALSE after ${iteration - 1} iteration(s).`,
-                                next: `We'll continue with the code after the loop.`
+                                why: `Condition is false after ${iteration - 1} iteration(s) → loop done`,
+                                next: `Continue after the loop.`,
+                                astNode: loop.test
                             });
                             break;
                         }
@@ -1062,12 +1190,11 @@ export class Executor implements IExecutor {
                     } catch (e: any) {
                         if (e instanceof BreakException) {
                             yield this.createTrace(loopLine, 'loop_end',
-                                `Loop broken - exiting`, {
+                                `for: break — exiting after iteration ${iteration}`, {
                                 loopIteration: iteration,
                                 pathTaken: 'true',
-                                what: `We are exiting the loop due to a break statement.`,
-                                why: `A break statement was executed inside the loop.`,
-                                next: `We'll continue with the code after the loop.`
+                                why: `break executed → loop exits`,
+                                next: `Continue after the loop.`
                             });
                             break;
                         }
@@ -1170,7 +1297,14 @@ export class Executor implements IExecutor {
                     if (assign.left.type === 'Identifier') {
                         const name = (assign.left as Identifier).name;
                         this.currentEnv().assign(name, right);
-                        yield this.createTrace(assign.line || 0, 'assignment', `${name} = ${right}`);
+                        yield this.createTrace(assign.line || 0, 'assignment', `${name} = ${right}`, {
+                            astNode: assign.value,
+                            assignmentDetail: {
+                                sources: this.extractSources(assign.value),
+                                dest: this.extractDest(assign.left),
+                                value: right
+                            }
+                        });
                     } else if (assign.left.type === 'MemberExpression') {
                         const mem = assign.left as MemberExpression;
                         const obj = yield* this.evaluate(mem.object);
@@ -1181,6 +1315,11 @@ export class Executor implements IExecutor {
                         }
 
                         if (mem.computed) {
+                            if (mem.object.type === 'Identifier' && mem.property.type === 'Identifier') {
+                                const objName = (mem.object as Identifier).name;
+                                const propName = (mem.property as Identifier).name;
+                                this.pointerToContainer.set(propName, objName);
+                            }
                             const idx = yield* this.evaluate(mem.property);
                             if (typeof obj === 'string' && !obj.startsWith('#')) {
                                 const strArr = obj.split('');
@@ -1190,13 +1329,34 @@ export class Executor implements IExecutor {
                                     const varName = (mem.object as Identifier).name;
                                     this.currentEnv().assign(varName, newStr);
                                 }
-                                yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${idx}] = ${right}`);
+                                yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${idx}] = ${right}`, {
+                                    astNode: assign.value,
+                                    assignmentDetail: {
+                                        sources: this.extractSources(assign.value),
+                                        dest: this.extractDest(assign.left),
+                                        value: right
+                                    }
+                                });
                             } else if (target instanceof Map) {
                                 target.set(idx, right);
-                                yield this.createTrace(assign.line || 0, 'assignment', `Map[${idx}] = ${right}`);
+                                yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${idx}] = ${right}`, {
+                                    astNode: assign.value,
+                                    assignmentDetail: {
+                                        sources: this.extractSources(assign.value),
+                                        dest: this.extractDest(assign.left),
+                                        value: right
+                                    }
+                                });
                             } else {
                                 target[idx] = right;
-                                yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${idx}] = ${right}`);
+                                yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${idx}] = ${right}`, {
+                                    astNode: assign.value,
+                                    assignmentDetail: {
+                                        sources: this.extractSources(assign.value),
+                                        dest: this.extractDest(assign.left),
+                                        value: right
+                                    }
+                                });
                             }
                         } else {
                             const prop = (mem.property as Identifier).name;
@@ -1206,7 +1366,14 @@ export class Executor implements IExecutor {
                             } else {
                                 target[prop] = right;
                             }
-                            yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}.${prop} = ${right}`);
+                            yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}.${prop} = ${right}`, {
+                                astNode: assign.value,
+                                assignmentDetail: {
+                                    sources: this.extractSources(assign.value),
+                                    dest: this.extractDest(assign.left),
+                                    value: right
+                                }
+                            });
                         }
                     } else {
                         throw new Error(`Runtime Error: Invalid left-hand side for assignment: ${assign.left.type}`);
@@ -1256,6 +1423,12 @@ export class Executor implements IExecutor {
                 let rVal = right;
 
                 if (bin.operator === '+') {
+                    if (left && typeof left === 'object' && 'container' in left && 'index' in left && typeof right === 'number') {
+                        return { ...left, index: left.index + right };
+                    }
+                    if (right && typeof right === 'object' && 'container' in right && 'index' in right && typeof left === 'number') {
+                        return { ...right, index: right.index + left };
+                    }
                     if (isChar(left) && typeof right === 'number') {
                         return left.charCodeAt(0) + right;
                     }
@@ -1271,18 +1444,76 @@ export class Executor implements IExecutor {
                 if (isChar(left)) lVal = left.charCodeAt(0);
                 if (isChar(right)) rVal = right.charCodeAt(0);
 
-                // cout << 
+                // cout <<  — use raw `right` (before isChar charcode conversion)
                 if (bin.operator === '<<' && left && (left.__type === 'std::cout')) {
-                    // Check for endl
-                    const outputVal = (rVal === '\\n') ? '\n' : rVal;
-                    this.outputBuffer += outputVal;
-                    yield this.createTrace(bin.line || 0, 'output', `Output: ${safeStringify(outputVal)}`);
-                    return left; // Return cout object for chaining
+                    const rawRight = right; // original value before any charcode conversion
+
+                    // ── stream manipulators (boolalpha, noboolalpha, '') — silently ignore ──
+                    if (rawRight === '' || rawRight === null || rawRight === undefined) {
+                        return left;
+                    }
+
+                    // ── endl / newline ──────────────────────────────────────────────
+                    const isEndl = rawRight === '\n' || rawRight === '\\n';
+                    if (isEndl) {
+                        this.outputBuffer += '\n';
+                        // Show a trace so the user sees the newline
+                        const sofar = this.outputBuffer.trimEnd().replace(/\n/g, ' ↵ ');
+                        yield this.createTrace(bin.line || 0, 'output', `↵  New line (endl)`, {
+                            why: sofar ? `Output so far: "${sofar}"` : `Output buffer is now on a new line`
+                        });
+                        return left;
+                    }
+
+                    // ── Determine what to append to the output buffer ───────────────
+                    let printedStr: string;
+                    let displayStr: string;  // human-friendly label for the trace
+
+                    if (typeof rawRight === 'string') {
+                        printedStr = rawRight;
+                        if (rawRight === ' ') {
+                            displayStr = `" " (space)`;
+                        } else if (rawRight.length === 1) {
+                            // single char literal  e.g. 'a'
+                            displayStr = rawRight;
+                        } else {
+                            displayStr = `"${rawRight}"`;
+                        }
+                    } else if (typeof rawRight === 'number') {
+                        printedStr = String(rawRight);
+                        displayStr  = String(rawRight);
+                    } else if (typeof rawRight === 'boolean') {
+                        printedStr = rawRight ? 'true' : 'false';
+                        displayStr  = printedStr;
+                    } else {
+                        // arrays, maps, objects
+                        printedStr = safeStringify(rawRight);
+                        displayStr  = printedStr;
+                    }
+
+                    this.outputBuffer += printedStr;
+
+                    // Build a running "output so far" view (replace newlines with ↵)
+                    const bufView = this.outputBuffer.replace(/\n/g, ' ↵ ');
+                    yield this.createTrace(bin.line || 0, 'output', `Printed: ${displayStr}`, {
+                        why: `Output so far: "${bufView}"`
+                    });
+                    return left; // Return cout for chaining  (cout << a << b)
                 }
 
                 switch (bin.operator) {
                     case '+': return lVal + rVal;
-                    case '-': return lVal - rVal;
+                    case '-': {
+                        if (lVal && typeof lVal === 'object' && 'container' in lVal && 'index' in lVal) {
+                            if (rVal && typeof rVal === 'object' && 'container' in rVal && 'index' in rVal) {
+                                return lVal.index - rVal.index;
+                            }
+                            if (typeof rVal === 'number') {
+                                return { ...lVal, index: lVal.index - rVal };
+                            }
+                        }
+                        return lVal - rVal;
+                    }
                     case '*': return lVal * rVal;
                     case '/': {
                         if (typeof lVal === 'number' && typeof rVal === 'number') {
@@ -1369,7 +1600,23 @@ export class Executor implements IExecutor {
                                 vec = new Array(args[0]).fill(null).map(() => Array.isArray(fillVal) ? [...fillVal] : fillVal);
                             }
                         }
+                        (vec as any).__type = 'std::vector';
                         return vec;
+                    }
+                    if (isStack(funcName)) {
+                        const s: any[] = [];
+                        (s as any).__type = 'std::stack';
+                        return s;
+                    }
+                    if (isQueue(funcName)) {
+                        const q: any[] = [];
+                        (q as any).__type = 'std::queue';
+                        return q;
+                    }
+                    if (isDeque(funcName)) {
+                        const dq: any[] = [];
+                        (dq as any).__type = 'std::deque';
+                        return dq;
                     }
                     // string(n, ch) constructor
                     if (funcName === 'string' || funcName === 'std::string') {
@@ -1400,11 +1647,11 @@ export class Executor implements IExecutor {
                     }
                     if (funcName === 'begin' || funcName === 'std::begin') {
                         const argVal = yield* this.evaluate(call.arguments[0]);
-                        return { container: argVal, index: 0 };
+                        return { container: argVal, index: 0, containerName: this.getNodeString(call.arguments[0]) };
                     }
                     if (funcName === 'end' || funcName === 'std::end') {
                         const argVal = yield* this.evaluate(call.arguments[0]);
-                        return { container: argVal, index: Array.isArray(argVal) ? argVal.length : (argVal.size || 0) };
+                        return { container: argVal, index: Array.isArray(argVal) ? argVal.length : (argVal.size || 0), containerName: this.getNodeString(call.arguments[0]) };
                     }
                     if (funcName === 'getline' || funcName === 'std::getline') {
                         const ssArg = call.arguments[0];
@@ -1501,10 +1748,13 @@ export class Executor implements IExecutor {
                         if (args[0] && args[0].container) {
                             if (Array.isArray(args[0].container)) {
                                 const arr = args[0].container;
+                                const start = args[0].index !== undefined ? args[0].index : 0;
+                                const end = (args[1] && args[1].index !== undefined) ? args[1].index : arr.length;
+                                const sub = arr.slice(start, end);
                                 const comparator = args[2];
                                 if (comparator && (comparator.type === 'FunctionDeclaration' || comparator.__type === 'std::closure')) {
                                     // Lambda or function comparator
-                                    arr.sort((a: any, b: any) => {
+                                    sub.sort((a: any, b: any) => {
                                         const runGen = (gen: Generator<any, any, any>) => {
                                             let res = gen.next();
                                             while (!res.done) {
@@ -1521,7 +1771,10 @@ export class Executor implements IExecutor {
                                         return isLessThan ? -1 : 1;
                                     });
                                 } else {
-                                    arr.sort((a: any, b: any) => typeof a === 'string' ? a.localeCompare(b) : a - b);
+                                    sub.sort((a: any, b: any) => typeof a === 'string' ? a.localeCompare(b) : a - b);
+                                }
+                                for (let i = 0; i < sub.length; i++) {
+                                    arr[start + i] = sub[i];
                                 }
                                 yield this.createTrace(call.line || 0, 'function_call', `Sorted container`);
                                 return;
@@ -1551,7 +1804,7 @@ export class Executor implements IExecutor {
                         const args = [];
                         for (const arg of call.arguments) args.push(yield* this.evaluate(arg));
                         return { first: args[0], second: args[1] };
-                    } else if (funcName === 'swap') {
+                    } else if (funcName === 'swap' || funcName === 'std::swap') {
                         const arg0 = call.arguments[0];
                         let arg1 = call.arguments[1];
                         if (!arg1 && arg0 && arg0.type === 'MemberExpression') {
@@ -1586,10 +1839,30 @@ export class Executor implements IExecutor {
                             const target0 = (typeof obj0 === 'string' && obj0.startsWith('#')) ? this.heap[obj0] : obj0;
                             const target1 = (typeof obj1 === 'string' && obj1.startsWith('#')) ? this.heap[obj1] : obj1;
                             
+                            const val0 = target0[prop0];
+                            const val1 = target1[prop1];
                             const temp = target0[prop0];
                             target0[prop0] = target1[prop1];
                             target1[prop1] = temp;
-                            yield this.createTrace(call.line || 0, 'assignment', `Swapped ${prop0} and ${prop1}`);
+                            
+                            const name0 = this.getEvaluatedNodeString(mem0);
+                            const name1 = this.getEvaluatedNodeString(mem1);
+
+                            const containerName0 = mem0.object.type === 'Identifier' ? (mem0.object as Identifier).name : '';
+                            const containerName1 = mem1.object.type === 'Identifier' ? (mem1.object as Identifier).name : '';
+                            const isSameContainer = containerName0 && containerName0 === containerName1;
+                            
+                            if (isSameContainer && typeof prop0 === 'number' && typeof prop1 === 'number') {
+                                this.activeSwapArrayName = containerName0;
+                                const idx0 = prop0;
+                                const idx1 = prop1;
+                                this.activeSwapIndices = [Math.min(idx0, idx1), Math.max(idx0, idx1)];
+                            }
+
+                            yield this.createTrace(call.line || 0, 'assignment', `Swapped ${name0} and ${name1} (values: ${val0} ⇄ ${val1})`);
+                            
+                            this.activeSwapArrayName = undefined;
+                            this.activeSwapIndices = undefined;
                             return;
                         } else if (arg0.type === 'Identifier' && arg1.type === 'Identifier') {
                             const name0 = (arg0 as Identifier).name;
@@ -1599,7 +1872,7 @@ export class Executor implements IExecutor {
                             const val1 = env.get(name1);
                             env.assign(name0, val1);
                             env.assign(name1, val0);
-                            yield this.createTrace(call.line || 0, 'assignment', `Swapped ${name0} and ${name1}`);
+                            yield this.createTrace(call.line || 0, 'assignment', `Swapped ${name0} and ${name1} (values: ${val0} ⇄ ${val1})`);
                             return;
                         }
                     }
@@ -1739,8 +2012,8 @@ export class Executor implements IExecutor {
                         if (method === 'size' || method === 'length') {
                             return obj.length;
                         }
-                        if (method === 'begin') return { container: obj, index: 0 };
-                        if (method === 'end') return { container: obj, index: obj.length };
+                        if (method === 'begin') return { container: obj, index: 0, containerName: this.getNodeString(mem.object) };
+                        if (method === 'end') return { container: obj, index: obj.length, containerName: this.getNodeString(mem.object) };
                         if (method === 'c_str') return obj;
                         if (method === 'at') {
                             const args = [];
@@ -1826,8 +2099,8 @@ export class Executor implements IExecutor {
                         if (method === 'empty') return obj.length === 0;
                         if (method === 'top' || method === 'back') return obj[obj.length - 1];
                         if (method === 'front') return (obj as any).__type === 'std::queue' ? obj[0] : obj[0];
-                        if (method === 'begin') return { container: obj, index: 0 }; // Mock iterator
-                        if (method === 'end') return { container: obj, index: obj.length };
+                        if (method === 'begin') return { container: obj, index: 0, containerName: this.getNodeString(mem.object) }; // Mock iterator
+                        if (method === 'end') return { container: obj, index: obj.length, containerName: this.getNodeString(mem.object) };
                         if (method === 'at') return obj[args[0]];
                         if (method === 'insert') {
                             // insert(pos_iter, val)
@@ -1882,11 +2155,55 @@ export class Executor implements IExecutor {
                         for (const arg of call.arguments) args.push(yield* this.evaluate(arg));
 
                         if (method === 'insert') {
-                            // insert can be called with value or pair.first
+                            // Can be s.insert(val), s.insert(iter_beg, iter_end) or s.insert(initializer_list)
+                            if (args.length >= 2 && args[0] && typeof args[0] === 'object' && 'container' in args[0] && 'index' in args[0]) {
+                                // Range insert
+                                const container = args[0].container;
+                                const startIdx = args[0].index;
+                                const endIdx = (args[1] && typeof args[1] === 'object' && 'index' in args[1]) ? args[1].index : container.length;
+                                if (Array.isArray(container)) {
+                                    for (let i = startIdx; i < endIdx; i++) {
+                                        obj.add(container[i]);
+                                    }
+                                } else if (container instanceof Set) {
+                                    for (const item of Array.from(container)) {
+                                        obj.add(item);
+                                    }
+                                }
+                                yield this.createTrace(call.line || 0, 'function_call', `Inserted range into set`);
+                                return;
+                            }
+                            if (Array.isArray(args[0])) {
+                                for (const val of args[0]) {
+                                    obj.add(val);
+                                }
+                                yield this.createTrace(call.line || 0, 'function_call', `Inserted elements into set`);
+                                return;
+                            }
                             const val = (args[0] && typeof args[0] === 'object' && 'first' in args[0]) ? args[0].first : args[0];
-                            obj.add(val);
-                            yield this.createTrace(call.line || 0, 'function_call', `Inserted ${val} into set`);
-                            return { second: true }; // C++ set.insert returns pair<iter, bool>
+                            const alreadyExists = obj.has(val);
+                            const targetName = this.getNodeString(call.callee).split('.')[0];
+                            if (alreadyExists) {
+                                yield this.createTrace(call.line || 0, 'function_call', `Duplicate insertion of ${val} rejected`, {
+                                    dataStructureOp: {
+                                        type: 'insert',
+                                        target: targetName,
+                                        value: val,
+                                        isRejected: true
+                                    } as any
+                                });
+                                return { second: false };
+                            } else {
+                                obj.add(val);
+                                yield this.createTrace(call.line || 0, 'function_call', `Inserted ${val} into set`, {
+                                    dataStructureOp: {
+                                        type: 'insert',
+                                        target: targetName,
+                                        value: val
+                                    }
+                                });
+                                return { second: true };
+                            }
                         }
                         if (method === 'count') {
                             return obj.has(args[0]) ? 1 : 0;
@@ -1959,13 +2276,53 @@ export class Executor implements IExecutor {
 
                         if (method === 'insert') {
                             // map.insert({k,v}) or pair
+                            const targetName = this.getNodeString(call.callee).split('.')[0];
                             if (args[0] && typeof args[0] === 'object' && 'first' in args[0] && 'second' in args[0]) {
-                                if (!obj.has(args[0].first)) {
-                                    obj.set(args[0].first, args[0].second);
-                                    yield this.createTrace(call.line || 0, 'function_call', `Inserted key ${args[0].first}`);
+                                const key = args[0].first;
+                                const val = args[0].second;
+                                const alreadyExists = obj.has(key);
+                                if (alreadyExists) {
+                                    yield this.createTrace(call.line || 0, 'function_call', `Duplicate insertion of key ${key} rejected`, {
+                                        dataStructureOp: {
+                                            type: 'insert',
+                                            target: targetName,
+                                            value: { key, value: val },
+                                            isRejected: true
+                                        } as any
+                                    });
+                                } else {
+                                    obj.set(key, val);
+                                    yield this.createTrace(call.line || 0, 'function_call', `Inserted key ${key}`, {
+                                        dataStructureOp: {
+                                            type: 'insert',
+                                            target: targetName,
+                                            value: { key, value: val }
+                                        }
+                                    });
                                 }
                             } else if (args.length >= 2) {
-                                obj.set(args[0], args[1]);
+                                const key = args[0];
+                                const val = args[1];
+                                const alreadyExists = obj.has(key);
+                                if (alreadyExists) {
+                                    yield this.createTrace(call.line || 0, 'function_call', `Duplicate insertion of key ${key} rejected`, {
+                                        dataStructureOp: {
+                                            type: 'insert',
+                                            target: targetName,
+                                            value: { key, value: val },
+                                            isRejected: true
+                                        } as any
+                                    });
+                                } else {
+                                    obj.set(key, val);
+                                    yield this.createTrace(call.line || 0, 'function_call', `Inserted key ${key}`, {
+                                        dataStructureOp: {
+                                            type: 'insert',
+                                            target: targetName,
+                                            value: { key, value: val }
+                                        }
+                                    });
+                                }
                             }
                             return;
                         }
@@ -2034,7 +2391,11 @@ export class Executor implements IExecutor {
                     return yield* this.executeFunction(callee, args);
                 } else if (typeof callee === 'function') {
                     // Built-in function (if any) or method
-                    return callee(...args);
+                    const res = callee.call(this, ...args);
+                    if (res && typeof res.next === 'function' && typeof res[Symbol.iterator] === 'function') {
+                        return yield* res;
+                    }
+                    return res;
                 } else if (callee && callee.__type === 'std::vector_push_back') {
                     // Handle push_back
                     const vec = callee.instance;
@@ -2269,6 +2630,11 @@ export class Executor implements IExecutor {
 
                 if (mem.computed) {
                     // Array access
+                    if (mem.object.type === 'Identifier' && mem.property.type === 'Identifier') {
+                        const objName = (mem.object as Identifier).name;
+                        const propName = (mem.property as Identifier).name;
+                        this.pointerToContainer.set(propName, objName);
+                    }
                     const idx = yield* this.evaluate(mem.property);
                     if (obj instanceof Map) {
                         // Default C++ specific: accessing map[k] inserts default if not found
@@ -2368,11 +2734,41 @@ export class Executor implements IExecutor {
                     const name = (upd.argument as Identifier).name;
                     const env = this.currentEnv();
                     const val = env.get(name);
+ 
+                    // Support iterator increment/decrement (e.g. it++, ++it, it--, --it)
+                    if (val && typeof val === 'object' && 'container' in val && 'index' in val) {
+                        const newVal = { ...val, index: isInc ? val.index + 1 : val.index - 1 };
+                        env.assign(name, newVal);
+                        yield this.createTrace(upd.line || 0, 'assignment', `Moved iterator ${name} (${val.index} → ${newVal.index})`);
+                        return upd.prefix ? newVal : val;
+                    }
+                    if (val && typeof val === 'object' && 'container' in val && 'key' in val) {
+                        // Map or Set iterator increment/decrement
+                        const keys = Array.from((val.container as any).keys ? (val.container as any).keys() : ((val.container as any).values ? (val.container as any).values() : []));
+                        const curIdx = keys.indexOf(val.key);
+                        if (curIdx !== -1) {
+                            const nextIdx = isInc ? curIdx + 1 : curIdx - 1;
+                            if (nextIdx >= 0 && nextIdx < keys.length) {
+                                const nextKey = keys[nextIdx];
+                                const newVal = { ...val, key: nextKey, first: nextKey, get second() { return (val.container as any).get ? (val.container as any).get(nextKey) : nextKey; } };
+                                env.assign(name, newVal);
+                                yield this.createTrace(upd.line || 0, 'assignment', `Moved iterator ${name} (${val.key} → ${nextKey})`);
+                                return upd.prefix ? newVal : val;
+                            } else {
+                                const newVal = { container: val.container, isEnd: true };
+                                env.assign(name, newVal);
+                                yield this.createTrace(upd.line || 0, 'assignment', `Moved iterator ${name} to end`);
+                                return upd.prefix ? newVal : val;
+                            }
+                        }
+                    }
+ 
                     const isChar = typeof val === 'string' && val.length === 1;
                     const numVal = isChar ? val.charCodeAt(0) : val;
                     const nextNum = isInc ? numVal + 1 : numVal - 1;
                     const newVal = isChar ? String.fromCharCode(nextNum) : nextNum;
                     env.assign(name, newVal);
+                    yield this.createTrace(upd.line || 0, 'assignment', `${name}${op} (${val} → ${newVal})`);
                     return upd.prefix ? newVal : val;
                 } else if (upd.argument.type === 'MemberExpression') {
                     const mem = upd.argument as MemberExpression;
@@ -2391,6 +2787,7 @@ export class Executor implements IExecutor {
                         const nextNum = isInc ? numVal + 1 : numVal - 1;
                         const newVal = isChar ? String.fromCharCode(nextNum) : nextNum;
                         target.set(prop, newVal);
+                        yield this.createTrace(upd.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${prop}]${op} (${val} → ${newVal})`);
                         return upd.prefix ? newVal : val;
                     } else {
                         const val = target[prop] !== undefined ? target[prop] : 0;
@@ -2399,6 +2796,7 @@ export class Executor implements IExecutor {
                         const nextNum = isInc ? numVal + 1 : numVal - 1;
                         const newVal = isChar ? String.fromCharCode(nextNum) : nextNum;
                         target[prop] = newVal;
+                        yield this.createTrace(upd.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${prop}]${op} (${val} → ${newVal})`);
                         return upd.prefix ? newVal : val;
                     }
                 } else {
@@ -2434,14 +2832,17 @@ export class Executor implements IExecutor {
                 }
                 if (unary.operator === '*') {
                     if (val && typeof val === 'object') {
-                        if ('first' in val) return val.first;
-                        if ('second' in val) return val.second;
+                        if (val.container instanceof Map) {
+                            return val;
+                        }
+                        if (val.container instanceof Set) {
+                            return val.key;
+                        }
                         if (val.container && val.index !== undefined) {
                             return val.container[val.index];
                         }
-                        if (val.container && val.key !== undefined) {
-                            return val.key;
-                        }
+                        if ('first' in val) return val.first;
+                        if ('second' in val) return val.second;
                     }
                     return val;
                 }
@@ -2475,12 +2876,61 @@ export class Executor implements IExecutor {
             why?: string;
             next?: string;
             dataStructureOp?: VisualizationHint['dataStructureOp'];
+            astNode?: ASTNode;
+            assignmentDetail?: any;
         }
     ): ExecutionTrace {
-        const stack: StackFrame[] = this.callStack.slice(1).map(env => ({
-            function: (env as any).functionName || 'unknown',
-            locals: this.extractLocals(env)
-        }));
+        const stack: StackFrame[] = [];
+        for (let i = 1; i < this.callStack.length; i++) {
+            const env = this.callStack[i];
+            const funcName = (env as any).functionName;
+            const envLocals = this.extractLocals(env);
+            
+            if (funcName) {
+                stack.push({
+                    function: funcName,
+                    locals: { ...envLocals }
+                });
+            } else {
+                if (stack.length > 0) {
+                    const topFrame = stack[stack.length - 1];
+                    for (const [k, v] of Object.entries(envLocals)) {
+                        if (k === 'this' || k.startsWith('__')) continue;
+                        topFrame.locals[k] = v;
+                    }
+                } else {
+                    stack.push({
+                        function: 'unknown',
+                        locals: { ...envLocals }
+                    });
+                }
+            }
+        }
+
+        let finalExplanation = explanation;
+        let whatText = vizContext?.what || this.generateWhat(type, explanation);
+
+        if (vizContext?.astNode) {
+            try {
+                const evalDetail = this.getEvaluationDetail(vizContext.astNode);
+                if (evalDetail && evalDetail.expressionCode && evalDetail.valueSubstituted) {
+                    const isComplex = ['BinaryExpression', 'CallExpression', 'MemberExpression', 'UnaryExpression', 'UpdateExpression'].includes(vizContext.astNode.type) ||
+                                      (evalDetail.expressionCode !== evalDetail.valueSubstituted);
+                    if (isComplex) {
+                        const resultStr = evalDetail.resultValue !== undefined ? this.formatValue(evalDetail.resultValue) : '';
+                        let calcStr = `\n(Calculation: ${evalDetail.expressionCode} → ${evalDetail.valueSubstituted}`;
+                        if (resultStr !== '') {
+                            calcStr += ` = ${resultStr}`;
+                        }
+                        calcStr += `)`;
+                        whatText += calcStr;
+                        finalExplanation += calcStr;
+                    }
+                }
+            } catch (e) {
+                console.error("Error evaluating AST node for trace explanation:", e);
+            }
+        }
 
         // Generate beginner-friendly three-part explanation
         const visualization: VisualizationHint = {
@@ -2489,7 +2939,7 @@ export class Executor implements IExecutor {
             loopIteration: vizContext?.loopIteration,
             dataStructureOp: vizContext?.dataStructureOp,
             explanation: {
-                what: vizContext?.what || this.generateWhat(type, explanation),
+                what: whatText,
                 why: vizContext?.why || this.generateWhy(type, explanation),
                 next: vizContext?.next || this.generateNext(type)
             }
@@ -2497,15 +2947,35 @@ export class Executor implements IExecutor {
 
         const visuals = this.generateVisuals();
 
+        const clonedHeap: Record<string, any> = {};
+        for (const [k, v] of Object.entries(this.heap)) {
+            if (Array.isArray(v)) {
+                const clonedArr = [...v];
+                if ((v as any).__type) (clonedArr as any).__type = (v as any).__type;
+                clonedHeap[k] = clonedArr;
+            } else if (v instanceof Map) {
+                const clonedMap = new Map(v);
+                if ((v as any).__valType) (clonedMap as any).__valType = (v as any).__valType;
+                clonedHeap[k] = clonedMap;
+            } else if (v instanceof Set) {
+                clonedHeap[k] = new Set(v);
+            } else if (v && typeof v === 'object') {
+                clonedHeap[k] = { ...v };
+            } else {
+                clonedHeap[k] = v;
+            }
+        }
+
         return {
             line,
             type,
-            explanation,
+            explanation: finalExplanation,
             stack,
-            heap: { ...this.heap },
+            heap: clonedHeap,
             output: this.outputBuffer,
             visualization,
-            visuals
+            visuals,
+            assignmentDetail: vizContext?.assignmentDetail
         };
     }
 
@@ -2513,11 +2983,53 @@ export class Executor implements IExecutor {
         const topEnv = this.currentEnv();
         if (!topEnv) return undefined;
 
-        const locals = this.extractLocals(topEnv);
-        const globals = this.extractLocals(this.globals);
-        const allVars = { ...globals, ...locals };
+        // Walk up the call stack to collect all visible variables.
+        // Top-env locals take priority, but we also look at parent frames
+        // (needed when inside a range-for loop scope where the array is in a parent env).
+        const collectAllLocals = (): Record<string, any> => {
+            const merged: Record<string, any> = {};
+            // Walk from outermost frame inward so inner scopes override
+            for (const frame of this.callStack) {
+                const frameLocals = this.extractLocals(frame);
+                for (const [k, v] of Object.entries(frameLocals)) {
+                    // Skip internal keys
+                    if (k === 'this' || k.startsWith('__')) continue;
+                    merged[k] = v;
+                }
+            }
+            return merged;
+        };
 
-        const hasRecursion = this.callStack.length > 2;
+        const locals = collectAllLocals();
+        const globals = this.extractLocals(this.globals);
+        // Merge: inner-scope wins over globals
+        const allVarsRaw = { ...globals, ...locals };
+
+        // ── Dereference heap pointers ─────────────────────────────────────────
+        // Variables like `vector<int> res(n)` are stored as heap addresses
+        // (e.g. "#1000").  Resolve them so all downstream detectors see the
+        // actual Array / Map / Set value.
+        const allVars: Record<string, any> = {};
+        for (const [k, v] of Object.entries(allVarsRaw)) {
+            if (typeof v === 'string' && v.startsWith('#') && this.heap[v] !== undefined) {
+                allVars[k] = this.heap[v];
+            } else {
+                allVars[k] = v;
+            }
+        }
+
+        // Extract range-for metadata from top env (if we are in a range-for iteration)
+        const topLocalsRaw = this.extractLocals(topEnv);
+        const rangeForIndex: number | undefined =
+            typeof topLocalsRaw['__rangeForIndex'] === 'number' ? topLocalsRaw['__rangeForIndex'] : undefined;
+        const rangeForArrayName: string | undefined =
+            typeof topLocalsRaw['__rangeForArray'] === 'string' && topLocalsRaw['__rangeForArray']
+                ? topLocalsRaw['__rangeForArray'] : undefined;
+
+        // True recursion: the SAME function name appears more than once in the call stack
+        const frameNames = this.callStack.slice(1).map(env => (env as any).functionName || '');
+        const hasRecursion = frameNames.length >= 2 &&
+            frameNames.some((name, i) => name && frameNames.indexOf(name) !== i);
 
         const isTreeNode = (addr: string): boolean => {
             if (typeof addr !== 'string' || !addr.startsWith('#')) return false;
@@ -2530,6 +3042,8 @@ export class Executor implements IExecutor {
             const node = this.heap[addr];
             return node && ('next' in node);
         };
+
+        const collectedVisuals: any[] = [];
 
         // 1. Binary Tree Detection
         for (const [name, val] of Object.entries(locals)) {
@@ -2563,13 +3077,14 @@ export class Executor implements IExecutor {
                     if (visited.has(vVal)) activeNodes.push(vVal);
                 }
 
-                return {
+                collectedVisuals.push({
                     type: 'tree',
+                    target: name,
                     nodes,
                     currentNodeId: val,
                     activeNodes,
                     visitedNodes: Array.from(visited)
-                };
+                });
             }
         }
 
@@ -2594,13 +3109,14 @@ export class Executor implements IExecutor {
                     if (visited.has(vVal)) activeNodes.push(vVal);
                 }
 
-                return {
+                collectedVisuals.push({
                     type: 'tree',
+                    target: name,
                     nodes,
                     currentNodeId: val,
                     activeNodes,
                     visitedNodes: Array.from(visited)
-                };
+                });
             }
         }
 
@@ -2638,7 +3154,7 @@ export class Executor implements IExecutor {
                 }
             }
 
-            return {
+            collectedVisuals.push({
                 type: 'graph',
                 nodes,
                 edges,
@@ -2646,160 +3162,569 @@ export class Executor implements IExecutor {
                 visitedNodes,
                 activeEdges,
                 adjacencyList
-            };
+            });
         }
 
-        // 4. Stack / Queue Detection
-        for (const [name, val] of Object.entries(locals)) {
-            if (Array.isArray(val) && ['s', 'st', 'stack', 'q', 'qu', 'queue'].some(p => name.toLowerCase().includes(p))) {
-                const isStack = name.toLowerCase().includes('stack') || name.toLowerCase().includes('s');
-                return {
-                    type: isStack ? 'stack' : 'queue',
-                    target: name,
-                    elements: val,
-                    activeIndices: val.length > 0 ? [val.length - 1] : []
-                };
-            }
-        }
+        // 4. Matrix (2D Grid) Detection
+        for (const [name, val] of Object.entries(allVars)) {
+            if (Array.isArray(val) && val.length > 0 && val.every(row => Array.isArray(row))) {
+                const rowPointers: Record<string, number> = {};
+                const colPointers: Record<string, number> = {};
+                const ROW_PTR_NAMES = new Set(['r', 'row', 'x', 'i']);
+                const COL_PTR_NAMES = new Set(['c', 'col', 'y', 'j']);
 
-        // 5. Map / HashMap Detection
-        for (const [name, val] of Object.entries(locals)) {
-            if (val instanceof Map) {
-                const entries = Array.from(val.entries()).map(([k, v]) => ({ key: k, value: v }));
-                return {
-                    type: 'hash_map',
-                    target: name,
-                    entries,
-                    activeKeys: entries.map(e => e.key)
-                };
-            }
-        }
-
-        // 6. 1D Array / Vector Detection
-        for (const [name, val] of Object.entries(locals)) {
-            if (Array.isArray(val) && val.every(el => typeof el !== 'object')) {
-                const pointers: any[] = [];
-                const highlightIndices: number[] = [];
-
-                for (const [vName, vVal] of Object.entries(locals)) {
-                    if (typeof vVal === 'number' && ['i', 'j', 'left', 'right', 'l', 'r', 'mid', 'low', 'high', 'start', 'end'].includes(vName.toLowerCase())) {
-                        if (vVal >= 0 && vVal < val.length) {
-                            const color = ['left', 'l', 'low', 'start', 'i'].includes(vName.toLowerCase()) ? 'red' :
-                                          ['right', 'r', 'high', 'end', 'j'].includes(vName.toLowerCase()) ? 'blue' :
-                                          ['mid', 'middle'].includes(vName.toLowerCase()) ? 'green' : 'orange';
-                            pointers.push({
-                                name: vName.toUpperCase().charAt(0),
-                                index: vVal,
-                                color,
-                                action: 'static'
-                            });
-                            highlightIndices.push(vVal);
+                for (const [vName, vVal] of Object.entries(allVars)) {
+                    if (typeof vVal === 'number') {
+                        const lower = vName.toLowerCase();
+                        if (ROW_PTR_NAMES.has(lower) && vVal >= 0 && vVal < val.length) {
+                            rowPointers[vName] = vVal;
+                        }
+                        if (COL_PTR_NAMES.has(lower) && vVal >= 0 && val[0] && vVal < val[0].length) {
+                            colPointers[vName] = vVal;
                         }
                     }
                 }
 
-                return {
-                    type: 'array_1d',
+                collectedVisuals.push({
+                    type: 'matrix',
                     target: name,
-                    values: val,
-                    pointers,
-                    highlightIndices
-                };
+                    rows: val.length,
+                    cols: val[0].length,
+                    values: val.map(row => [...row]),
+                    rowPointers,
+                    colPointers
+                });
             }
         }
 
+        // 5. Stack / Queue / Deque / Priority Queue Detection
+        const STACK_NAMES = new Set(['stack', 'st', 'stk', 'mystack']);
+        const QUEUE_NAMES = new Set(['queue', 'q', 'qu', 'myqueue', 'bfsqueue', 'pq', 'deque', 'dq']);
+        for (const [name, val] of Object.entries(allVars)) {
+            if (val && (val as any).__type === 'std::priority_queue') {
+                collectedVisuals.push({
+                    type: 'priority_queue',
+                    target: name,
+                    elements: [...(val as any).elements],
+                    activeIndices: (val as any).elements.length > 0 ? [0] : [],
+                    isMinHeap: (val as any).isMinHeap
+                });
+                continue;
+            }
+            if (Array.isArray(val)) {
+                const type = (val as any).__type;
+                const lower = name.toLowerCase();
+                if (type === 'std::stack' || STACK_NAMES.has(lower)) {
+                    collectedVisuals.push({
+                        type: 'stack',
+                        target: name,
+                        elements: [...val],
+                        activeIndices: val.length > 0 ? [val.length - 1] : []
+                    });
+                } else if (type === 'std::queue' || QUEUE_NAMES.has(lower) || type === 'std::deque') {
+                    const isDeque = type === 'std::deque' || lower.includes('deque') || lower.includes('dq');
+                    collectedVisuals.push({
+                        type: isDeque ? 'deque' : 'queue',
+                        target: name,
+                        elements: [...val],
+                        activeIndices: val.length > 0 ? [0] : []
+                    });
+                }
+            }
+        }
+
+        // 6. Map / HashMap / Set Detection
+        for (const [name, val] of Object.entries(allVars)) {
+            if (val instanceof Map) {
+                const entries = Array.from(val.entries()).map(([k, v]) => ({ key: k, value: v }));
+                collectedVisuals.push({
+                    type: 'hash_map',
+                    target: name,
+                    entries,
+                    activeKeys: entries.map(e => e.key)
+                });
+            } else if (val instanceof Set) {
+                const entries = Array.from(val.values()).map(el => ({ key: el, value: '✔' }));
+                collectedVisuals.push({
+                    type: 'hash_map',
+                    target: `${name} (Set)`,
+                    entries,
+                    activeKeys: entries.map(e => e.key)
+                });
+            } else if (val && typeof val === 'object' && 'first' in val && 'second' in val) {
+                collectedVisuals.push({
+                    type: 'hash_map',
+                    target: `${name} (pair)`,
+                    entries: [
+                        { key: 'first', value: val.first },
+                        { key: 'second', value: val.second }
+                    ],
+                    activeKeys: ['first', 'second']
+                });
+            }
+        }
+
+        const POINTER_NAMES_LEFT  = new Set(['i', 'left', 'l', 'low', 'lo', 'start', 'slow']);
+        const POINTER_NAMES_RIGHT = new Set(['j', 'right', 'r', 'high', 'hi', 'end', 'fast']);
+        const POINTER_NAMES_MID   = new Set(['mid', 'middle', 'm']);
+        const POINTER_NAMES_WRITE = new Set(['pos', 'k', 'write', 'wp', 'cur', 'count', 'p', 'idx']);
+        const ALL_POINTER_NAMES   = new Set([...POINTER_NAMES_LEFT, ...POINTER_NAMES_RIGHT,
+                                             ...POINTER_NAMES_MID, ...POINTER_NAMES_WRITE]);
+
+        const SYSTEM_CONSTANTS = new Set([
+            'endl', 'std::endl', 'boolalpha', 'noboolalpha', 
+            'string::npos', 'std::string::npos', 
+            'INT_MAX', 'INT_MIN', 'std::INT_MAX', 'std::INT_MIN',
+            'cout', 'std::cout', 'cin', 'std::cin'
+        ]);
+
+        // 7. String as 1D Character Array Visualization
+        for (const [name, val] of Object.entries(allVars)) {
+            if (typeof val === 'string' && !name.startsWith('__') && !SYSTEM_CONSTANTS.has(name) && !val.startsWith('#')) {
+                const charArray = val.split('');
+                const pointers: any[] = [];
+                const highlightIndices: number[] = [];
+
+                if (rangeForArrayName === name && rangeForIndex !== undefined) {
+                    highlightIndices.push(rangeForIndex);
+                    pointers.push({
+                        name: 'i',
+                        index: rangeForIndex,
+                        color: 'blue',
+                        action: 'move'
+                    });
+                }
+
+                for (const [vName, vVal] of Object.entries(allVars)) {
+                    if (typeof vVal === 'number' && ALL_POINTER_NAMES.has(vName.toLowerCase())) {
+                        const assocContainer = this.pointerToContainer.get(vName);
+                        if (assocContainer && assocContainer !== name) {
+                            continue;
+                        }
+                        if (vVal >= 0 && vVal < charArray.length) {
+                            const lowerPtr = vName.toLowerCase();
+                            const color = POINTER_NAMES_LEFT.has(lowerPtr)  ? 'red' :
+                                          POINTER_NAMES_RIGHT.has(lowerPtr) ? 'blue' :
+                                          POINTER_NAMES_MID.has(lowerPtr)   ? 'green' : 'orange';
+                            if (!pointers.some(p => p.index === vVal && p.name === vName.toUpperCase().charAt(0))) {
+                                pointers.push({
+                                    name: vName.toUpperCase().charAt(0),
+                                    index: vVal,
+                                    color,
+                                    action: 'static'
+                                });
+                                if (!highlightIndices.includes(vVal)) {
+                                    highlightIndices.push(vVal);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Determine sliding window boundary
+                let windowRange: [number, number] | undefined = undefined;
+                const leftPtr = pointers.find(p => p.name === 'L' || p.name === 'I' || p.name === 'S');
+                const rightPtr = pointers.find(p => p.name === 'R' || p.name === 'J' || p.name === 'R'); // 'R' maps to right pointer index
+                if (leftPtr && rightPtr) {
+                    windowRange = [leftPtr.index, rightPtr.index];
+                }
+
+                // If there's no left/right pointer but we have a pointer i and a pattern string s1/p:
+                if (!windowRange) {
+                    const lowerName = name.toLowerCase();
+                    if ((lowerName === 's2' || lowerName === 's') && typeof allVars['i'] === 'number') {
+                        const patternVal = allVars['s1'] || allVars['p'];
+                        const patternLen = typeof patternVal === 'string' ? patternVal.length : 0;
+                        if (patternLen > 0) {
+                            const iVal = allVars['i'];
+                            if (iVal < patternLen) {
+                                // We are in the first loop building the initial window
+                                windowRange = [0, iVal];
+                            } else {
+                                // We are in the main sliding window loop.
+                                const currentLineContent = this.sourceLines[this.currentLine - 1]?.trim() || '';
+                                const isPermutationInString = this.sourceLines.some(line => line.includes('checkInclusion'));
+                                if (isPermutationInString) {
+                                    const isAtComparison = currentLineContent.includes('freq1 == freq2') || currentLineContent.includes('==');
+                                    if (isAtComparison) {
+                                        windowRange = [iVal - patternLen, iVal - 1];
+                                    } else {
+                                        // The shift has executed: freq2[s2[i] - 'a']++; freq2[s2[i - s1.size()] - 'a']--;
+                                        windowRange = [iVal - patternLen + 1, iVal];
+                                    }
+                                } else {
+                                    // For other problems like find-all-anagrams:
+                                    // shift happens first in the loop: fs[s[i]-'a']++; fs[s[i-p.size()]-'a']--;
+                                    // and then comparison: if (equal(...))
+                                    windowRange = [iVal - patternLen + 1, iVal];
+                                }
+                            }
+                            // Clamp window range to valid bounds
+                            if (windowRange) {
+                                windowRange = [
+                                    Math.max(0, Math.min(windowRange[0], val.length - 1)),
+                                    Math.max(0, Math.min(windowRange[1], val.length - 1))
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                collectedVisuals.push({
+                    type: 'array_1d',
+                    target: `${name.toUpperCase()} (string)`,
+                    values: charArray,
+                    pointers,
+                    highlightIndices,
+                    windowRange
+                });
+            }
+        }
+
+        // 8. 1D Array / Vector Detection
+        for (const [name, val] of Object.entries(allVars)) {
+            // Accept arrays whose elements are primitive (number/string/bool) or null
+            const isPrimitive = (el: any) => el === null || typeof el === 'number' || typeof el === 'string' || typeof el === 'boolean';
+            if (Array.isArray(val) && val.length >= 0 && val.every(isPrimitive)) {
+                const type = (val as any).__type;
+                const lower = name.toLowerCase();
+                if (type === 'std::stack' || type === 'std::queue' || type === 'std::deque' || type === 'std::list') continue;
+                if (STACK_NAMES.has(lower) || QUEUE_NAMES.has(lower)) continue;
+                if (val.every(row => Array.isArray(row))) continue; // skip 2D array
+                
+                // Frequency array optimization:
+                // Convert 26-element frequency vectors (freq, count, fp, fs) into high-level compact HashMaps showing only non-zero character counts.
+                const isFreqArray = val.length === 26 && 
+                                   (lower.includes('freq') || lower.includes('count') || lower === 'fs' || lower === 'fp') &&
+                                   val.every(x => typeof x === 'number');
+                if (isFreqArray) {
+                    const entries: any[] = [];
+                    for (let idx = 0; idx < 26; idx++) {
+                        const count = val[idx];
+                        if (typeof count === 'number' && count > 0) {
+                            entries.push({ key: String.fromCharCode(97 + idx), value: count });
+                        }
+                    }
+                    collectedVisuals.push({
+                        type: 'hash_map',
+                        target: name,
+                        entries,
+                        activeKeys: entries.map(e => e.key)
+                    });
+                    continue;
+                }
+
+                const pointers: any[] = [];
+                const highlightIndices: number[] = [];
+
+                if (rangeForArrayName === name && rangeForIndex !== undefined) {
+                    highlightIndices.push(rangeForIndex);
+                    pointers.push({
+                        name: 'i',
+                        index: rangeForIndex,
+                        color: 'blue',
+                        action: 'move'
+                    });
+                }
+
+                // Named pointer variables
+                for (const [vName, vVal] of Object.entries(allVars)) {
+                    if (typeof vVal === 'number' && ALL_POINTER_NAMES.has(vName.toLowerCase())) {
+                        const assocContainer = this.pointerToContainer.get(vName);
+                        if (assocContainer && assocContainer !== name) {
+                            continue; // Only show pointer on its associated container
+                        }
+                        if (vVal >= 0 && vVal < val.length) {
+                            const lowerPtr = vName.toLowerCase();
+                            const color = POINTER_NAMES_LEFT.has(lowerPtr)  ? 'red' :
+                                          POINTER_NAMES_RIGHT.has(lowerPtr) ? 'blue' :
+                                          POINTER_NAMES_MID.has(lowerPtr)   ? 'green' : 'orange';
+                            if (!pointers.some(p => p.index === vVal && p.name === vName.toUpperCase().charAt(0))) {
+                                pointers.push({
+                                    name: vName.toUpperCase().charAt(0),
+                                    index: vVal,
+                                    color,
+                                    action: 'static'
+                                });
+                                if (!highlightIndices.includes(vVal)) {
+                                    highlightIndices.push(vVal);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Determine sliding window boundary
+                let windowRange: [number, number] | undefined = undefined;
+                const leftPtr = pointers.find(p => p.name === 'L' || p.name === 'I' || p.name === 'S');
+                const rightPtr = pointers.find(p => p.name === 'R' || p.name === 'J' || p.name === 'R');
+                if (leftPtr && rightPtr) {
+                    windowRange = [leftPtr.index, rightPtr.index];
+                }
+
+                const isSwapping = this.activeSwapArrayName === name && this.activeSwapIndices;
+                collectedVisuals.push({
+                    type: 'array_1d',
+                    target: name,
+                    values: [...val],
+                    pointers,
+                    highlightIndices,
+                    windowRange,
+                    ...(isSwapping ? { swapIndices: this.activeSwapIndices } : {})
+                });
+            }
+        }
+
+        // 9. Primitive Scope Variables - Render each as an independent visual card!
+        const ANS_VAR_NAMES = new Set(['ans', 'result', 'res', 'maxlen', 'maxsum', 'count', 'area', 'profit', 'max_len', 'min_len', 'max_val', 'min_val', 'square']);
+        for (const [name, val] of Object.entries(allVars)) {
+            if (SYSTEM_CONSTANTS.has(name)) continue;
+            if (name.startsWith('__')) continue;
+            if (val && typeof val === 'object') continue;
+            if (Array.isArray(val)) continue;
+            if (val instanceof Map || val instanceof Set) continue;
+
+            if (typeof val === 'number' || typeof val === 'string' || typeof val === 'boolean') {
+                collectedVisuals.push({
+                    type: 'hash_map',
+                    target: name.toUpperCase(),
+                    entries: [{ key: name, value: val }],
+                    activeKeys: [name]
+                });
+            }
+        }
+
+        // Smart Canvas Layout - Type-Based Visual Prioritization
+        const getPriorityScore = (v: any): number => {
+            if (v.type === 'array_1d') {
+                if (v.target.toLowerCase().includes('string')) return 1; // Strings first
+                return 2; // Arrays/Vectors second
+            }
+            if (['matrix', 'tree', 'graph'].includes(v.type)) return 3;
+            if (['stack', 'queue', 'deque', 'priority_queue'].includes(v.type)) return 4;
+            if (v.type === 'hash_map') {
+                if (v.target.toLowerCase().includes('set')) return 5;
+                if (v.target.toLowerCase().includes('pair')) return 7;
+                // Scope primitives (uppercase targets)
+                const isPrimitive = v.entries.length === 1 && String(v.entries[0].key).toUpperCase() === v.target;
+                if (isPrimitive) {
+                    if (ANS_VAR_NAMES.has(String(v.entries[0].key).toLowerCase())) return 8; // Answer variables
+                    if (ALL_POINTER_NAMES.has(String(v.entries[0].key).toLowerCase())) return 9; // Pointer variables
+                    return 10; // Other primitives
+                }
+                return 6; // Standard Maps
+            }
+            return 100;
+        };
+
+        collectedVisuals.sort((a, b) => getPriorityScore(a) - getPriorityScore(b));
+
+        if (collectedVisuals.length > 1) {
+            return {
+                type: 'multi_visuals',
+                visuals: collectedVisuals
+            };
+        } else if (collectedVisuals.length === 1) {
+            return collectedVisuals[0];
+        }
+
         if (hasRecursion) {
-            const frames = this.callStack.slice(1).map(env => ({
-                functionName: (env as any).functionName || 'unknown',
-                args: this.extractLocals(env)
-            }));
+            const frames: any[] = [];
+            for (let i = 1; i < this.callStack.length; i++) {
+                const env = this.callStack[i];
+                const funcName = (env as any).functionName;
+                const envLocals = this.extractLocals(env);
+                
+                const args: Record<string, any> = {};
+                for (const [k, v] of Object.entries(envLocals)) {
+                    if (k === 'this' || k.startsWith('__')) continue;
+                    if (v !== null && typeof v === 'object' && !Array.isArray(v)) continue;
+                    args[k] = v;
+                }
+
+                if (funcName) {
+                    frames.push({
+                        functionName: funcName,
+                        args
+                    });
+                } else {
+                    if (frames.length > 0) {
+                        const topFrame = frames[frames.length - 1];
+                        Object.assign(topFrame.args, args);
+                    } else {
+                        frames.push({
+                            functionName: 'unknown',
+                            args
+                        });
+                    }
+                }
+            }
             return {
                 type: 'call_stack',
                 frames,
                 activeFrame: frames.length - 1
             };
         }
-
         return undefined;
     }
 
-    // Generate "What just happened" explanation
+
+    // Generate "What just happened" — returns the raw explanation with no generic prefix
     private generateWhat(type: ExecutionTrace['type'], explanation: string): string {
+        // Return the explanation as-is; calculation detail is appended by createTrace when astNode is present
+        return explanation;
+    }
+
+    private extractSources(node: any): any[] {
+        const sources: any[] = [];
+        const self = this;
+        function traverse(n: any) {
+            if (!n) return;
+            if (n.type === 'Identifier') {
+                const lower = n.name.toLowerCase();
+                if (!['abs', 'std', 'endl', 'cout', 'cin', 'int_max', 'int_min'].includes(lower)) {
+                    try {
+                        const val = self.currentEnv().get(n.name);
+                        if (val !== undefined) {
+                            sources.push({ name: n.name, value: val });
+                        }
+                    } catch (e) {}
+                }
+            } else if (n.type === 'MemberExpression') {
+                if (n.object.type === 'Identifier') {
+                    const arrayName = n.object.name;
+                    try {
+                        let idxVal: any = undefined;
+                        if (n.computed) {
+                            if (n.property.type === 'Identifier') {
+                                idxVal = self.currentEnv().get(n.property.name);
+                            } else if (n.property.type === 'Literal') {
+                                idxVal = n.property.value;
+                            }
+                        } else {
+                            idxVal = n.property.type === 'Identifier' ? n.property.name : n.property.value;
+                        }
+                        if (idxVal !== undefined) {
+                            let val: any = undefined;
+                            const addr = self.currentEnv().get(arrayName);
+                            if (typeof addr === 'string' && addr.startsWith('#')) {
+                                val = self.heap[addr]?.[idxVal];
+                            } else {
+                                val = self.currentEnv().get(arrayName)?.[idxVal];
+                            }
+                            sources.push({ name: arrayName, index: idxVal, value: val });
+                        }
+                    } catch (e) {}
+                }
+                return; // Do not traverse inside MemberExpression properties
+            }
+            for (const key of Object.keys(n)) {
+                const child = n[key];
+                if (child && typeof child === 'object') {
+                    if (Array.isArray(child)) {
+                        child.forEach(traverse);
+                    } else if (child.type) {
+                        traverse(child);
+                    }
+                }
+            }
+        }
+        traverse(node);
+        return sources;
+    }
+
+    private extractDest(leftNode: any): any {
+        if (!leftNode) return undefined;
+        if (leftNode.type === 'Identifier') {
+            return { name: leftNode.name };
+        } else if (leftNode.type === 'MemberExpression') {
+            if (leftNode.object.type === 'Identifier') {
+                const arrayName = leftNode.object.name;
+                let idxVal: any = undefined;
+                if (leftNode.computed) {
+                    if (leftNode.property.type === 'Identifier') {
+                        idxVal = this.currentEnv().get(leftNode.property.name);
+                    } else if (leftNode.property.type === 'Literal') {
+                        idxVal = leftNode.property.value;
+                    }
+                } else {
+                    idxVal = leftNode.property.type === 'Identifier' ? leftNode.property.name : leftNode.property.value;
+                }
+                return { name: arrayName, index: idxVal };
+            }
+        }
+        return undefined;
+    }
+
+    // Generate state-aware "Why" text based on the actual explanation content
+    private generateWhy(type: ExecutionTrace['type'], explanation: string): string {
         switch (type) {
-            case 'definition':
-                return `We created a new variable. ${explanation}`;
-            case 'assignment':
-                return `We updated a variable's value. ${explanation}`;
-            case 'condition':
-                return `We checked a condition. ${explanation}`;
-            case 'loop_start':
-                return `We entered a loop and will repeat until the condition becomes false.`;
-            case 'loop_continue':
-                return `We go back to the loop because the condition is still true.`;
-            case 'loop_end':
-                return `The loop has finished because the condition became false.`;
-            case 'function_call':
-                return `We called a function. ${explanation}`;
-            case 'return':
-                return `We returned a value and exited the function. ${explanation}`;
-            case 'output':
-                return `We printed something to the screen. ${explanation}`;
+            case 'definition': {
+                // e.g. "Declared complement = 15" -> "complement is now 15"
+                const m = explanation.match(/^Declared (\S+) = (.+)$/);
+                if (m) return `${m[1]} is now ${m[2]}`;
+                return explanation;
+            }
+            case 'assignment': {
+                // e.g. "complement = 15" or "nums[i] = 3"
+                return explanation;
+            }
+            case 'condition': {
+                const isTrue = /\btrue\b|→\s*true|= true/i.test(explanation);
+                const isFalse = /\bfalse\b|→\s*false|= false/i.test(explanation);
+                if (isTrue)  return `Condition is TRUE → taking the if-branch`;
+                if (isFalse) return `Condition is FALSE → skipping the if-block`;
+                return explanation;
+            }
+            case 'loop_start': {
+                const m = explanation.match(/iteration (\d+)/);
+                return m ? `Loop body runs — iteration ${m[1]}` : `Loop body runs`;
+            }
+            case 'loop_continue': {
+                const m = explanation.match(/iteration (\d+)/);
+                return m ? `Continuing loop — iteration ${m[1]}` : `Continuing loop`;
+            }
+            case 'loop_end': {
+                const m = explanation.match(/(\d+) iteration/);
+                return m ? `Loop exits after ${m[1]} iteration(s)` : `Loop condition is false — loop exits`;
+            }
+            case 'function_call': {
+                return explanation;
+            }
+            case 'return': {
+                const m = explanation.match(/Returned (.+)/);
+                return m ? `Function returns ${m[1]}` : explanation;
+            }
+            case 'output': {
+                const m = explanation.match(/Output: (.+)/);
+                return m ? `Prints: ${m[1]}` : explanation;
+            }
             default:
                 return explanation;
         }
     }
 
-    // Generate "Why it happened" explanation  
-    private generateWhy(type: ExecutionTrace['type'], explanation: string): string {
-        switch (type) {
-            case 'definition':
-                return `Every variable needs to be created before we can use it.`;
-            case 'assignment':
-                return `The variable's value was computed from the expression on the right side.`;
-            case 'condition':
-                if (explanation.includes('true') || explanation.includes('True')) {
-                    return `The condition evaluated to TRUE, so we take the Yes branch.`;
-                } else if (explanation.includes('false') || explanation.includes('False')) {
-                    return `The condition evaluated to FALSE, so we take the No branch.`;
-                }
-                return `The condition determines which path the program takes.`;
-            case 'loop_start':
-            case 'loop_continue':
-                return `The loop condition is still true, so we continue repeating.`;
-            case 'loop_end':
-                return `The loop condition became false, so we stop repeating.`;
-            case 'function_call':
-                return `Functions help organize code into reusable pieces.`;
-            case 'return':
-                return `The function completed its work and sent back a result.`;
-            case 'output':
-                return `We want to show this value to the user.`;
-            default:
-                return `This is part of the program's execution flow.`;
-        }
-    }
-
-    // Generate "What will be checked next" explanation
+    // Generate "What will happen next"
     private generateNext(type: ExecutionTrace['type']): string {
         switch (type) {
             case 'definition':
             case 'assignment':
-                return `We'll move to the next statement in the program.`;
+                return `Next statement executes.`;
             case 'condition':
-                return `We'll execute the code inside the chosen branch.`;
+                return `Enter chosen branch.`;
             case 'loop_start':
             case 'loop_continue':
-                return `We'll run the code inside the loop body.`;
+                return `Run loop body.`;
             case 'loop_end':
-                return `We'll continue with the code after the loop.`;
+                return `Continue after loop.`;
             case 'function_call':
-                return `We'll execute the code inside the function.`;
+                return `Execute function body.`;
             case 'return':
-                return `Control returns to where the function was called.`;
+                return `Return to caller.`;
             case 'output':
-                return `We'll move to the next statement.`;
+                return `Next statement executes.`;
             default:
-                return `The program continues to the next step.`;
+                return `Program continues.`;
         }
     }
 
@@ -2848,6 +3773,239 @@ export class Executor implements IExecutor {
         for (const v of Object.values(this.heap)) {
             visit(v);
         }
+    }
+
+    private formatValue(val: any): string {
+        if (val === undefined) return 'undefined';
+        if (val === null) return 'null';
+        if (typeof val === 'string') return `"${val}"`;
+        if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+        if (val instanceof Map) {
+            const entries = Array.from(val.entries()).map(([k, v]) => `${this.formatValue(k)}: ${this.formatValue(v)}`);
+            return `{${entries.join(', ')}}`;
+        }
+        if (val instanceof Set) {
+            const elts = Array.from(val.values()).map(e => this.formatValue(e));
+            return `{${elts.join(', ')}}`;
+        }
+        if (Array.isArray(val)) {
+            return `[${val.map(e => this.formatValue(e)).join(', ')}]`;
+        }
+        if (typeof val === 'object') {
+            if ('first' in val && 'second' in val) {
+                return `{first: ${this.formatValue(val.first)}, second: ${this.formatValue(val.second)}}`;
+            }
+            if (val.__type === 'std::priority_queue') {
+                return `priority_queue([${val.elements.map((e: any) => this.formatValue(e)).join(', ')}])`;
+            }
+            return safeStringify(val);
+        }
+        return String(val);
+    }
+
+    private getEvaluationDetail(node: ASTNode): { expressionCode: string; valueSubstituted: string; resultValue: any } {
+        if (!node) return { expressionCode: '', valueSubstituted: '', resultValue: undefined };
+
+        switch (node.type) {
+            case 'Literal': {
+                const val = (node as Literal).value;
+                const str = typeof val === 'string' ? `"${val}"` : String(val);
+                return { expressionCode: str, valueSubstituted: str, resultValue: val };
+            }
+            case 'Identifier': {
+                const name = (node as Identifier).name;
+                let val: any = undefined;
+                try {
+                    val = this.currentEnv().get(name);
+                } catch (e) {}
+                const valStr = this.formatValue(val);
+                return { expressionCode: name, valueSubstituted: valStr, resultValue: val };
+            }
+            case 'BinaryExpression': {
+                const bin = node as BinaryExpression;
+                const left = this.getEvaluationDetail(bin.left);
+                const right = this.getEvaluationDetail(bin.right);
+                
+                let resVal: any = undefined;
+                try {
+                    const op = bin.operator;
+                    if (op === '+') resVal = left.resultValue + right.resultValue;
+                    else if (op === '-') resVal = left.resultValue - right.resultValue;
+                    else if (op === '*') resVal = left.resultValue * right.resultValue;
+                    else if (op === '/') resVal = Math.trunc(left.resultValue / right.resultValue);
+                    else if (op === '%') resVal = left.resultValue % right.resultValue;
+                    else if (op === '==') resVal = left.resultValue === right.resultValue;
+                    else if (op === '!=') resVal = left.resultValue !== right.resultValue;
+                    else if (op === '<') resVal = left.resultValue < right.resultValue;
+                    else if (op === '>') resVal = left.resultValue > right.resultValue;
+                    else if (op === '<=') resVal = left.resultValue <= right.resultValue;
+                    else if (op === '>=') resVal = left.resultValue >= right.resultValue;
+                    else if (op === '&&') resVal = left.resultValue && right.resultValue;
+                    else if (op === '||') resVal = left.resultValue || right.resultValue;
+                } catch (e) {}
+
+                return {
+                    expressionCode: `(${left.expressionCode} ${bin.operator} ${right.expressionCode})`,
+                    valueSubstituted: `(${left.valueSubstituted} ${bin.operator} ${right.valueSubstituted})`,
+                    resultValue: resVal
+                };
+            }
+            case 'MemberExpression': {
+                const mem = node as MemberExpression;
+                const obj = this.getEvaluationDetail(mem.object);
+                
+                let propStr = '';
+                let propVal: any = undefined;
+                if (mem.computed) {
+                    const propDetail = this.getEvaluationDetail(mem.property);
+                    propStr = propDetail.expressionCode;
+                    propVal = propDetail.resultValue;
+                    const propValStr = this.formatValue(propVal);
+                    
+                    let resVal: any = undefined;
+                    try {
+                        let target = obj.resultValue;
+                        if (typeof target === 'string' && target.startsWith('#')) target = this.heap[target];
+                        if (target instanceof Map) {
+                            resVal = target.get(propVal);
+                        } else {
+                            resVal = Array.isArray(target) ? target[propVal] : target?.[propVal];
+                        }
+                    } catch (e) {}
+
+                    return {
+                        expressionCode: `${obj.expressionCode}[${propStr}]`,
+                        valueSubstituted: `${obj.valueSubstituted}[${propValStr}]`,
+                        resultValue: resVal
+                    };
+                } else {
+                    propStr = (mem.property as Identifier).name;
+                    propVal = propStr;
+
+                    let resVal: any = undefined;
+                    try {
+                        let target = obj.resultValue;
+                        if (typeof target === 'string' && target.startsWith('#')) target = this.heap[target];
+                        resVal = target?.[propVal];
+                    } catch (e) {}
+
+                    return {
+                        expressionCode: `${obj.expressionCode}.${propStr}`,
+                        valueSubstituted: `${obj.valueSubstituted}.${propStr}`,
+                        resultValue: resVal
+                    };
+                }
+            }
+            case 'ArrayExpression': {
+                const arr = node as ArrayExpression;
+                const elDetails = arr.elements.map(el => this.getEvaluationDetail(el));
+                const symbolic = `{${elDetails.map(e => e.expressionCode).join(', ')}}`;
+                const valued = `{${elDetails.map(e => e.valueSubstituted).join(', ')}}`;
+                const resVal = elDetails.map(e => e.resultValue);
+                return { expressionCode: symbolic, valueSubstituted: valued, resultValue: resVal };
+            }
+            case 'CallExpression': {
+                const call = node as CallExpression;
+                const callee = typeof call.callee === 'string'
+                    ? { expressionCode: call.callee, valueSubstituted: call.callee, resultValue: undefined }
+                    : this.getEvaluationDetail(call.callee);
+                const args = call.arguments.map(arg => this.getEvaluationDetail(arg));
+                
+                const argsExprStr = args.map(a => a.expressionCode).join(', ');
+                const argsValStr = args.map(a => a.valueSubstituted).join(', ');
+                
+                let resVal: any = undefined;
+                try {
+                    const calleeCode = callee.expressionCode;
+                    if (calleeCode.endsWith('.count')) {
+                        const targetMap = calleeCode.substring(0, calleeCode.length - 6);
+                        const mapObj = this.currentEnv().get(targetMap);
+                        if (mapObj instanceof Map) {
+                            resVal = mapObj.has(args[0].resultValue) ? 1 : 0;
+                        } else if (mapObj instanceof Set) {
+                            resVal = mapObj.has(args[0].resultValue) ? 1 : 0;
+                        }
+                    } else if (calleeCode.endsWith('.size')) {
+                        const targetObj = calleeCode.substring(0, calleeCode.length - 5);
+                        const objVal = this.currentEnv().get(targetObj);
+                        if (Array.isArray(objVal) || typeof objVal === 'string') {
+                            resVal = objVal.length;
+                        } else if (objVal instanceof Map || objVal instanceof Set) {
+                            resVal = objVal.size;
+                        }
+                    } else if (calleeCode === 'abs' || calleeCode === 'std::abs') {
+                        resVal = Math.abs(args[0].resultValue);
+                    } else if (calleeCode === 'stoi' || calleeCode === 'std::stoi') {
+                        resVal = parseInt(args[0].resultValue);
+                    } else if (calleeCode === 'to_string' || calleeCode === 'std::to_string') {
+                        resVal = String(args[0].resultValue);
+                    }
+                } catch (e) {}
+
+                return {
+                    expressionCode: `${callee.expressionCode}(${argsExprStr})`,
+                    valueSubstituted: `${callee.valueSubstituted}(${argsValStr})`,
+                    resultValue: resVal
+                };
+            }
+            case 'UnaryExpression': {
+                const unary = node as any;
+                const arg = this.getEvaluationDetail(unary.argument);
+                let resVal: any = undefined;
+                try {
+                    const op = unary.operator;
+                    if (op === '!') resVal = !arg.resultValue;
+                    else if (op === '~') resVal = ~arg.resultValue;
+                    else if (op === '-') resVal = -arg.resultValue;
+                } catch (e) {}
+                return {
+                    expressionCode: `${unary.operator}${arg.expressionCode}`,
+                    valueSubstituted: `${unary.operator}${arg.valueSubstituted}`,
+                    resultValue: resVal
+                };
+            }
+            case 'UpdateExpression': {
+                const upd = node as UpdateExpression;
+                const arg = this.getEvaluationDetail(upd.argument);
+                return {
+                    expressionCode: upd.prefix ? `${upd.operator}${arg.expressionCode}` : `${arg.expressionCode}${upd.operator}`,
+                    valueSubstituted: upd.prefix ? `${upd.operator}${arg.valueSubstituted}` : `${arg.valueSubstituted}${upd.operator}`,
+                    resultValue: arg.resultValue
+                };
+            }
+            default: {
+                return { expressionCode: 'value', valueSubstituted: 'value', resultValue: undefined };
+            }
+        }
+    }
+
+    private getEvaluatedNodeString(node: ASTNode): string {
+        if (node.type === 'Identifier') {
+            const name = (node as Identifier).name;
+            let val: any = undefined;
+            try {
+                val = this.currentEnv().get(name);
+            } catch (e) {}
+            return typeof val === 'number' || typeof val === 'string' || typeof val === 'boolean' ? String(val) : name;
+        }
+        if (node.type === 'MemberExpression') {
+            const mem = node as MemberExpression;
+            const objStr = this.getEvaluatedNodeString(mem.object);
+            if (mem.computed) {
+                let propVal: any = '?';
+                try {
+                    const propDetail = this.getEvaluationDetail(mem.property);
+                    propVal = propDetail.resultValue !== undefined ? propDetail.resultValue : '?';
+                } catch (e) {}
+                return `${objStr}[${propVal}]`;
+            } else {
+                return `${objStr}.${(mem.property as Identifier).name}`;
+            }
+        }
+        if (node.type === 'Literal') {
+            return String((node as Literal).value);
+        }
+        return 'value';
     }
 
     private getNodeString(node: ASTNode): string {

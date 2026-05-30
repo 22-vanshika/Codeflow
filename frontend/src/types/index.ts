@@ -20,6 +20,7 @@ export interface VisualizationHint {
         target: string;                 // Variable name
         value?: any;
         index?: number;
+        isRejected?: boolean;
     };
     explanation: VisualizationExplanation;
 }
@@ -32,6 +33,8 @@ export interface ExecutionTrace {
     heap: Record<string, any>;
     output?: string;
     visualization?: VisualizationHint;
+    visuals?: any;
+    assignmentDetail?: any;
 }
 
 export interface AlgorithmAnalysis {
@@ -91,6 +94,7 @@ export interface ArrayVisual {
     pointers: PointerVisual[];
     highlightIndices?: number[];
     swapIndices?: [number, number];
+    windowRange?: [number, number];
 }
 
 export interface CallStackVisual {
@@ -169,6 +173,7 @@ export interface TraceStep {
     visuals?: VisualInstruction;
     teacherNote: TeacherNote;
     type: 'assignment' | 'condition' | 'loop_start' | 'loop_continue' | 'loop_end' | 'function_call' | 'return' | 'comparison';
+    assignmentDetail?: any;
 }
 
 export interface TraceResult {

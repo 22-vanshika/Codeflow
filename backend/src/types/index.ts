@@ -33,6 +33,7 @@ export interface ExecutionTrace {
     explanation?: string;
     visualization?: VisualizationHint;  // Enhanced visualization data
     visuals?: any;                      // Deterministic data structure visual instructions
+    assignmentDetail?: any;             // Capture details of dynamic variable assignments/transfers
 }
 
 export interface StackFrame {

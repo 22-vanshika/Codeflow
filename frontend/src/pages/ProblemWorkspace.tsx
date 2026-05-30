@@ -37,12 +37,55 @@ interface ProblemData {
     url?: string;
 }
 
+interface FormattedVar {
+    key: string;
+    displayValue: string;
+    isSTL?: boolean;
+    type?: string;
+}
+
+const getFormattedStates = (variables: Record<string, any> | undefined): FormattedVar[] => {
+    if (!variables) return [];
+    const list: FormattedVar[] = [];
+    for (const [name, val] of Object.entries(variables)) {
+        if (name.startsWith('__') || name === 'this') continue;
+        
+        const type = val && (val as any).__type;
+        const isMapType = val instanceof Map;
+        const isSetType = val instanceof Set;
+        
+        if (type === 'std::stack' && Array.isArray(val)) {
+            list.push({ key: name, displayValue: `stack(size=${val.length}, top=${val.length > 0 ? val[val.length - 1] : '—'})`, isSTL: true, type: 'stack' });
+        } else if (type === 'std::queue' && Array.isArray(val)) {
+            list.push({ key: name, displayValue: `queue(size=${val.length}, front=${val.length > 0 ? val[0] : '—'})`, isSTL: true, type: 'queue' });
+        } else if (type === 'std::deque' && Array.isArray(val)) {
+            list.push({ key: name, displayValue: `deque(size=${val.length}, front=${val.length > 0 ? val[0] : '—'}, back=${val.length > 0 ? val[val.length - 1] : '—'})`, isSTL: true, type: 'deque' });
+        } else if (type === 'std::priority_queue' && val && 'elements' in val) {
+            const elements = (val as any).elements;
+            list.push({ key: name, displayValue: `pq(size=${elements.length}, top=${elements.length > 0 ? elements[0] : '—'})`, isSTL: true, type: 'priority_queue' });
+        } else if (isSetType) {
+            list.push({ key: name, displayValue: `set(size=${val.size}, values={${Array.from(val).join(', ')}})`, isSTL: true, type: 'set' });
+        } else if (isMapType) {
+            const keys = Array.from(val.keys());
+            list.push({ key: name, displayValue: `map(size=${val.size}, keys={${keys.join(', ')}})`, isSTL: true, type: 'map' });
+        } else {
+            const isScalar = val === null || typeof val === 'number' || typeof val === 'string' || typeof val === 'boolean';
+            if (isScalar) {
+                list.push({ key: name, displayValue: String(val) });
+            } else if (Array.isArray(val)) {
+                list.push({ key: name, displayValue: `[${val.slice(0, 10).join(', ')}${val.length > 10 ? ', …' : ''}]` });
+            }
+        }
+    }
+    return list;
+};
+
 export default function ProblemWorkspace() {
     const {
         connect, reset, executeRealCode, error, setCode,
         requestTrace, nextStep, prevStep, togglePlay, isPlaying,
         currentStepIndex, traceSteps, traces,
-        currentPattern, speed, setSpeed
+        currentPattern, speed, setSpeed, traceMode
     } = useExecutionStore();
 
     const [activeTab, setActiveTab] = useState<'description' | 'editor'>('editor');
@@ -373,43 +416,26 @@ export default function ProblemWorkspace() {
                                     className="flex-1 overflow-y-auto custom-scrollbar px-8 py-5 space-y-4"
                                 >
                                     {currentTraceStep ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* What's Happening: the raw trace explanation + any calculation detail */}
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-primary">
                                                     <div className="w-1 h-3 rounded-full bg-primary" />
                                                     <span className="text-[10px] font-black uppercase tracking-widest">What's Happening</span>
                                                 </div>
-                                                <p className="text-sm font-bold text-white leading-relaxed">
+                                                <p className="text-sm font-bold text-white leading-relaxed font-mono whitespace-pre-wrap">
                                                     {currentTraceStep.teacherNote.what}
                                                 </p>
                                             </div>
+                                            {/* Step Detail: state-specific contextual info (no generic boilerplate) */}
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-secondary">
                                                     <div className="w-1 h-3 rounded-full bg-secondary" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">The "Why"</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Step Detail</span>
                                                 </div>
-                                                <p className="text-[13px] font-medium text-text-secondary leading-relaxed">
+                                                <p className="text-[13px] font-medium text-text-secondary leading-relaxed font-mono">
                                                     {currentTraceStep.teacherNote.why}
                                                 </p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-accent-green">
-                                                    <div className="w-1 h-3 rounded-full bg-accent-green" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">Current State</span>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2 pt-1">
-                                                    {Object.keys(currentTraceStep.variables).length > 0 ? (
-                                                        Object.entries(currentTraceStep.variables).map(([k, v]) => (
-                                                            <div key={k} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5">
-                                                                <span className="text-[11px] font-black text-text-muted">{k}</span>
-                                                                <div className="w-px h-3 bg-white/10" />
-                                                                <span className="text-[11px] font-black text-white font-mono">{Array.isArray(v) ? `[${v.join(', ')}]` : String(v)}</span>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-[11px] text-text-muted italic">No variables in scope.</span>
-                                                    )}
-                                                </div>
                                             </div>
                                         </div>
                                     ) : (

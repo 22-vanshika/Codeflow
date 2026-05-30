@@ -21,6 +21,11 @@ export default function CallStackVisualizer({ visual, className = '' }: CallStac
                 {frames.map((frame, index) => {
                     const isActive = index === activeFrame;
                     const argsStr = Object.entries(frame.args)
+                        .filter(([k, v]) => {
+                            if (k === 'this' || k.startsWith('__')) return false;
+                            if (v !== null && typeof v === 'object' && !Array.isArray(v)) return false;
+                            return true;
+                        })
                         .map(([k, v]) => `${k}=${formatValue(v)}`)
                         .join(', ');
 

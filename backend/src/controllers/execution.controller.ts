@@ -129,13 +129,24 @@ export class ExecutionController {
             const codeLines = code.split('\n');
             const traceSteps = traces.map((t, idx) => {
                 const topFrame = t.stack.length > 0 ? t.stack[t.stack.length - 1] : { locals: {} };
-                const variables = { ...topFrame.locals };
+                // Dereference heap pointers so the frontend sees actual array/map values
+                // instead of "#1000" style addresses.
+                const rawVars = { ...topFrame.locals };
+                const variables: Record<string, any> = {};
+                for (const [k, v] of Object.entries(rawVars)) {
+                    if (typeof v === 'string' && v.startsWith('#') && t.heap && t.heap[v] !== undefined) {
+                        variables[k] = t.heap[v];
+                    } else {
+                        variables[k] = v;
+                    }
+                }
                 return {
                     step: idx + 1,
                     line: t.line,
                     lineContent: codeLines[t.line - 1]?.trim() || '',
                     variables,
                     visuals: t.visuals,
+                    assignmentDetail: t.assignmentDetail,
                     teacherNote: {
                         what: t.visualization?.explanation.what || t.explanation || '',
                         why: t.visualization?.explanation.why || '',
