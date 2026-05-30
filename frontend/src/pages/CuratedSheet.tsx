@@ -103,11 +103,11 @@ export default function CuratedSheet() {
                     </motion.div>
                     
                     <h1 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tighter">
-                        SWE <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-gradient-x">180</span> Sheet
+                        DSA <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-gradient-x">Sheet</span>
                     </h1>
                     
                     <p className="text-text-muted text-lg max-w-2xl mx-auto leading-relaxed">
-                        A high-fidelity roadmap to mastering DSA. 180 curated problems that cover every pattern you need for top-tier technical interviews.
+                        A high-fidelity roadmap to mastering DSA. 200 curated problems that cover every pattern you need for top-tier technical interviews.
                     </p>
                 </motion.div>
 

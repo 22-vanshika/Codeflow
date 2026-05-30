@@ -45,11 +45,35 @@ for (const [path, mod] of Object.entries(problemModules)) {
   allProblemsUnsorted.push(candidate);
 }
 
+const categoryOrder: Record<string, number> = {
+  'Arrays & Hashing': 0,
+  'Two Pointers': 1,
+  'Sliding Window': 2,
+  'Sorting': 3,
+  'Binary Search': 4,
+  'Linked List': 5,
+  'Stack': 6,
+  'Intervals': 7,
+  'Trees': 8,
+  'Graphs': 9,
+  'Backtracking': 10,
+  'Heap': 11,
+  'Heap / Priority Queue': 11,
+  'Dynamic Programming': 12,
+  'Trie': 13,
+  'Bit Manipulation': 14,
+};
+
+function getCategoryRank(cat: string): number {
+  return categoryOrder[cat] !== undefined ? categoryOrder[cat] : 99;
+}
+
 export const problemsList: ProblemDefinition[] = allProblemsUnsorted
   .slice()
   .sort((a, b) => {
-    const cat = a.category.localeCompare(b.category);
-    if (cat !== 0) return cat;
+    const rankA = getCategoryRank(a.category);
+    const rankB = getCategoryRank(b.category);
+    if (rankA !== rankB) return rankA - rankB;
 
     const diff = difficultyRank[a.difficulty] - difficultyRank[b.difficulty];
     if (diff !== 0) return diff;

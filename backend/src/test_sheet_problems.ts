@@ -127,11 +127,13 @@ const runSheetTests = () => {
     }
 
     console.log("====================================================");
-
-    if (failed.length === 0) {
-        console.log("🎉 ALL CURATED SHEET PROBLEMS PASSED SUCCESSFULLY!");
+    if (failed.length === 0 && results.length === 200) {
+        console.log("🎉 ALL 200 CURATED SHEET PROBLEMS PASSED SUCCESSFULLY!");
         process.exit(0);
     } else {
+        if (results.length !== 200) {
+            console.error(`🚨 ERROR: Expected exactly 200 problems, but found ${results.length}!`);
+        }
         process.exit(1);
     }
 };
