@@ -1,4 +1,3 @@
-import React from 'react';
 import './visualizers.css';
 
 interface MatrixVisualizerProps {

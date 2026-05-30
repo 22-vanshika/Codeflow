@@ -10,7 +10,6 @@ export default function StackQueueVisualizer({ visual, className = '' }: StackQu
     const { target, elements = [], pointers = [], activeIndices = [], type } = visual;
 
     const isStack = type === 'stack';
-    const isDeque = type === 'deque';
 
     return (
         <div className={`stack-queue-visualizer flex flex-col items-center justify-center w-full h-full ${className}`}>

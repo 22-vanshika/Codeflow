@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import type { ArrayVisual, PointerVisual } from '../../../../types';
+import type { ArrayVisual } from '../../../../types';
 import './visualizers.css';
 
 type StepType = 'assignment' | 'condition' | 'loop_start' | 'loop_continue' | 'loop_end' | 'function_call' | 'return' | 'comparison';
@@ -63,18 +62,7 @@ export default function ArrayVisualizer({
     stepType,
     sortedUntil,
 }: ArrayVisualizerProps) {
-    const { values, pointers, highlightIndices = [], swapIndices } = visual;
-
-    /* Group pointers by index for stacking */
-    const pointersByIndex = useMemo(() => {
-        const map = new Map<number, PointerVisual[]>();
-        for (const ptr of pointers) {
-            const existing = map.get(ptr.index) ?? [];
-            existing.push(ptr);
-            map.set(ptr.index, existing);
-        }
-        return map;
-    }, [pointers]);
+    const { values, pointers, swapIndices } = visual;
 
     /* Responsive: shrink boxes when many elements */
     const count = values.length;

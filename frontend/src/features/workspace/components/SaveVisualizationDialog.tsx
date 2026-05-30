@@ -1,25 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, CheckCircle } from 'lucide-react';
+import { X, Save, CheckCircle, Copy, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { useExecutionStore } from '../../../store/executionStore';
+import { useVisualizationStore } from '../../../store/visualizationStore';
+import type { SavedVisualization } from '../../../store/visualizationStore';
 
 interface SaveVisualizationDialogProps {
     isOpen: boolean;
     onClose: () => void;
+    loadedVis?: SavedVisualization | null;
+    onSaveSuccess?: (vis: SavedVisualization) => void;
 }
 
-export default function SaveVisualizationDialog({ isOpen, onClose }: SaveVisualizationDialogProps) {
+export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, onSaveSuccess }: SaveVisualizationDialogProps) {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [overwriteMode, setOverwriteMode] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
     
     const { user } = useAuthStore();
-    const { code, traceSteps, traces } = useExecutionStore();
+    const { code, traceSteps, traces, speed, input } = useExecutionStore();
+    const updateVisualization = useVisualizationStore(s => s.updateVisualization);
+
+    // Prefill title & description if loadedVis is active
+    useEffect(() => {
+        if (isOpen) {
+            if (loadedVis) {
+                setTitle(loadedVis.title);
+                setDescription(loadedVis.description || '');
+                // Default to overwrite mode if owned by the user
+                const isOwner = user && loadedVis.userId === user.uid;
+                setOverwriteMode(!!isOwner);
+            } else {
+                setTitle('');
+                setDescription('');
+                setOverwriteMode(false);
+            }
+            setError('');
+            setSuccess(false);
+        }
+    }, [isOpen, loadedVis, user]);
 
     if (!isOpen) return null;
+
+    const isOwner = user && loadedVis && loadedVis.userId === user.uid;
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,35 +65,61 @@ export default function SaveVisualizationDialog({ isOpen, onClose }: SaveVisuali
         setIsSaving(true);
         setError('');
 
+        const settings = { speed, input };
+        const metadata = loadedVis?.metadata || {};
+
         try {
             const token = await user.getIdToken();
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const response = await fetch(`${API_URL}/api/visualizations/save`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
+            let savedVis: SavedVisualization;
+
+            if (isOwner && overwriteMode && loadedVis) {
+                // Update existing visualization
+                savedVis = await updateVisualization(loadedVis._id, {
                     title,
                     description,
                     code,
-                    language: 'cpp',
                     traceSteps: steps,
-                    isPublic: true
-                })
-            });
+                    settings,
+                    metadata
+                }, token);
+            } else {
+                // Save new visualization
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                const response = await fetch(`${API_URL}/api/visualizations/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        code,
+                        language: 'cpp',
+                        traceSteps: steps,
+                        isPublic: true,
+                        settings,
+                        metadata
+                    })
+                });
 
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.message || 'Failed to save visualization');
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Failed to save visualization');
+                }
+
+                const resData = await response.json();
+                savedVis = resData.visualization;
             }
 
             setSuccess(true);
+            if (onSaveSuccess) {
+                onSaveSuccess(savedVis);
+            }
             setTimeout(() => {
                 setSuccess(false);
                 onClose();
-            }, 2000);
+            }, 1500);
 
         } catch (err: any) {
             setError(err.message);
@@ -101,8 +154,8 @@ export default function SaveVisualizationDialog({ isOpen, onClose }: SaveVisuali
 
                         {success ? (
                             <div className="flex flex-col items-center justify-center py-8 text-green-400">
-                                <CheckCircle size={48} className="mb-4" />
-                                <p className="text-lg font-medium">Successfully saved to your profile!</p>
+                                <CheckCircle size={48} className="mb-4 animate-bounce" />
+                                <p className="text-lg font-medium">Successfully saved project!</p>
                             </div>
                         ) : (
                             <form onSubmit={handleSave} className="space-y-4">
@@ -111,9 +164,39 @@ export default function SaveVisualizationDialog({ isOpen, onClose }: SaveVisuali
                                         {error}
                                     </div>
                                 )}
+
+                                {/* Choice: Overwrite or New copy */}
+                                {isOwner && (
+                                    <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/5 mb-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOverwriteMode(true)}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                                                overwriteMode 
+                                                ? 'bg-primary text-white shadow-lg' 
+                                                : 'text-text-muted hover:text-white'
+                                            }`}
+                                        >
+                                            <RefreshCw size={14} />
+                                            Update Existing
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setOverwriteMode(false)}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                                                !overwriteMode 
+                                                ? 'bg-primary text-white shadow-lg' 
+                                                : 'text-text-muted hover:text-white'
+                                            }`}
+                                        >
+                                            <Copy size={14} />
+                                            Save As Copy
+                                        </button>
+                                    </div>
+                                )}
                                 
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-text-secondary">Title</label>
+                                    <label className="text-sm font-medium text-text-secondary">Project Name</label>
                                     <input 
                                         type="text" 
                                         value={title}
@@ -139,7 +222,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose }: SaveVisuali
                                     disabled={isSaving}
                                     className="w-full py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold transition-colors mt-4 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                                 >
-                                    {isSaving ? 'Saving...' : 'Save to Profile'}
+                                    {isSaving ? 'Saving...' : overwriteMode ? 'Update Visualization' : 'Save as New Project'}
                                 </button>
                             </form>
                         )}

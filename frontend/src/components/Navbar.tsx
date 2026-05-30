@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function Navbar() {
     const location = useLocation();
     const { user, logout } = useAuthStore();
-    const { getSolvedCount, getProgressPercent, fetchFromBackend, reset } = useProgressStore();
+    const { getProgressPercent, fetchFromBackend, reset } = useProgressStore();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);

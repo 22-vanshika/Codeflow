@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useExecutionStore } from '../store/executionStore';
+import { useVisualizationStore } from '../store/visualizationStore';
+import type { SavedVisualization } from '../store/visualizationStore';
 import CodeEditor from '../features/visualizer/components/CodeEditor';
 import WhiteboardPanel from '../features/visualizer/components/panels/WhiteboardPanel';
 import FixPermissionDialog from '../components/dialogs/FixPermissionDialog';
@@ -14,8 +16,8 @@ import {
     Play, Pause, SkipBack, SkipForward, RotateCcw, 
     ChevronLeft, ChevronRight, Sparkles, ChevronDown, 
     ChevronUp, Code2, Save, Github, BookOpen, 
-    Zap, Terminal, Settings, Layers, MousePointer2,
-    Maximize2, Minimize2, X
+    Zap, Terminal, Layers, MousePointer2,
+    Maximize2, Minimize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,55 +39,14 @@ interface ProblemData {
     url?: string;
 }
 
-interface FormattedVar {
-    key: string;
-    displayValue: string;
-    isSTL?: boolean;
-    type?: string;
-}
 
-const getFormattedStates = (variables: Record<string, any> | undefined): FormattedVar[] => {
-    if (!variables) return [];
-    const list: FormattedVar[] = [];
-    for (const [name, val] of Object.entries(variables)) {
-        if (name.startsWith('__') || name === 'this') continue;
-        
-        const type = val && (val as any).__type;
-        const isMapType = val instanceof Map;
-        const isSetType = val instanceof Set;
-        
-        if (type === 'std::stack' && Array.isArray(val)) {
-            list.push({ key: name, displayValue: `stack(size=${val.length}, top=${val.length > 0 ? val[val.length - 1] : '—'})`, isSTL: true, type: 'stack' });
-        } else if (type === 'std::queue' && Array.isArray(val)) {
-            list.push({ key: name, displayValue: `queue(size=${val.length}, front=${val.length > 0 ? val[0] : '—'})`, isSTL: true, type: 'queue' });
-        } else if (type === 'std::deque' && Array.isArray(val)) {
-            list.push({ key: name, displayValue: `deque(size=${val.length}, front=${val.length > 0 ? val[0] : '—'}, back=${val.length > 0 ? val[val.length - 1] : '—'})`, isSTL: true, type: 'deque' });
-        } else if (type === 'std::priority_queue' && val && 'elements' in val) {
-            const elements = (val as any).elements;
-            list.push({ key: name, displayValue: `pq(size=${elements.length}, top=${elements.length > 0 ? elements[0] : '—'})`, isSTL: true, type: 'priority_queue' });
-        } else if (isSetType) {
-            list.push({ key: name, displayValue: `set(size=${val.size}, values={${Array.from(val).join(', ')}})`, isSTL: true, type: 'set' });
-        } else if (isMapType) {
-            const keys = Array.from(val.keys());
-            list.push({ key: name, displayValue: `map(size=${val.size}, keys={${keys.join(', ')}})`, isSTL: true, type: 'map' });
-        } else {
-            const isScalar = val === null || typeof val === 'number' || typeof val === 'string' || typeof val === 'boolean';
-            if (isScalar) {
-                list.push({ key: name, displayValue: String(val) });
-            } else if (Array.isArray(val)) {
-                list.push({ key: name, displayValue: `[${val.slice(0, 10).join(', ')}${val.length > 10 ? ', …' : ''}]` });
-            }
-        }
-    }
-    return list;
-};
 
 export default function ProblemWorkspace() {
     const {
         connect, reset, executeRealCode, error, setCode,
         requestTrace, nextStep, prevStep, togglePlay, isPlaying,
         currentStepIndex, traceSteps, traces,
-        currentPattern, speed, setSpeed, traceMode
+        currentPattern, speed, setSpeed
     } = useExecutionStore();
 
     const [activeTab, setActiveTab] = useState<'description' | 'editor'>('editor');
@@ -97,29 +58,61 @@ export default function ProblemWorkspace() {
     const [isGithubImportOpen, setIsGithubImportOpen] = useState(false);
     const [problemDetails, setProblemDetails] = useState<ProblemData | null>(null);
     const [logicPanelOpen, setLogicPanelOpen] = useState(true);
-    const [selectedLanguage, setSelectedLanguage] = useState('C++');
+    const [selectedLanguage] = useState('C++');
     const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
+    const [loadedVis, setLoadedVis] = useState<SavedVisualization | null>(null);
     
     const location = useLocation();
     const hasAutoImported = useRef(false);
+    const fetchVisualizationById = useVisualizationStore(s => s.fetchVisualizationById);
+
+    // Load visualization if vid param is present
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const vid = params.get('vid');
+        if (vid) {
+            fetchVisualizationById(vid).then(vis => {
+                setLoadedVis(vis);
+                setCode(vis.code);
+                useExecutionStore.getState().setInput(vis.settings?.input || "");
+                useExecutionStore.getState().setSpeed(vis.settings?.speed !== undefined ? vis.settings.speed : 500);
+                
+                // Load trace steps directly into store
+                const steps = vis.traceSteps || [];
+                if (steps.length > 0) {
+                    useExecutionStore.setState({
+                        traceSteps: steps,
+                        traces: steps,
+                        currentStepIndex: 0,
+                        isPlaying: false,
+                        traceMode: true
+                    });
+                }
+                
+                if (vis.metadata?.problemDetails) {
+                    setProblemDetails(vis.metadata.problemDetails);
+                } else {
+                    setProblemDetails({
+                        id: 'custom-playground',
+                        title: vis.title,
+                        difficulty: 'Medium',
+                        starterCode: { cpp: vis.code },
+                        source: 'Custom'
+                    });
+                }
+                
+                setActiveTab('editor');
+            }).catch(err => {
+                console.error("Failed to load visualization:", err);
+            });
+        }
+    }, [location.search, fetchVisualizationById, setCode]);
 
     const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
     const hasSteps = stepsArray.length > 0;
     const currentTraceStep = stepsArray[currentStepIndex];
 
-    const handleResetCode = () => {
-        if (problemDetails?.starterCode?.cpp) {
-            if (window.confirm("Reset to starter code? Unsaved changes will be lost.")) {
-                setCode(problemDetails.starterCode.cpp);
-                reset();
-            }
-        } else {
-            if (window.confirm("Reset editor? Unsaved changes will be lost.")) {
-                setCode(`#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello, World!" << endl;\n  return 0;\n}`);
-                reset();
-            }
-        }
-    };
+
 
     useEffect(() => { connect(); }, [connect]);
 
@@ -424,7 +417,7 @@ export default function ProblemWorkspace() {
                                                     <span className="text-[10px] font-black uppercase tracking-widest">What's Happening</span>
                                                 </div>
                                                 <p className="text-sm font-bold text-white leading-relaxed font-mono whitespace-pre-wrap">
-                                                    {currentTraceStep.teacherNote.what}
+                                                    {(currentTraceStep as any).teacherNote?.what || (currentTraceStep as any).explanation || ''}
                                                 </p>
                                             </div>
                                             {/* Step Detail: state-specific contextual info (no generic boilerplate) */}
@@ -434,7 +427,7 @@ export default function ProblemWorkspace() {
                                                     <span className="text-[10px] font-black uppercase tracking-widest">Step Detail</span>
                                                 </div>
                                                 <p className="text-[13px] font-medium text-text-secondary leading-relaxed font-mono">
-                                                    {currentTraceStep.teacherNote.why}
+                                                    {(currentTraceStep as any).teacherNote?.why || ''}
                                                 </p>
                                             </div>
                                         </div>
@@ -600,6 +593,16 @@ export default function ProblemWorkspace() {
             <SaveVisualizationDialog
                 isOpen={isSaveOpen}
                 onClose={() => setIsSaveOpen(false)}
+                loadedVis={loadedVis}
+                onSaveSuccess={(updatedVis) => {
+                    setLoadedVis(updatedVis);
+                    if (updatedVis && updatedVis._id) {
+                        const params = new URLSearchParams(window.location.search);
+                        if (params.get('vid') !== updatedVis._id) {
+                            window.history.replaceState(null, '', `${window.location.pathname}?vid=${updatedVis._id}`);
+                        }
+                    }
+                }}
             />
             <GitHubImportDialog
                 isOpen={isGithubImportOpen}

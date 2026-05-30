@@ -1,5 +1,4 @@
-import { motion } from 'framer-motion';
-import { BookOpen, Info, Target, AlertCircle, Code, ListFilter } from 'lucide-react';
+import { BookOpen, Info, AlertCircle, Code, ListFilter } from 'lucide-react';
 
 interface ProblemDescriptionProps {
     problem: {

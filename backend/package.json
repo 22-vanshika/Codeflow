@@ -23,7 +23,6 @@
     "ws": "^8.18.3"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@types/cors": "^2.8.19",
     "axios": "^1.13.3",
     "compression": "^1.8.1",

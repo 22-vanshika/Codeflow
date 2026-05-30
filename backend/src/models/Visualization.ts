@@ -8,6 +8,11 @@ export interface IVisualization extends Document {
     language: string;
     traceSteps: any[]; // JSON array of execution trace steps
     isPublic: boolean;
+    settings?: {
+        speed?: number;
+        input?: string;
+    };
+    metadata?: any;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -21,6 +26,8 @@ const VisualizationSchema = new Schema<IVisualization>(
         language: { type: String, required: true, default: 'cpp' },
         traceSteps: { type: Schema.Types.Mixed, required: true },
         isPublic: { type: Boolean, default: false },
+        settings: { type: Schema.Types.Mixed },
+        metadata: { type: Schema.Types.Mixed },
     },
     { timestamps: true }
 );

@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, X, Play, ChevronDown, ChevronUp, Command } from 'lucide-react';
+import { Terminal, Play, ChevronDown, ChevronUp, Command } from 'lucide-react';
 import InputPanel from '../../visualizer/components/panels/InputPanel';
 import OutputPanel from '../../visualizer/components/panels/OutputPanel';
 
