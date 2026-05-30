@@ -37,6 +37,40 @@ export interface ExecutionTrace {
     assignmentDetail?: any;
 }
 
+export interface ComplexityBreakdownItem {
+    operation: string;
+    complexity: string;
+}
+
+export interface SpaceBreakdownItem {
+    structure: string;
+    complexity: string;
+}
+
+export interface LearningModeDetails {
+    bruteForce: {
+        time: string;
+        space: string;
+        explanation?: string;
+    };
+    optimized: {
+        time: string;
+        space: string;
+        explanation?: string;
+    };
+    improvement: string;
+    optimizationReason: string;
+}
+
+export interface ComplexityDetectionDetail {
+    title: string;
+    detectedType: string;
+    codeSnippet: string;
+    complexity: string;
+    explanation: string;
+    visualTree?: string[];
+}
+
 export interface AlgorithmAnalysis {
     title: string;
     timeComplexity: string;
@@ -45,6 +79,11 @@ export interface AlgorithmAnalysis {
     pattern: string;
     explanation: Record<string, string>;
     overview: string;
+    timeBreakdown?: ComplexityBreakdownItem[];
+    spaceBreakdown?: SpaceBreakdownItem[];
+    stepExplanations?: string[];
+    detections?: ComplexityDetectionDetail[];
+    learningMode?: LearningModeDetails;
 }
 
 // Flowchart node metadata for visualization
@@ -193,4 +232,5 @@ export interface TraceResult {
     totalSteps: number;
     error?: string;
     output?: string;
+    analysis?: AlgorithmAnalysis;
 }

@@ -113,18 +113,23 @@ export class ExecutionController {
                 return;
             }
 
-            // Deterministic trace simulation
-            const executor = new Executor();
-            const generator = executor.execute(code, input);
-            const traces: any[] = [];
-            let stepLimit = 0;
-
-            for (const trace of generator) {
-                traces.push(trace);
-                if (stepLimit++ > 2000) {
-                    break;
-                }
-            }
+            // Deterministic trace simulation and parallel AI analysis
+            const [traces, analysis] = await Promise.all([
+                (async () => {
+                    const executor = new Executor();
+                    const generator = executor.execute(code, input);
+                    const list: any[] = [];
+                    let stepLimit = 0;
+                    for (const trace of generator) {
+                        list.push(trace);
+                        if (stepLimit++ > 2000) {
+                            break;
+                        }
+                    }
+                    return list;
+                })(),
+                this.aiService.analyzeCode(code)
+            ]);
 
             const codeLines = code.split('\n');
             const traceSteps = traces.map((t, idx) => {
@@ -160,7 +165,8 @@ export class ExecutionController {
                 success: true,
                 steps: traceSteps,
                 totalSteps: traceSteps.length,
-                output: traces[traces.length - 1]?.output || ''
+                output: traces[traces.length - 1]?.output || '',
+                analysis
             };
 
             this.safeSend(ws, {

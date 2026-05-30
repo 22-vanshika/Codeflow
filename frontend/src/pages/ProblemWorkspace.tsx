@@ -10,6 +10,7 @@ import ImportProblemDialog from '../features/workspace/components/ImportProblemD
 import SaveVisualizationDialog from '../features/workspace/components/SaveVisualizationDialog';
 import GitHubImportDialog from '../features/workspace/components/GitHubImportDialog';
 import ComplexityInfo from '../features/workspace/components/ComplexityInfo';
+import ComplexityTab from '../features/workspace/components/ComplexityTab';
 import ProblemDescription from '../features/workspace/components/ProblemDescription';
 import SlidingConsole from '../features/workspace/components/SlidingConsole';
 import { 
@@ -252,7 +253,7 @@ export default function ProblemWorkspace() {
 
                     <div className="flex-1 relative overflow-hidden">
                         <AnimatePresence mode="wait">
-                            {activeTab === 'description' ? (
+                            {activeTab === 'description' && (
                                 <motion.div 
                                     key="desc"
                                     initial={{ opacity: 0, x: -20 }}
@@ -262,7 +263,8 @@ export default function ProblemWorkspace() {
                                 >
                                     <ProblemDescription problem={problemDetails} />
                                 </motion.div>
-                            ) : (
+                            )}
+                            {activeTab === 'editor' && (
                                 <motion.div 
                                     key="editor"
                                     initial={{ opacity: 0, x: 20 }}
