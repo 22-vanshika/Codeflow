@@ -2479,17 +2479,46 @@ export class Executor implements IExecutor {
                     }
                     this.heap[address] = vec;
                 } else if (isStack(className)) {
-                    this.heap[address] = [];
+                    const st = args[0] && Array.isArray(args[0]) ? [...args[0]] : [];
+                    (st as any).__type = 'std::stack';
+                    this.heap[address] = st;
                 } else if (isQueue(className)) {
-                    const q: any[] = [];
+                    const q = args[0] && Array.isArray(args[0]) ? [...args[0]] : [];
                     (q as any).__type = 'std::queue';
                     this.heap[address] = q;
                 } else if (isDeque(className)) {
-                    const dq: any[] = [];
+                    const dq = args[0] && Array.isArray(args[0]) ? [...args[0]] : [];
                     (dq as any).__type = 'std::deque';
                     this.heap[address] = dq;
                 } else if (isPriorityQueue(className)) {
-                    this.heap[address] = { __type: 'std::priority_queue', elements: [], isMinHeap: className.includes('greater') };
+                    let elements: any[] = [];
+                    if (args.length === 2 && args[0] && typeof args[0] === 'object' && 'container' in args[0] && args[1] && typeof args[1] === 'object' && 'container' in args[1]) {
+                        const container = args[0].container;
+                        if (Array.isArray(container)) {
+                            const start = args[0].index !== undefined ? args[0].index : 0;
+                            const end = args[1].index !== undefined ? args[1].index : container.length;
+                            elements = container.slice(start, end);
+                        }
+                    } else if (args[0] && Array.isArray(args[0])) {
+                        elements = [...args[0]];
+                    }
+                    const isMinHeap = className.includes('greater');
+                    elements.sort((a: any, b: any) => {
+                        let compA = a;
+                        let compB = b;
+                        if (a && typeof a === 'object') {
+                            if ('first' in a) {
+                                if (a.first !== b.first) return isMinHeap ? a.first - b.first : b.first - a.first;
+                                return isMinHeap ? a.second - b.second : b.second - a.second;
+                            }
+                            if (Array.isArray(a)) {
+                                if (a[0] !== b[0]) return isMinHeap ? a[0] - b[0] : b[0] - a[0];
+                                return isMinHeap ? a[1] - b[1] : b[1] - a[1];
+                            }
+                        }
+                        return isMinHeap ? compA - compB : compB - compA;
+                    });
+                    this.heap[address] = { __type: 'std::priority_queue', elements, isMinHeap };
                 } else if (isMap(className)) {
                     const m = createMapWithValType(className);
                     if (args[0] instanceof Map) {
