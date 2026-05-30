@@ -7,6 +7,7 @@ import './visualizers.css';
 interface HashMapVisualizerProps {
     visual: HashMapVisual;
     className?: string;
+    compact?: boolean;
 }
 
 const renderCellContent = (p: any) => {
@@ -21,12 +22,12 @@ const renderCellContent = (p: any) => {
     return <span>{formatValue(p)}</span>;
 };
 
-const HashMapVisualizer = memo(({ visual, className = '' }: HashMapVisualizerProps) => {
+const HashMapVisualizer = memo(({ visual, className = '', compact = false }: HashMapVisualizerProps) => {
     const { target, entries, activeKeys = [] } = visual;
 
     const { currentStepIndex, traceSteps, traces } = useExecutionStore();
     const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
-    const currentTraceStep = stepsArray[currentStepIndex];
+    const currentTraceStep = stepsArray[currentStepIndex] as any;
 
     const isScopeVars = target === 'Scope Variables';
     const isPair = target.toLowerCase().includes('pair');
@@ -34,11 +35,13 @@ const HashMapVisualizer = memo(({ visual, className = '' }: HashMapVisualizerPro
     // 1. Render C++ Scope Variables as Premium Visual Cards
     if (isScopeVars) {
         return (
-            <div className={`flex flex-col items-center justify-center w-full p-4 ${className}`}>
-                <h3 className="text-xs font-black text-accent-purple uppercase tracking-[0.2em] mb-4">
-                    Active Variables
-                </h3>
-                <div className="flex flex-wrap gap-6 items-center justify-center max-w-4xl">
+            <div className={`flex flex-col items-center justify-center w-full ${compact ? 'p-1' : 'p-4'} ${className}`}>
+                {!compact && (
+                    <h3 className="text-xs font-black text-accent-purple uppercase tracking-[0.2em] mb-4">
+                        Active Variables
+                    </h3>
+                )}
+                <div className={`flex flex-wrap items-center justify-center max-w-4xl ${compact ? 'gap-3' : 'gap-6'}`}>
                     <AnimatePresence>
                         {entries.map(({ key, value }) => {
                             const isHighlighted = activeKeys.includes(key);
@@ -52,12 +55,15 @@ const HashMapVisualizer = memo(({ visual, className = '' }: HashMapVisualizerPro
                                     className="flex flex-col items-center"
                                 >
                                     {/* Variable Name Label */}
-                                    <span className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-2 font-mono">
+                                    <span className={`font-black text-text-muted uppercase tracking-[0.2em] font-mono ${
+                                        compact ? 'text-[8px] mb-1' : 'text-[10px] mb-2'
+                                    }`}>
                                         {String(key)}
                                     </span>
                                     {/* variable Visual Card */}
                                     <div 
-                                        className={`w-16 h-16 rounded-xl border flex flex-col items-center justify-center font-mono text-base font-black relative overflow-hidden transition-all duration-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05),0_10px_20px_rgba(0,0,0,0.3)]
+                                        className={`rounded-xl border flex flex-col items-center justify-center font-mono font-black relative overflow-hidden transition-all duration-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05),0_10px_20px_rgba(0,0,0,0.3)]
+                                            ${compact ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
                                             ${isHighlighted
                                                 ? 'border-accent-cyan bg-bg-panel text-accent-cyan shadow-glow ring-1 ring-accent-cyan/30'
                                                 : 'border-white/10 bg-[#0B1120]/80 text-[#cdd6f4] hover:border-white/20'
@@ -113,17 +119,19 @@ const HashMapVisualizer = memo(({ visual, className = '' }: HashMapVisualizerPro
 
     // 3. Render Standard Hash Map / Set
     return (
-        <div className={`flex flex-col items-center justify-center w-full h-full p-4 overflow-auto custom-scrollbar ${className}`}>
-            <h3 className="text-sm font-semibold text-accent-purple uppercase tracking-widest mb-4">
+        <div className={`flex flex-col items-center justify-center w-full h-full ${compact ? 'p-2' : 'p-4'} overflow-auto custom-scrollbar ${className}`}>
+            <h3 className={`${compact ? 'text-xs mb-2' : 'text-sm mb-4'} font-semibold text-accent-purple uppercase tracking-widest`}>
                 {target.replace(' (Set)', '')} <span className="text-text-muted text-xs normal-case">({target.toLowerCase().includes('set') ? 'Set' : 'Hash Map'})</span>
             </h3>
 
             {entries.length === 0 ? (
-                <div className="flex items-center justify-center h-24 border border-dashed border-border-subtle rounded-xl w-64 text-text-muted text-sm italic">
+                <div className={`flex items-center justify-center border border-dashed border-border-subtle rounded-xl w-64 text-text-muted italic ${
+                    compact ? 'h-16 text-xs w-full' : 'h-24 text-sm'
+                }`}>
                     {target.replace(' (Set)', '')} is empty
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl">
+                <div className={compact ? "grid grid-cols-2 gap-2 w-full max-w-md" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl"}>
                     <AnimatePresence>
                         {entries.map(({ key, value }) => {
                             const isActive = activeKeys.includes(key);
@@ -158,7 +166,8 @@ const HashMapVisualizer = memo(({ visual, className = '' }: HashMapVisualizerPro
                                 >
                                     {/* Key Section */}
                                     <div className={`
-                                        flex items-center justify-center px-4 py-2 font-mono text-sm font-bold min-w-[60px] flex-1
+                                        flex items-center justify-center font-mono font-bold flex-1
+                                        ${compact ? 'px-2.5 py-1.5 text-xs min-w-[40px]' : 'px-4 py-2 text-sm min-w-[60px]'}
                                         ${isActive
                                             ? 'bg-accent-cyan/20 text-accent-cyan'
                                             : 'bg-bg-panel text-text-primary'
@@ -170,7 +179,9 @@ const HashMapVisualizer = memo(({ visual, className = '' }: HashMapVisualizerPro
 
                                     {/* Value Section */}
                                     {!isSet && (
-                                        <div className="flex items-center justify-center px-4 py-2 font-mono text-sm flex-1 text-accent-orange font-semibold">
+                                        <div className={`flex items-center justify-center font-mono text-accent-orange font-semibold flex-1 ${
+                                            compact ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2 text-sm'
+                                        }`}>
                                             {renderCellContent(value)}
                                         </div>
                                     )}

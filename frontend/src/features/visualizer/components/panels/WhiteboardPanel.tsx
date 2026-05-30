@@ -21,9 +21,7 @@ mermaid.initialize({
 
 const WhiteboardPanel = React.memo(function WhiteboardPanel() {
     const {
-        code,
         flowchart,
-        analysis,
         currentStepIndex,
         traces,
         traceSteps,
@@ -41,10 +39,10 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
 
     const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
     const hasSteps = stepsArray.length > 0;
-    const activeStep = stepsArray[currentStepIndex];
+    const activeStep = stepsArray[currentStepIndex] as any;
     const activeLine = activeStep?.line;
-    const currentTraceStep = stepsArray[currentStepIndex];
-    const currentTrace = stepsArray[currentStepIndex];
+    const currentTraceStep = stepsArray[currentStepIndex] as any;
+    const currentTrace = stepsArray[currentStepIndex] as any;
     const currentNodeId = currentTrace?.visualization?.nodeId;
     const pathTaken = currentTrace?.visualization?.pathTaken;
 
@@ -155,7 +153,7 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
 
     const arrayStepType = (currentTraceStep as any)?.type as string | undefined;
 
-    const renderVisualizerItem = (v: any) => {
+    const renderVisualizerItem = (v: any, compact: boolean = false) => {
         if (!v) return null;
         switch (v.type) {
             case 'array_1d': {
@@ -179,7 +177,7 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             case 'stack':
             case 'queue':
             case 'deque':      return <StackQueueVisualizer visual={v as StackQueueVisual} />;
-            case 'hash_map':   return <HashMapVisualizer visual={v as HashMapVisual} />;
+            case 'hash_map':   return <HashMapVisualizer visual={v as HashMapVisual} compact={compact} />;
             default:           return null;
         }
     };
@@ -188,17 +186,63 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
         if (!currentTraceStep?.visuals) return null;
         const v = currentTraceStep.visuals;
         if (v.type === 'multi_visuals') {
+            const list = (v as any).visuals || [];
+            
+            // Filter large visual structures into mainVisuals
+            const mainVisuals = list.filter((subV: any) => 
+                ['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue'].includes(subV.type)
+            );
+            
+            // Filter smaller helper variables/hash_maps into sideVisuals
+            const sideVisuals = list.filter((subV: any) => 
+                !['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue'].includes(subV.type)
+            );
+
+            if (mainVisuals.length > 0 && sideVisuals.length > 0) {
+                return (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full h-full min-h-0">
+                        {/* Main Visualizer Area: takes 2 columns (66% width) */}
+                        <div className="lg:col-span-2 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 h-full min-h-0">
+                            {mainVisuals.map((subV: any, idx: number) => (
+                                <div key={subV.target || idx} className="w-full flex justify-center flex-none">
+                                    {renderVisualizerItem(subV)}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Side Panel Area: takes 1 column (33% width) for sticky scope variables */}
+                        <div className="lg:col-span-1 flex flex-col bg-white/5 border border-white/5 rounded-2xl p-5 h-full min-h-0 shadow-xl backdrop-blur-md">
+                            <div className="flex items-center gap-2 pb-3 border-b border-white/5 mb-3 text-cyan-400">
+                                <div className="w-1.5 h-3.5 rounded-full bg-cyan-400" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#768390]">Scope Variables</span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                                {sideVisuals.map((subV: any, idx: number) => (
+                                    <div key={subV.target || idx} className="w-full flex justify-center flex-none">
+                                        {renderVisualizerItem(subV, true)}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
-                <div className="flex flex-col gap-6 w-full items-center">
-                    {(v as any).visuals.map((subV: any, idx: number) => (
-                        <div key={subV.target || idx} className="w-full flex justify-center">
+                <div className="flex flex-col gap-6 w-full items-center overflow-y-auto custom-scrollbar h-full p-2">
+                    {list.map((subV: any, idx: number) => (
+                        <div key={subV.target || idx} className="w-full flex justify-center flex-none">
                             {renderVisualizerItem(subV)}
                         </div>
                     ))}
                 </div>
             );
         }
-        return renderVisualizerItem(v);
+        return (
+            <div className="p-4 w-full flex justify-center">
+                {renderVisualizerItem(v)}
+            </div>
+        );
     };
 
     const showEmptyState = traceMode ? !hasSteps : !flowchart;
@@ -243,8 +287,10 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             {traceMode ? (
                 /* Primary Data Visualization Area takes 100% of height */
                 <div className="flex-1 w-full h-full flex flex-col min-h-0 relative z-10">
-                    <div className="flex-1 w-full min-h-0 flex items-center justify-center p-6 overflow-auto">
-                        <div className="w-full flex justify-center max-w-4xl">
+                    <div className="flex-1 w-full min-h-0 flex items-stretch justify-center p-6 overflow-hidden">
+                        <div className={`w-full h-full flex justify-center min-h-0 ${
+                            currentTraceStep?.visuals?.type === 'multi_visuals' ? 'max-w-7xl' : 'max-w-4xl items-center overflow-y-auto custom-scrollbar'
+                        }`}>
                             {renderVisualizer()}
                         </div>
                     </div>
