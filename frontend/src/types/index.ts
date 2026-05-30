@@ -109,6 +109,16 @@ export interface TreeVisual {
     currentNodeId?: string;
     activeNodes?: string[];
     visitedNodes?: string[];
+    pointers?: { name: string; nodeId: string; color: string }[];
+}
+
+export interface LinkedListVisual {
+    type: 'linked_list';
+    target: string;
+    nodes: { id: string; value: any; next?: string | null; prev?: string | null }[];
+    pointers: { name: string; nodeId: string; color: string }[];
+    hasCycle?: boolean;
+    cycleStartId?: string;
 }
 
 export interface GraphNode {

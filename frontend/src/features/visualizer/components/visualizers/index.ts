@@ -7,4 +7,5 @@ export { default as StackQueueVisualizer } from './StackQueueVisualizer';
 export { default as HashMapVisualizer } from './HashMapVisualizer';
 export { default as MatrixVisualizer } from './MatrixVisualizer';
 export { default as PriorityQueueVisualizer } from './PriorityQueueVisualizer';
+export { default as LinkedListVisualizer } from './LinkedListVisualizer';
 

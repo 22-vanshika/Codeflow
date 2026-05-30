@@ -3077,45 +3077,120 @@ export class Executor implements IExecutor {
                     if (visited.has(vVal)) activeNodes.push(vVal);
                 }
 
+                // Collect tree pointers (root, curr, left, right, parent, etc.)
+                const pointers: any[] = [];
+                for (const [vName, vVal] of Object.entries(allVarsRaw)) {
+                    if (typeof vVal === 'string' && visited.has(vVal)) {
+                        const lower = vName.toLowerCase();
+                        if (lower === 'root' || lower === 'curr' || lower === 'left' || lower === 'right' || lower === 'parent' || lower === 'node') {
+                            const color = lower === 'root' ? '#06b6d4' :
+                                          lower === 'curr' ? '#f97316' :
+                                          lower === 'left' ? '#a855f7' :
+                                          lower === 'right' ? '#ec4899' : '#eab308';
+                            pointers.push({ name: vName, nodeId: vVal, color });
+                        }
+                    }
+                }
+
                 collectedVisuals.push({
                     type: 'tree',
                     target: name,
                     nodes,
                     currentNodeId: val,
                     activeNodes,
-                    visitedNodes: Array.from(visited)
+                    visitedNodes: Array.from(visited),
+                    pointers
                 });
             }
         }
 
         // 2. Linked List Detection
+        const processedListStarts = new Set<string>();
         for (const [name, val] of Object.entries(locals)) {
             if (isListNode(val)) {
+                if (processedListStarts.has(val)) continue;
+
                 const nodes: any[] = [];
                 let currAddr = val;
-                let prevAddr = undefined;
                 const visited = new Set<string>();
+                let hasCycle = false;
+                let cycleStartId = undefined;
 
-                while (currAddr && isListNode(currAddr) && !visited.has(currAddr)) {
+                while (currAddr && isListNode(currAddr)) {
+                    if (visited.has(currAddr)) {
+                        hasCycle = true;
+                        cycleStartId = currAddr;
+                        break;
+                    }
                     visited.add(currAddr);
+                    processedListStarts.add(currAddr);
+
                     const currNode = this.heap[currAddr];
-                    nodes.push({ id: currAddr, value: currNode.val !== undefined ? currNode.val : currNode.value, parentId: prevAddr });
-                    prevAddr = currAddr;
-                    currAddr = currNode.next;
+                    const nodeVal = currNode.val !== undefined ? currNode.val : currNode.value;
+
+                    // We store next and prev pointers
+                    const nextAddr = currNode.next;
+                    const prevAddr = currNode.prev;
+
+                    nodes.push({
+                        id: currAddr,
+                        value: nodeVal,
+                        next: nextAddr && isListNode(nextAddr) ? nextAddr : null,
+                        prev: prevAddr && isListNode(prevAddr) ? prevAddr : null
+                    });
+
+                    if (nextAddr && isListNode(nextAddr)) {
+                        currAddr = nextAddr;
+                    } else {
+                        break;
+                    }
                 }
 
-                const activeNodes: string[] = [];
-                for (const [vName, vVal] of Object.entries(locals)) {
-                    if (visited.has(vVal)) activeNodes.push(vVal);
+                // If cycle exists, make sure the last traversed node's next points back
+                if (hasCycle && cycleStartId && nodes.length > 0) {
+                    const lastNode = nodes[nodes.length - 1];
+                    lastNode.next = cycleStartId;
+                }
+
+                // Collect pointers pointing to nodes in this list
+                const pointers: any[] = [];
+                const POINTER_COLORS: Record<string, string> = {
+                    head: '#06b6d4', // cyan
+                    tail: '#3b82f6', // blue
+                    curr: '#f97316', // orange
+                    prev: '#a855f7', // purple
+                    next: '#ec4899', // pink
+                    slow: '#eab308', // yellow
+                    fast: '#22c55e', // green
+                    temp: '#ef4444', // red
+                    dummy: '#6b7280' // gray
+                };
+
+                for (const [vName, vVal] of Object.entries(allVarsRaw)) {
+                    if (typeof vVal === 'string' && visited.has(vVal)) {
+                        const lower = vName.toLowerCase();
+                        let color = '#06b6d4'; // default cyan
+                        for (const [key, col] of Object.entries(POINTER_COLORS)) {
+                            if (lower.includes(key)) {
+                                color = col;
+                                break;
+                            }
+                        }
+                        pointers.push({
+                            name: vName,
+                            nodeId: vVal,
+                            color
+                        });
+                    }
                 }
 
                 collectedVisuals.push({
-                    type: 'tree',
+                    type: 'linked_list',
                     target: name,
                     nodes,
-                    currentNodeId: val,
-                    activeNodes,
-                    visitedNodes: Array.from(visited)
+                    pointers,
+                    hasCycle,
+                    cycleStartId
                 });
             }
         }
@@ -3148,6 +3223,16 @@ export class Executor implements IExecutor {
 
             const activeNodes: string[] = [];
             const activeEdges: any[] = [];
+            
+            // Check for u and v/neighbor/child to highlight the active traversing edge
+            const uVal = allVars['u'];
+            const vVal = allVars['v'] !== undefined ? allVars['v'] : 
+                         allVars['neighbor'] !== undefined ? allVars['neighbor'] : 
+                         allVars['child'] !== undefined ? allVars['child'] : undefined;
+            if (uVal !== undefined && vVal !== undefined) {
+                activeEdges.push({ from: String(uVal), to: String(vVal) });
+            }
+
             for (const [vName, vVal] of Object.entries(locals)) {
                 if (typeof vVal === 'number' && vVal >= 0 && vVal < adj.length) {
                     activeNodes.push(String(vVal));
@@ -3475,11 +3560,44 @@ export class Executor implements IExecutor {
             }
         }
 
-        // 9. Primitive Scope Variables - Render each as an independent visual card!
+        // 9. Primitive & Pointer Scope Variables - Render each as an independent visual card!
         const ANS_VAR_NAMES = new Set(['ans', 'result', 'res', 'maxlen', 'maxsum', 'count', 'area', 'profit', 'max_len', 'min_len', 'max_val', 'min_val', 'square']);
-        for (const [name, val] of Object.entries(allVars)) {
+        for (const [name, rawVal] of Object.entries(allVarsRaw)) {
             if (SYSTEM_CONSTANTS.has(name)) continue;
             if (name.startsWith('__')) continue;
+
+            // Check if it's a pointer pointing to a heap node (ListNode or TreeNode)
+            const val = allVars[name];
+            if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Map) && !(val instanceof Set) && typeof rawVal === 'string' && rawVal.startsWith('#')) {
+                const node = this.heap[rawVal];
+                if (node) {
+                    const nodeVal = node.val !== undefined ? node.val : (node.value !== undefined ? node.value : undefined);
+                    if (nodeVal !== undefined) {
+                        collectedVisuals.push({
+                            type: 'hash_map',
+                            target: name.toUpperCase(),
+                            entries: [{ key: name, value: `Node(${nodeVal})` }],
+                            activeKeys: [name]
+                        });
+                        continue;
+                    }
+                }
+            }
+
+            if (rawVal === null || rawVal === undefined) {
+                // Null pointer or uninitialized variable
+                // Only show if it's a known pointer or simple variable name (not random internal keys)
+                if (['slow', 'fast', 'curr', 'prev', 'next', 'head', 'tail', 'root', 'node', 'temp', 'dummy'].includes(name.toLowerCase())) {
+                    collectedVisuals.push({
+                        type: 'hash_map',
+                        target: name.toUpperCase(),
+                        entries: [{ key: name, value: 'nullptr' }],
+                        activeKeys: [name]
+                    });
+                }
+                continue;
+            }
+
             if (val && typeof val === 'object') continue;
             if (Array.isArray(val)) continue;
             if (val instanceof Map || val instanceof Set) continue;
@@ -3493,6 +3611,7 @@ export class Executor implements IExecutor {
                 });
             }
         }
+
 
         // Smart Canvas Layout - Type-Based Visual Prioritization
         const getPriorityScore = (v: any): number => {
