@@ -1349,6 +1349,7 @@ export class Executor implements IExecutor {
                                 });
                             } else {
                                 target[idx] = right;
+                                this.trackMatrixAccess(target, idx);
                                 yield this.createTrace(assign.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${idx}] = ${right}`, {
                                     astNode: assign.value,
                                     assignmentDetail: {
@@ -2658,7 +2659,16 @@ export class Executor implements IExecutor {
                         }
                         return obj.get(idx);
                     }
-                    return obj[idx];
+                    const result = obj[idx];
+                    if (Array.isArray(obj)) {
+                        if (Array.isArray(result) && obj.every(row => Array.isArray(row))) {
+                            Object.defineProperty(result, '__parentArray', { value: obj, configurable: true, writable: true });
+                            Object.defineProperty(result, '__rowIndex', { value: idx, configurable: true, writable: true });
+                        } else {
+                            this.trackMatrixAccess(obj, idx);
+                        }
+                    }
+                    return result;
                 } else {
                     const prop = (mem.property as Identifier).name;
 
@@ -2796,6 +2806,7 @@ export class Executor implements IExecutor {
                         const nextNum = isInc ? numVal + 1 : numVal - 1;
                         const newVal = isChar ? String.fromCharCode(nextNum) : nextNum;
                         target[prop] = newVal;
+                        this.trackMatrixAccess(target, prop);
                         yield this.createTrace(upd.line || 0, 'assignment', `${this.getNodeString(mem.object)}[${prop}]${op} (${val} → ${newVal})`);
                         return upd.prefix ? newVal : val;
                     }
@@ -3043,6 +3054,15 @@ export class Executor implements IExecutor {
             return node && ('next' in node);
         };
 
+        const isTrieNode = (addr: string): boolean => {
+            if (typeof addr !== 'string' || !addr.startsWith('#')) return false;
+            const node = this.heap[addr];
+            if (!node) return false;
+            const hasChildren = 'children' in node || 'child' in node || 'ch' in node || 'childs' in node;
+            const hasIsWord = 'isWord' in node || 'isEndOfWord' in node || 'is_word' in node || 'endOfWord' in node || 'end' in node || 'isEnd' in node;
+            return hasChildren && hasIsWord;
+        };
+
         const collectedVisuals: any[] = [];
 
         // 1. Binary Tree Detection
@@ -3099,6 +3119,102 @@ export class Executor implements IExecutor {
                     currentNodeId: val,
                     activeNodes,
                     visitedNodes: Array.from(visited),
+                    pointers
+                });
+            }
+        }
+
+        // 1b. Trie Detection
+        const processedTrieStarts = new Set<string>();
+        for (const [name, val] of Object.entries(locals)) {
+            if (isTrieNode(val)) {
+                if (processedTrieStarts.has(val)) continue;
+
+                const nodes: any[] = [];
+                const queue: { addr: string; parentId?: string; char: string }[] = [{ addr: val, char: 'ROOT' }];
+                const visited = new Set<string>();
+                visited.add(val);
+                processedTrieStarts.add(val);
+
+                let headIdx = 0;
+                while (headIdx < queue.length) {
+                    const current = queue[headIdx++];
+                    const nodeObj = this.heap[current.addr];
+                    if (!nodeObj) continue;
+
+                    const isWord = !!(nodeObj.isWord || nodeObj.isEndOfWord || nodeObj.is_word || nodeObj.endOfWord || nodeObj.end || nodeObj.isEnd);
+                    nodes.push({
+                        id: current.addr,
+                        val: current.char,
+                        isWord,
+                        parentId: current.parentId
+                    });
+
+                    // Retrieve children
+                    let childrenEntries: [string, string][] = [];
+                    const rawChildren = nodeObj.children || nodeObj.child || nodeObj.ch || nodeObj.childs;
+                    if (Array.isArray(rawChildren)) {
+                        rawChildren.forEach((childAddr, idx) => {
+                            if (childAddr && typeof childAddr === 'string' && childAddr.startsWith('#')) {
+                                childrenEntries.push([String.fromCharCode(97 + idx), childAddr]);
+                            }
+                        });
+                    } else if (rawChildren instanceof Map) {
+                        for (const [char, childAddr] of rawChildren.entries()) {
+                            if (childAddr && typeof childAddr === 'string' && childAddr.startsWith('#')) {
+                                childrenEntries.push([String(char), childAddr]);
+                            }
+                        }
+                    } else if (rawChildren && typeof rawChildren === 'object') {
+                        for (const [char, childAddr] of Object.entries(rawChildren)) {
+                            if (childAddr && typeof childAddr === 'string' && childAddr.startsWith('#')) {
+                                childrenEntries.push([String(char), childAddr]);
+                            }
+                        }
+                    }
+
+                    // Sort children alphabetical for neat structure
+                    childrenEntries.sort((a, b) => a[0].localeCompare(b[0]));
+
+                    for (const [char, childAddr] of childrenEntries) {
+                        if (!visited.has(childAddr)) {
+                            visited.add(childAddr);
+                            processedTrieStarts.add(childAddr);
+                            queue.push({ addr: childAddr, parentId: current.addr, char });
+                        }
+                    }
+                }
+
+                // Collect active pointers pointing to nodes in this Trie
+                const pointers: any[] = [];
+                const POINTER_COLORS: Record<string, string> = {
+                    root: '#06b6d4',
+                    curr: '#f97316',
+                    node: '#ec4899',
+                    temp: '#eab308'
+                };
+                for (const [vName, vVal] of Object.entries(allVarsRaw)) {
+                    if (typeof vVal === 'string' && visited.has(vVal)) {
+                        const lower = vName.toLowerCase();
+                        let color = '#06b6d4';
+                        for (const [key, col] of Object.entries(POINTER_COLORS)) {
+                            if (lower.includes(key)) {
+                                color = col;
+                                break;
+                            }
+                        }
+                        pointers.push({
+                            name: vName,
+                            nodeId: vVal,
+                            color
+                        });
+                    }
+                }
+
+                collectedVisuals.push({
+                    type: 'trie',
+                    target: name,
+                    nodes,
                     pointers
                 });
             }
@@ -3258,26 +3374,64 @@ export class Executor implements IExecutor {
                 const ROW_PTR_NAMES = new Set(['r', 'row', 'x', 'i']);
                 const COL_PTR_NAMES = new Set(['c', 'col', 'y', 'j']);
 
+                const numRows = val.length;
+                const numCols = val[0]?.length || 0;
+
+                // 1. Collect standard 2D pointer variables
                 for (const [vName, vVal] of Object.entries(allVars)) {
                     if (typeof vVal === 'number') {
                         const lower = vName.toLowerCase();
-                        if (ROW_PTR_NAMES.has(lower) && vVal >= 0 && vVal < val.length) {
-                            rowPointers[vName] = vVal;
+                        if (ROW_PTR_NAMES.has(lower) && vVal >= 0 && vVal < numRows) {
+                            // If 'l' also exists as a number, this is likely a 1D binary search (l and r), so avoid misinterpreting 'r' as row pointer!
+                            const is1DBinarySearch = allVars['l'] !== undefined || allVars['low'] !== undefined;
+                            if (!is1DBinarySearch) {
+                                rowPointers[vName] = vVal;
+                            }
                         }
-                        if (COL_PTR_NAMES.has(lower) && vVal >= 0 && val[0] && vVal < val[0].length) {
+                        if (COL_PTR_NAMES.has(lower) && vVal >= 0 && vVal < numCols) {
                             colPointers[vName] = vVal;
                         }
                     }
                 }
 
+                // 2. Handle 1D index mapping to 2D coordinates (Low, Mid, High, Left, Right, etc.)
+                const ONE_D_INDEX_NAMES = new Set(['mid', 'l', 'r', 'low', 'high', 'left', 'right', 'idx', 'index']);
+                if (numCols > 0) {
+                    for (const [vName, vVal] of Object.entries(allVars)) {
+                        if (typeof vVal === 'number') {
+                            const lower = vName.toLowerCase();
+                            if (ONE_D_INDEX_NAMES.has(lower)) {
+                                const totalCells = numRows * numCols;
+                                if (vVal >= 0 && vVal < totalCells) {
+                                    const r = Math.floor(vVal / numCols);
+                                    const c = vVal % numCols;
+                                    rowPointers[`${vName}_row`] = r;
+                                    colPointers[`${vName}_col`] = c;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Extract binary search range if present in 1D variables
+                let binarySearchRange: { l: number; r: number } | null = null;
+                const lowVal = allVars['l'] !== undefined ? allVars['l'] : allVars['low'];
+                const highVal = allVars['r'] !== undefined ? allVars['r'] : allVars['high'];
+                if (typeof lowVal === 'number' && typeof highVal === 'number') {
+                    binarySearchRange = { l: lowVal, r: highVal };
+                }
+
                 collectedVisuals.push({
                     type: 'matrix',
                     target: name,
-                    rows: val.length,
-                    cols: val[0].length,
+                    rows: numRows,
+                    cols: numCols,
                     values: val.map(row => [...row]),
                     rowPointers,
-                    colPointers
+                    colPointers,
+                    lastAccessedCell: (val as any).__lastAccessedCell ? { ...(val as any).__lastAccessedCell } : null,
+                    visitedCells: (val as any).__visitedCells ? (val as any).__visitedCells.map((c: any) => ({ ...c })) : [],
+                    binarySearchRange
                 });
             }
         }
@@ -3299,6 +3453,16 @@ export class Executor implements IExecutor {
             if (Array.isArray(val)) {
                 const type = (val as any).__type;
                 const lower = name.toLowerCase();
+                if (lower.includes('heap') || lower === 'pq') {
+                    collectedVisuals.push({
+                        type: 'priority_queue',
+                        target: name,
+                        elements: [...val],
+                        activeIndices: val.length > 0 ? [0] : [],
+                        isMinHeap: lower.includes('min')
+                    });
+                    continue;
+                }
                 if (type === 'std::stack' || STACK_NAMES.has(lower)) {
                     collectedVisuals.push({
                         type: 'stack',
@@ -3710,7 +3874,36 @@ export class Executor implements IExecutor {
                     } catch (e) {}
                 }
             } else if (n.type === 'MemberExpression') {
-                if (n.object.type === 'Identifier') {
+                if (n.object.type === 'MemberExpression' && n.object.computed && n.computed) {
+                    const inner = n.object;
+                    if (inner.object.type === 'Identifier') {
+                        const arrayName = inner.object.name;
+                        try {
+                            let rVal: any = undefined;
+                            let cVal: any = undefined;
+                            if (inner.property.type === 'Identifier') {
+                                rVal = self.currentEnv().get(inner.property.name);
+                            } else if (inner.property.type === 'Literal') {
+                                rVal = inner.property.value;
+                            }
+                            if (n.property.type === 'Identifier') {
+                                cVal = self.currentEnv().get(n.property.name);
+                            } else if (n.property.type === 'Literal') {
+                                cVal = n.property.value;
+                            }
+                            if (rVal !== undefined && cVal !== undefined) {
+                                let val: any = undefined;
+                                const addr = self.currentEnv().get(arrayName);
+                                if (typeof addr === 'string' && addr.startsWith('#')) {
+                                    val = self.heap[addr]?.[rVal]?.[cVal];
+                                } else {
+                                    val = self.currentEnv().get(arrayName)?.[rVal]?.[cVal];
+                                }
+                                sources.push({ name: arrayName, row: rVal, col: cVal, value: val });
+                            }
+                        } catch (e) {}
+                    }
+                } else if (n.object.type === 'Identifier') {
                     const arrayName = n.object.name;
                     try {
                         let idxVal: any = undefined;
@@ -3727,9 +3920,9 @@ export class Executor implements IExecutor {
                             let val: any = undefined;
                             const addr = self.currentEnv().get(arrayName);
                             if (typeof addr === 'string' && addr.startsWith('#')) {
-                                val = self.heap[addr]?.[idxVal];
+                                  val = self.heap[addr]?.[idxVal];
                             } else {
-                                val = self.currentEnv().get(arrayName)?.[idxVal];
+                                  val = self.currentEnv().get(arrayName)?.[idxVal];
                             }
                             sources.push({ name: arrayName, index: idxVal, value: val });
                         }
@@ -3757,6 +3950,27 @@ export class Executor implements IExecutor {
         if (leftNode.type === 'Identifier') {
             return { name: leftNode.name };
         } else if (leftNode.type === 'MemberExpression') {
+            if (leftNode.object.type === 'MemberExpression' && leftNode.object.computed && leftNode.computed) {
+                const inner = leftNode.object;
+                if (inner.object.type === 'Identifier') {
+                    const arrayName = inner.object.name;
+                    let rVal: any = undefined;
+                    let cVal: any = undefined;
+                    if (inner.property.type === 'Identifier') {
+                        rVal = this.currentEnv().get(inner.property.name);
+                    } else if (inner.property.type === 'Literal') {
+                        rVal = inner.property.value;
+                    }
+                    if (leftNode.property.type === 'Identifier') {
+                        cVal = this.currentEnv().get(leftNode.property.name);
+                    } else if (leftNode.property.type === 'Literal') {
+                        cVal = leftNode.property.value;
+                    }
+                    if (rVal !== undefined && cVal !== undefined) {
+                        return { name: arrayName, row: rVal, col: cVal };
+                    }
+                }
+            }
             if (leftNode.object.type === 'Identifier') {
                 const arrayName = leftNode.object.name;
                 let idxVal: any = undefined;
@@ -4141,6 +4355,25 @@ export class Executor implements IExecutor {
             }
         }
         return 'value';
+    }
+
+    private trackMatrixAccess(target: any, idx: any) {
+        if (Array.isArray(target) && '__parentArray' in target) {
+            const parent = (target as any).__parentArray;
+            const rowIdx = (target as any).__rowIndex;
+            const colIdx = Number(idx);
+            if (parent && Array.isArray(parent) && !isNaN(colIdx)) {
+                const pAny = parent as any;
+                pAny.__lastAccessedCell = { r: rowIdx, c: colIdx };
+                if (!pAny.__visitedCells) {
+                    pAny.__visitedCells = [];
+                }
+                const alreadyVisited = pAny.__visitedCells.some((cell: any) => cell.r === rowIdx && cell.c === colIdx);
+                if (!alreadyVisited) {
+                    pAny.__visitedCells.push({ r: rowIdx, c: colIdx });
+                }
+            }
+        }
     }
 
     private extractLocals(env: Environment): Record<string, any> {

@@ -4,7 +4,7 @@ import mermaid from 'mermaid';
 import { useExecutionStore } from '../../../../store/executionStore';
 import { Network } from 'lucide-react';
 import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual, HashMapVisual, LinkedListVisual } from '../../../../types';
-import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer, MatrixVisualizer, PriorityQueueVisualizer, LinkedListVisualizer } from '../visualizers';
+import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer, MatrixVisualizer, PriorityQueueVisualizer, LinkedListVisualizer, TrieVisualizer } from '../visualizers';
 
 mermaid.initialize({
     startOnLoad: false,
@@ -115,7 +115,9 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
         const timer = setTimeout(() => {
             const dest = detail.dest;
             let destEl: HTMLElement | null = null;
-            if (dest.index !== undefined) {
+            if (dest.row !== undefined && dest.col !== undefined) {
+                destEl = document.querySelector(`[data-array-name="${dest.name}"][data-row-index="${dest.row}"][data-col-index="${dest.col}"]`);
+            } else if (dest.index !== undefined) {
                 destEl = document.querySelector(`[data-array-name="${dest.name}"][data-cell-index="${dest.index}"]`);
             } else {
                 destEl = document.querySelector(`[data-var-name="${dest.name}"]`);
@@ -126,7 +128,9 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             const sources = detail.sources || [];
             sources.forEach((src: any) => {
                 let srcEl: HTMLElement | null = null;
-                if (src.index !== undefined) {
+                if (src.row !== undefined && src.col !== undefined) {
+                    srcEl = document.querySelector(`[data-array-name="${src.name}"][data-row-index="${src.row}"][data-col-index="${src.col}"]`);
+                } else if (src.index !== undefined) {
                     srcEl = document.querySelector(`[data-array-name="${src.name}"][data-cell-index="${src.index}"]`);
                 } else {
                     srcEl = document.querySelector(`[data-var-name="${src.name}"]`);
@@ -179,6 +183,7 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             case 'deque':      return <StackQueueVisualizer visual={v as StackQueueVisual} />;
             case 'hash_map':   return <HashMapVisualizer visual={v as HashMapVisual} compact={compact} />;
             case 'linked_list': return <LinkedListVisualizer visual={v as LinkedListVisual} compact={compact} />;
+            case 'trie':       return <TrieVisualizer visual={v as any} />;
             default:           return null;
         }
     };
@@ -191,12 +196,12 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             
             // Filter large visual structures into mainVisuals
             const mainVisuals = list.filter((subV: any) => 
-                ['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list'].includes(subV.type)
+                ['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list', 'trie'].includes(subV.type)
             );
             
             // Filter smaller helper variables/hash_maps into sideVisuals
             const sideVisuals = list.filter((subV: any) => 
-                !['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list'].includes(subV.type)
+                !['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list', 'trie'].includes(subV.type)
             );
 
             if (mainVisuals.length > 0 && sideVisuals.length > 0) {
