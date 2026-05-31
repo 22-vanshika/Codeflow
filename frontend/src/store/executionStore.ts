@@ -116,7 +116,9 @@ int main() {
 
         connect: () => {
             if (ws) return;
-            ws = new WebSocket('ws://localhost:5000');
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const WS_URL = API_URL.replace(/^http/, 'ws');
+            ws = new WebSocket(WS_URL);
 
             ws.onopen = () => {
                 set({ isConnected: true, error: null });

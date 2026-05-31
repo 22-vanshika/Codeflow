@@ -10,7 +10,6 @@ import ImportProblemDialog from '../features/workspace/components/ImportProblemD
 import SaveVisualizationDialog from '../features/workspace/components/SaveVisualizationDialog';
 import GitHubImportDialog from '../features/workspace/components/GitHubImportDialog';
 import ComplexityInfo from '../features/workspace/components/ComplexityInfo';
-import ComplexityTab from '../features/workspace/components/ComplexityTab';
 import ProblemDescription from '../features/workspace/components/ProblemDescription';
 import SlidingConsole from '../features/workspace/components/SlidingConsole';
 import { 

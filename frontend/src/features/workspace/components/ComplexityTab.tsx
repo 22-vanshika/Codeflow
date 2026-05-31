@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 
 export default function ComplexityTab() {
     const { 
+        code,
         analysis, 
         currentStepIndex, 
         traceSteps, 
@@ -16,6 +17,18 @@ export default function ComplexityTab() {
 
     const stepsArray = traceMode ? traceSteps : traces;
     const currentStep = stepsArray[currentStepIndex];
+
+    const getLineContent = (step: any) => {
+        if (!step) return "";
+        if (step && 'lineContent' in step && typeof step.lineContent === 'string') {
+            return step.lineContent;
+        }
+        const lines = code.split('\n');
+        const lineIdx = step.line - 1;
+        return (lineIdx >= 0 && lineIdx < lines.length) ? lines[lineIdx] : "";
+    };
+
+    const currentLineContent = currentStep ? getLineContent(currentStep) : "";
 
     if (!analysis) {
         return (
@@ -123,7 +136,7 @@ export default function ComplexityTab() {
         };
     };
 
-    const liveOp = currentStep ? getLiveOperation(currentStep.lineContent) : null;
+    const liveOp = currentStep ? getLiveOperation(currentLineContent) : null;
 
     return (
         <div className="h-full flex flex-col bg-bg-main overflow-y-auto custom-scrollbar p-6 space-y-6">
@@ -168,7 +181,7 @@ export default function ComplexityTab() {
                     <div className="space-y-3 font-mono">
                         <div className="p-3 bg-bg-main/60 rounded-xl border border-white/5 text-xs text-white overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-3">
                             <span className="text-text-muted text-[10px] font-bold select-none border-r border-white/10 pr-2">Line {currentStep.line}</span>
-                            <span className="text-accent-cyan font-bold">{currentStep.lineContent}</span>
+                            <span className="text-accent-cyan font-bold">{currentLineContent}</span>
                         </div>
                         {liveOp && (
                             <div className="grid grid-cols-2 gap-4 text-xs font-sans mt-2">
