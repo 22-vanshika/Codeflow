@@ -175,6 +175,7 @@ int main() {
                             traceSteps: traceResult.steps,
                             currentPattern: traceResult.pattern || null,
                             traceOutput: traceResult.output || "",
+                            analysis: traceResult.analysis || null,
                             currentStepIndex: 0,
                             isPlaying: true,
                             error: null,

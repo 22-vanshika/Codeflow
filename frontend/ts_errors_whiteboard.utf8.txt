@@ -1,6 +1,0 @@
-﻿src/features/visualizer/components/panels/WhiteboardPanel.tsx(5,19): error TS6133: 'ZoomIn' is declared but its value is never read.
-src/features/visualizer/components/panels/WhiteboardPanel.tsx(5,27): error TS6133: 'ZoomOut' is declared but its value is never read.
-src/features/visualizer/components/panels/WhiteboardPanel.tsx(5,36): error TS6133: 'Maximize' is declared but its value is never read.
-src/features/visualizer/components/panels/WhiteboardPanel.tsx(41,19): error TS6133: 'setScale' is declared but its value is never read.
-src/features/visualizer/components/panels/WhiteboardPanel.tsx(58,11): error TS6133: 'loopIteration' is declared but its value is never read.
-

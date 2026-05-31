@@ -1,9 +1,9 @@
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Editor, { type Monaco } from '@monaco-editor/react';
 import { useExecutionStore } from '@/store/executionStore';
 
-export default function CodeEditor() {
-    const { code, setCode, traces, currentStepIndex } = useExecutionStore();
+const CodeEditor = React.memo(function CodeEditor() {
+    const { code, setCode, traces, traceSteps, currentStepIndex } = useExecutionStore();
     const editorRef = useRef<any>(null);
     const monacoRef = useRef<Monaco | null>(null);
     const decorationsRef = useRef<string[]>([]);
@@ -16,7 +16,8 @@ export default function CodeEditor() {
     useEffect(() => {
         if (!editorRef.current || !monacoRef.current) return;
 
-        const currentTrace = traces[currentStepIndex];
+        const stepsArray = traceSteps.length > 0 ? traceSteps : traces;
+        const currentTrace = stepsArray[currentStepIndex];
         const line = currentTrace?.line;
 
         try {
@@ -41,7 +42,7 @@ export default function CodeEditor() {
         } catch (e) {
             console.error("Monaco Decoration Error:", e);
         }
-    }, [currentStepIndex, traces]);
+    }, [currentStepIndex, traces, traceSteps]);
 
     return (
         <div className="h-full w-full border-r border-gray-700">
@@ -64,4 +65,6 @@ export default function CodeEditor() {
             />
         </div>
     );
-}
+});
+
+export default CodeEditor;

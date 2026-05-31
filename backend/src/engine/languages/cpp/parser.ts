@@ -23,7 +23,11 @@ export const KEYWORDS = new Set([
     'class', 'struct', 'public', 'private', 'protected',
     'new', 'delete', 'this',
     'std',
-    'using', 'namespace'
+    'using', 'namespace',
+    'const', 'size_t', 'auto',
+    'unsigned', 'signed', 'long', 'short',
+    'uint32_t', 'uint64_t', 'int32_t', 'int64_t', 'uint8_t', 'int8_t',
+    'uint16_t', 'int16_t'
 ]);
 
 export class Lexer {
@@ -95,7 +99,7 @@ export class Lexer {
             }
 
             // Multi-char operators
-            if (['=', '!', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^'].includes(char)) {
+            if (['=', '!', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^', ':'].includes(char)) {
                 const next = this.source[this.position + 1];
                 if (next === '=') {
                     tokens.push({ type: 'OPERATOR', value: char + '=', line: this.line });
@@ -103,13 +107,23 @@ export class Lexer {
                     continue;
                 }
                 if (char === '<' && next === '<') {
-                    tokens.push({ type: 'OPERATOR', value: '<<', line: this.line });
-                    this.position += 2;
+                    if (this.source[this.position + 2] === '=') {
+                        tokens.push({ type: 'OPERATOR', value: '<<=', line: this.line });
+                        this.position += 3;
+                    } else {
+                        tokens.push({ type: 'OPERATOR', value: '<<', line: this.line });
+                        this.position += 2;
+                    }
                     continue;
                 }
                 if (char === '>' && next === '>') {
-                    tokens.push({ type: 'OPERATOR', value: '>>', line: this.line });
-                    this.position += 2;
+                    if (this.source[this.position + 2] === '=') {
+                        tokens.push({ type: 'OPERATOR', value: '>>=', line: this.line });
+                        this.position += 3;
+                    } else {
+                        tokens.push({ type: 'OPERATOR', value: '>>', line: this.line });
+                        this.position += 2;
+                    }
                     continue;
                 }
                 if (char === '-' && next === '>') {
@@ -144,13 +158,13 @@ export class Lexer {
                 }
             }
 
-            if (['+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^'].includes(char)) {
+            if (['+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^', '~'].includes(char)) {
                 tokens.push({ type: 'OPERATOR', value: char, line: this.line });
                 this.position++;
                 continue;
             }
 
-            if (['(', ')', '{', '}', ';', ',', '[', ']', '.', ':'].includes(char)) {
+            if (['(', ')', '{', '}', ';', ',', '[', ']', '.', ':', '?'].includes(char)) {
                 tokens.push({ type: 'PUNCTUATION', value: char, line: this.line });
                 this.position++;
                 continue;
@@ -176,6 +190,16 @@ export class Lexer {
         while (this.position < this.source.length && /[0-9]/.test(this.source[this.position])) {
             value += this.source[this.position++];
         }
+        if (this.position < this.source.length && this.source[this.position] === '.' && /[0-9]/.test(this.source[this.position + 1])) {
+            value += this.source[this.position++]; // consume '.'
+            while (this.position < this.source.length && /[0-9]/.test(this.source[this.position])) {
+                value += this.source[this.position++];
+            }
+        }
+        // Consume numeric suffixes: LL, ULL, U, L, F
+        while (this.position < this.source.length && /[uUlLfF]/.test(this.source[this.position])) {
+            this.position++; // skip suffix
+        }
         return { type: 'NUMBER', value, line: this.line };
     }
 
@@ -183,8 +207,25 @@ export class Lexer {
         const quoteType = this.source[this.position]; // " or '
         this.position++; // Skip quote
         let value = '';
-        while (this.position < this.source.length && this.source[this.position] !== quoteType) {
-            value += this.source[this.position++];
+        while (this.position < this.source.length) {
+            const char = this.source[this.position];
+            if (char === '\\') {
+                this.position++;
+                if (this.position < this.source.length) {
+                    const esc = this.source[this.position++];
+                    if (esc === 'n') value += '\n';
+                    else if (esc === 't') value += '\t';
+                    else if (esc === '\"') value += '\"';
+                    else if (esc === '\'') value += '\'';
+                    else if (esc === '\\') value += '\\';
+                    else value += '\\' + esc;
+                }
+            } else if (char === quoteType) {
+                break;
+            } else {
+                value += char;
+                this.position++;
+            }
         }
         this.position++; // Skip closing quote
         return { type: 'STRING', value, line: this.line };
@@ -269,8 +310,10 @@ export class Parser {
                 let depth = 1;
                 offset++;
                 while (offset < this.tokens.length && depth > 0) {
-                    if (this.peek(offset).value === '<') depth++;
-                    if (this.peek(offset).value === '>') depth--;
+                    const val = this.peek(offset).value;
+                    if (val === '<') depth++;
+                    else if (val === '>') depth--;
+                    else if (val === '>>') depth -= 2;
                     offset++;
                 }
             }
@@ -305,8 +348,77 @@ export class Parser {
                 continue;
             }
 
-            // Member can be Var or Func
-            if (this.isFunctionDeclaration()) {
+            // Check for constructor: StructName(...)
+            if (this.peek().type === 'IDENTIFIER' && this.peek().value === name && this.peek(1).value === '(') {
+                this.consume('IDENTIFIER', name);
+                this.consume('PUNCTUATION', '(');
+                const params: { name: string; type: string }[] = [];
+                if (!this.check('PUNCTUATION', ')')) {
+                    do {
+                        let pType = this.parseTypeString();
+                        const pName = this.consume('IDENTIFIER').value;
+                        while (this.match('PUNCTUATION', '[')) {
+                            if (this.check('NUMBER')) this.consume('NUMBER');
+                            this.consume('PUNCTUATION', ']');
+                            pType += '[]';
+                        }
+                        params.push({ name: pName, type: pType });
+                    } while (this.match('PUNCTUATION', ','));
+                }
+                this.consume('PUNCTUATION', ')');
+
+                // Constructor initializer list: : member1(arg1), member2(arg2)
+                const bodyStatements: ASTNode[] = [];
+                if (this.match('PUNCTUATION', ':')) {
+                    do {
+                        const memberName = this.consume('IDENTIFIER').value;
+                        this.consume('PUNCTUATION', '(');
+                        const expr = this.parseExpression();
+                        this.consume('PUNCTUATION', ')');
+
+                        // Construct: this->memberName = expr
+                        const thisExpr = { type: 'ThisExpression', line: this.previous().line } as ThisExpression;
+                        const memberExpr = {
+                            type: 'MemberExpression',
+                            object: thisExpr,
+                            property: { type: 'Identifier', name: memberName, line: this.previous().line } as Identifier,
+                            computed: false,
+                            line: this.previous().line
+                        } as MemberExpression;
+
+                        bodyStatements.push({
+                            type: 'ExpressionStatement',
+                            expression: {
+                                type: 'Assignment',
+                                left: memberExpr,
+                                name: memberName,
+                                value: expr,
+                                line: this.previous().line
+                            } as Assignment,
+                            line: this.previous().line
+                        } as ExpressionStatement);
+
+                    } while (this.match('PUNCTUATION', ','));
+                }
+
+                const body = this.parseBlock();
+                body.body = [...bodyStatements, ...body.body]; // Prepend initializer assignments!
+
+                members.push({
+                    type: 'FunctionDeclaration',
+                    name: name, // Save constructor as the struct name
+                    returnType: 'void',
+                    params,
+                    body,
+                    line: this.previous().line
+                } as any);
+                continue;
+            }
+
+            // Member can be nested struct/class, Var, or Func
+            if (this.check('KEYWORD', 'struct') || this.check('KEYWORD', 'class')) {
+                members.push(this.parseClassDeclaration() as any);
+            } else if (this.isFunctionDeclaration()) {
                 members.push(this.parseFunctionDeclaration());
             } else {
                 // Must be var decl. parseStatement parses var decl or other statements. 
@@ -332,21 +444,52 @@ export class Parser {
             type += 'std';
             if (this.match('PUNCTUATION', '::')) {
                 type += '::';
-                // Consume vector/string/etc
                 type += this.advance().value;
             }
-        } else if (this.check('IDENTIFIER') || this.check('KEYWORD')) {
-            // consume
-            type += this.advance().value;
-            // Handle std::vector if started with std
         } else {
-            type += this.advance().value; // consume whatever
+            const words: string[] = [];
+            if (this.check('KEYWORD', 'const')) {
+                words.push(this.advance().value);
+            }
+            if (this.check('KEYWORD', 'decltype') || this.check('IDENTIFIER', 'decltype')) {
+                this.advance();
+                this.consume('PUNCTUATION', '(');
+                let depth = 1;
+                let inner = '';
+                while (depth > 0 && !this.check('EOF')) {
+                    if (this.check('PUNCTUATION', '(')) depth++;
+                    else if (this.check('PUNCTUATION', ')')) depth--;
+                    const t = this.advance().value;
+                    if (depth > 0) inner += t;
+                }
+                words.push(`decltype(${inner})`);
+            } else if (this.check('KEYWORD') || this.check('IDENTIFIER')) {
+                const parts: string[] = [];
+                while (this.check('KEYWORD') || this.check('IDENTIFIER')) {
+                    const val = this.peek().value;
+                    // Support 'unsigned int', 'long long', 'unsigned long long', etc.
+                    if (['unsigned', 'signed', 'long', 'short', 'int', 'double', 'char', 'float'].includes(val)) {
+                        parts.push(this.advance().value);
+                    } else if (parts.length === 0) {
+                        parts.push(this.advance().value);
+                        // For fixed-width integer types, normalize them to int
+                        break;
+                    } else {
+                        break;
+                    }
+                }
+                words.push(parts.join(' '));
+            }
+            type = words.join(' ');
         }
 
         // Handle ::
         while (this.match('PUNCTUATION', '::')) {
             type += '::';
-            type += this.consume('IDENTIFIER').value;
+            // Could be identifier or keyword (e.g. std::string::npos)
+            if (this.check('IDENTIFIER') || this.check('KEYWORD')) {
+                type += this.advance().value;
+            }
         }
 
         // Handle templates <...>
@@ -363,43 +506,21 @@ export class Parser {
                 this.consume('OPERATOR', '>');
                 type += '>';
             } else if (this.check('OPERATOR', '>>')) {
-                // Split >> into > and >. 
-                // We consume one > here, and leave one > for the outer loop/caller?
-                // Actually, if we are in nested calls, the inner one needs one >, the outer needs one >.
-                // We can mutate the token?
-                // Or just:
-                // type += '>';
-                // Change current token from >> to > and NOT advance position?
-                // Yes, hacky but works.
                 this.tokens[this.current].value = '>'; // Change >> to >
-                // Don't advance, effectively "consuming" the first > of >> by transforming it to > for the *next* consumer.
-                // Wait, if I change it to >, then I *should* consume this one, and the *next* consumer sees... wait.
-                // If I have >>, I want to consume one >, leave one >.
-                // So I append > to type.
+                this.tokens.splice(this.current + 1, 0, { type: 'OPERATOR', value: '>', line: this.peek().line });
+                this.consume('OPERATOR', '>');
                 type += '>';
-                // Now I need to ensure the NEXT consumer sees a >.
-                // Currently token is >>.
-                // If I change it to >, and don't advance...
-                // The NEXT consumer calls check('>'). It sees >. It consumes it.
-                // So correct flow: 
-                // Inner parseTypeString sees >>. It wants >.
-                // It takes "half".
-                // We change token to >. We return.
-                // Outer parseTypeString wants >. It sees >. It consumes it.
-
-                // ISSUE: We need to consume the "first half" now?
-                // No, `parseTypeString` returns the type string.
-                // We just need to ensure `type` gets `>`.
-                // And the token stream allows the outer loop to see `>`.
-                // So: Change >> to >. Do NOT advance.
-                // But wait, if I don't advance, I processed nothing?
-                // No, I processed the "closing of this template".
-                // But I didn't verify I found a >?
-                // I checked >>.
-                // So: I found "closing".
-                // I change >> to > for the *next* guy.
             } else {
-                throw new Error(`Expected '>' or '>>' at line ${this.peek()!.line}`);
+                // Tolerant: if we can't find >, just close gracefully
+                type += '>';
+            }
+        }
+
+        // Handle :: after templates (e.g. list<int>::iterator)
+        while (this.match('PUNCTUATION', '::')) {
+            type += '::';
+            if (this.check('IDENTIFIER') || this.check('KEYWORD')) {
+                type += this.advance().value;
             }
         }
 
@@ -418,8 +539,13 @@ export class Parser {
         const params: { name: string; type: string }[] = [];
         if (!this.check('PUNCTUATION', ')')) {
             do {
-                const pType = this.parseTypeString(); // Use parseTypeString instead of consume KEYWORD
+                let pType = this.parseTypeString();
                 const pName = this.consume('IDENTIFIER').value;
+                while (this.match('PUNCTUATION', '[')) {
+                    if (this.check('NUMBER')) this.consume('NUMBER');
+                    this.consume('PUNCTUATION', ']');
+                    pType += '[]';
+                }
                 params.push({ name: pName, type: pType });
             } while (this.match('PUNCTUATION', ','));
         }
@@ -475,6 +601,15 @@ export class Parser {
             // We'll treat break as a minimal specific BreakStatement
             return { type: 'BreakStatement', line: this.previous().line } as any; // Cast as ASTNode
         }
+        if (this.match('KEYWORD', 'continue')) {
+            this.consume('PUNCTUATION', ';');
+            return { type: 'ContinueStatement', line: this.previous().line } as any;
+        }
+        if (this.match('KEYWORD', 'delete')) {
+            const expr = this.parseExpression();
+            this.consume('PUNCTUATION', ';');
+            return { type: 'DeleteStatement', argument: expr, line: this.previous().line } as any;
+        }
 
         return this.parseExpressionStatement();
     }
@@ -502,7 +637,7 @@ export class Parser {
             // Since we don't have transaction/rollback easily, implement peephole.
 
             // Simple heuristic: If starts with keyword (int/bool/etc) -> VarDecl.
-            if (KEYWORDS.has(this.peek().value) && !['return', 'if', 'while', 'for', 'break', 'struct', 'class', 'using', 'namespace'].includes(this.peek().value)) {
+            if (KEYWORDS.has(this.peek().value) && !['return', 'if', 'while', 'for', 'break', 'continue', 'struct', 'class', 'using', 'namespace', 'true', 'false', 'null', 'new', 'delete', 'this'].includes(this.peek().value)) {
                 // Excluding control keywords. 
                 // Includes 'vector', 'map' if in KEYWORDS.
                 return true;
@@ -529,8 +664,9 @@ export class Parser {
                     while (offset < 100 && depth > 0) { // arbitrary limit
                         const t = this.peek(offset).value;
                         if (t === '<') depth++;
-                        if (t === '>') depth--;
-                        if (this.check('EOF')) break;
+                        else if (t === '>') depth--;
+                        else if (t === '>>') depth -= 2;
+                        if (this.check('EOF') || this.peek(offset).type === 'EOF') break;
                         offset++;
                     }
                     if (depth === 0) {
@@ -592,6 +728,79 @@ export class Parser {
         const line = this.previous().line;
         this.consume('PUNCTUATION', '(');
 
+        // Check if it is a range-based for loop
+        let isRangeFor = false;
+        let depth = 0;
+        for (let i = 0; ; i++) {
+            const tok = this.peek(i);
+            if (tok.type === 'EOF') break;
+            if (tok.type === 'PUNCTUATION' && tok.value === '(') depth++;
+            if (tok.type === 'PUNCTUATION' && tok.value === ')') {
+                if (depth === 0) break;
+                depth--;
+            }
+            if (depth === 0) {
+                if (tok.type === 'PUNCTUATION' && tok.value === ':') {
+                    isRangeFor = true;
+                    break;
+                }
+                if (tok.type === 'PUNCTUATION' && tok.value === ';') {
+                    break;
+                }
+            }
+        }
+
+        if (isRangeFor) {
+            let type = this.parseTypeString();
+            while (this.check('OPERATOR', '*') || this.check('OPERATOR', '&')) {
+                type += this.advance().value;
+            }
+            let rangeVariable: any;
+            if (this.match('PUNCTUATION', '[')) {
+                const names: string[] = [];
+                if (!this.check('PUNCTUATION', ']')) {
+                    do {
+                        // Skip any reference ampersands inside structured binding if present
+                        while (this.check('OPERATOR', '&')) {
+                            this.advance();
+                        }
+                        names.push(this.consume('IDENTIFIER').value);
+                    } while (this.match('PUNCTUATION', ','));
+                }
+                this.consume('PUNCTUATION', ']');
+                rangeVariable = {
+                    type: 'StructuredBindingDeclaration',
+                    names,
+                    varType: type,
+                    line: this.previous().line
+                };
+            } else {
+                const name = this.consume('IDENTIFIER').value;
+                rangeVariable = {
+                    type: 'VariableDeclaration',
+                    name,
+                    varType: type,
+                    line: this.previous().line
+                };
+            }
+
+            this.consume('PUNCTUATION', ':');
+            const rangeContainer = this.parseExpression();
+            this.consume('PUNCTUATION', ')');
+            const body = this.parseStatement();
+            return {
+                type: 'ForStatement',
+                init: undefined,
+                test: undefined,
+                update: undefined,
+                body,
+                line,
+                isRangeFor: true,
+                rangeVariable,
+                rangeContainer
+            } as any;
+        }
+
         // Init
         let init: ASTNode | undefined;
         if (!this.match('PUNCTUATION', ';')) {
@@ -619,16 +828,51 @@ export class Parser {
         }
         this.consume('PUNCTUATION', ')');
 
-        const body = this.parseBlock();
+        const body = this.parseStatement();
         return { type: 'ForStatement', init, test, update, body, line };
     }
 
     private parseVariableDeclarationList(type: string): ASTNode {
+        // Intercept structured binding: auto [a, b] = ...;
+        let checkType = type;
+        const savePos = this.current;
+        while (this.check('OPERATOR', '*') || this.check('OPERATOR', '&')) {
+            checkType += this.peek().value;
+            this.advance();
+        }
+        if (this.check('PUNCTUATION', '[')) {
+            this.consume('PUNCTUATION', '[');
+            const names: string[] = [];
+            if (!this.check('PUNCTUATION', ']')) {
+                do {
+                    while (this.check('OPERATOR', '&')) this.advance();
+                    names.push(this.consume('IDENTIFIER').value);
+                } while (this.match('PUNCTUATION', ','));
+            }
+            this.consume('PUNCTUATION', ']');
+            this.consume('OPERATOR', '=');
+            const init = this.parseExpression();
+            this.consume('PUNCTUATION', ';');
+            return {
+                type: 'StructuredBindingDeclaration',
+                names,
+                varType: checkType,
+                init,
+                line: this.previous().line
+            } as any;
+        }
+        // Rollback pointers/refs check if it's not structured binding
+        this.current = savePos;
+
         // Parse: name [= init], name2 [= init2];
         // Also supports: name[size] = {...}
         const decls: VariableDeclaration[] = [];
 
         do {
+            let varType = type;
+            while (this.check('OPERATOR', '*') || this.check('OPERATOR', '&')) {
+                varType += this.advance().value;
+            }
             const name = this.consume('IDENTIFIER').value;
             let arraySize: number | undefined;
             let init: ASTNode | undefined;
@@ -637,7 +881,9 @@ export class Parser {
             const dimensions: number[] = [];
             while (this.match('PUNCTUATION', '[')) {
                 // Parse array size
-                if (this.check('NUMBER')) {
+                if (this.check('PUNCTUATION', ']')) {
+                    dimensions.push(0); // empty brackets
+                } else if (this.check('NUMBER')) {
                     dimensions.push(parseInt(this.consume('NUMBER').value));
                 } else {
                     // Could be expression like arr[n], but for simplicity we'll parse as expression
@@ -670,12 +916,12 @@ export class Parser {
                     do { args.push(this.parseExpression()); } while (this.match('PUNCTUATION', ','));
                 }
                 this.consume('PUNCTUATION', ')');
-                init = { type: 'NewExpression', className: type, arguments: args, line: this.previous().line } as NewExpression;
+                init = { type: 'NewExpression', className: varType, arguments: args, line: this.previous().line } as NewExpression;
             }
 
             decls.push({
                 type: 'VariableDeclaration',
-                varType: dimensions.length > 0 ? `${type}${dimensions.map(() => '[]').join('')}` : type,
+                varType: dimensions.length > 0 ? `${varType}${dimensions.map(() => '[]').join('')}` : varType,
                 name,
                 arrayDimensions: dimensions.length > 0 ? dimensions : undefined,
                 init,
@@ -712,11 +958,13 @@ export class Parser {
     }
 
     private parseAssignment(): ASTNode {
-        const left = this.parseLogicalOr(); // Was parseEquality, now parseLogicalOr
+        const left = this.parseTernary();
 
-        // Check if next is = or compound assignment (+=, -=, *=, /=, %=)
+        // Check if next is = or compound assignment (+=, -=, *=, /=, %=, &=, |=, ^=, <<=, >>=)
         if (this.match('OPERATOR', '=') || this.match('OPERATOR', '+=') || this.match('OPERATOR', '-=') ||
-            this.match('OPERATOR', '*=') || this.match('OPERATOR', '/=') || this.match('OPERATOR', '%=')) {
+            this.match('OPERATOR', '*=') || this.match('OPERATOR', '/=') || this.match('OPERATOR', '%=') ||
+            this.match('OPERATOR', '&=') || this.match('OPERATOR', '|=') || this.match('OPERATOR', '^=') ||
+            this.match('OPERATOR', '<<=') || this.match('OPERATOR', '>>=')) {
 
             const operator = this.previous().value;
             const value = this.parseAssignment(); // Right-associative
@@ -749,6 +997,23 @@ export class Parser {
         return left;
     }
 
+    private parseTernary(): ASTNode {
+        let expr = this.parseLogicalOr();
+        if (this.match('PUNCTUATION', '?')) {
+            const consequent = this.parseExpression();
+            this.consume('PUNCTUATION', ':');
+            const alternate = this.parseAssignment(); // ternary is right-associative
+            return {
+                type: 'ConditionalExpression',
+                test: expr,
+                consequent,
+                alternate,
+                line: this.previous().line
+            } as any;
+        }
+        return expr;
+    }
+
     private parseReturnStatement(): ReturnStatement {
         let argument: ASTNode | undefined;
         if (!this.check('PUNCTUATION', ';')) {
@@ -774,7 +1039,7 @@ export class Parser {
         this.consume('PUNCTUATION', '(');
         const test = this.parseExpression();
         this.consume('PUNCTUATION', ')');
-        const body = this.parseBlock();
+        const body = this.parseStatement();
         return { type: 'WhileStatement', test, body, line: this.previous().line };
     }
 
@@ -793,8 +1058,38 @@ export class Parser {
     }
 
     private parseLogicalAnd(): ASTNode {
-        let expr = this.parseEquality();
+        let expr = this.parseBitwiseOr();
         while (this.match('OPERATOR', '&&')) {
+            const operator = this.previous().value;
+            const right = this.parseBitwiseOr();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
+    }
+
+    private parseBitwiseOr(): ASTNode {
+        let expr = this.parseBitwiseXor();
+        while (this.match('OPERATOR', '|')) {
+            const operator = this.previous().value;
+            const right = this.parseBitwiseXor();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
+    }
+
+    private parseBitwiseXor(): ASTNode {
+        let expr = this.parseBitwiseAnd();
+        while (this.match('OPERATOR', '^')) {
+            const operator = this.previous().value;
+            const right = this.parseBitwiseAnd();
+            expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
+        }
+        return expr;
+    }
+
+    private parseBitwiseAnd(): ASTNode {
+        let expr = this.parseEquality();
+        while (this.match('OPERATOR', '&')) {
             const operator = this.previous().value;
             const right = this.parseEquality();
             expr = { type: 'BinaryExpression', operator, left: expr, right, line: expr.line } as BinaryExpression;
@@ -855,12 +1150,10 @@ export class Parser {
     }
 
     private parseUnary(): ASTNode {
-        if (this.match('OPERATOR', '-') || this.match('OPERATOR', '!')) {
+        if (this.match('OPERATOR', '-') || this.match('OPERATOR', '!') || this.match('OPERATOR', '~') || this.match('OPERATOR', '*') || this.match('OPERATOR', '&') ||
+            this.match('OPERATOR', '++') || this.match('OPERATOR', '--')) {
             const operator = this.previous().value;
             const argument = this.parseUnary();
-            // Simplify unary minus to binary 0 - x for now if types allow, or implement UnaryExpression
-            // For now, implementing simple UnaryExpression (need to add type support if not exists)
-            // Or cheat: 0 - x for '-'
             if (operator === '-') {
                 return {
                     type: 'BinaryExpression',
@@ -870,24 +1163,74 @@ export class Parser {
                     line: this.previous().line
                 } as BinaryExpression;
             }
-            // Handle !
-            if (operator === '!') {
-                // We don't have UnaryExpression in executor? 
-                // Using x == false for !x? Or just add Unary support
-                // Let's create a Binary expression: x == false
+            if (operator === '!' || operator === '~') {
                 return {
-                    type: 'BinaryExpression',
-                    operator: '==',
-                    left: argument,
-                    right: { type: 'Literal', value: false, valueType: 'bool', line: this.previous().line },
+                    type: 'UnaryExpression',
+                    operator,
+                    argument,
                     line: this.previous().line
-                } as BinaryExpression;
+                } as any;
+            }
+            if (operator === '*' || operator === '&') {
+                return {
+                    type: 'UnaryExpression',
+                    operator,
+                    argument,
+                    line: this.previous().line
+                } as any;
+            }
+            if (operator === '++' || operator === '--') {
+                return {
+                    type: 'UpdateExpression',
+                    operator,
+                    argument,
+                    prefix: true,
+                    line: this.previous().line
+                } as any;
             }
         }
         return this.parsePrimary();
     }
 
     private parsePrimary(): ASTNode {
+        if (this.check('PUNCTUATION', '[')) {
+            this.consume('PUNCTUATION', '[');
+            while (!this.check('PUNCTUATION', ']') && !this.check('EOF')) {
+                this.advance();
+            }
+            this.consume('PUNCTUATION', ']');
+
+            this.consume('PUNCTUATION', '(');
+            const params: VariableDeclaration[] = [];
+            if (!this.check('PUNCTUATION', ')')) {
+                do {
+                    const pType = this.parseTypeString();
+                    let pName = '';
+                    while (this.check('OPERATOR', '*') || this.check('OPERATOR', '&')) {
+                        this.advance();
+                    }
+                    pName = this.consume('IDENTIFIER').value;
+                    params.push({
+                        type: 'VariableDeclaration',
+                        name: pName,
+                        varType: pType,
+                        line: this.previous().line
+                    });
+                } while (this.match('PUNCTUATION', ','));
+            }
+            this.consume('PUNCTUATION', ')');
+
+            const body = this.parseBlock();
+            return {
+                type: 'FunctionDeclaration',
+                name: '',
+                params,
+                body,
+                returnType: 'auto',
+                line: this.previous().line
+            } as any;
+        }
+
         if (this.match('KEYWORD', 'true')) return { type: 'Literal', value: true, valueType: 'bool', line: this.previous().line };
         if (this.match('KEYWORD', 'false')) return { type: 'Literal', value: false, valueType: 'bool', line: this.previous().line };
         if (this.match('KEYWORD', 'new')) {
@@ -905,25 +1248,58 @@ export class Parser {
         if (this.match('KEYWORD', 'this')) return { type: 'ThisExpression', line: this.previous().line };
 
         if (this.match('NUMBER')) {
-            return { type: 'Literal', value: parseInt(this.previous().value), valueType: 'int', line: this.previous().line };
+            const numStr = this.previous().value;
+            const numVal = numStr.includes('.') ? parseFloat(numStr) : parseInt(numStr);
+            return { type: 'Literal', value: numVal, valueType: numStr.includes('.') ? 'double' : 'int', line: this.previous().line };
         }
         if (this.match('STRING')) {
             return { type: 'Literal', value: this.previous().value, valueType: 'string', line: this.previous().line };
         }
+        if (this.check('PUNCTUATION', '{')) {
+            return this.parseArrayExpression();
+        }
 
         let expr: ASTNode;
-        if (this.match('IDENTIFIER') || this.match('KEYWORD', 'std')) { // Allow std as ID start
-            // Rewind a bit? No, we used match.
-            // If std, check for ::
-            let name = this.previous().value;
-            if (name === 'std') {
-                if (this.match('PUNCTUATION', '::')) {
-                    name += '::' + this.consume('IDENTIFIER').value;
+        const nextVal = this.peek().value;
+        const isTypeStart = ['vector', 'map', 'unordered_map', 'set', 'unordered_set', 'stack', 'queue', 'deque', 'priority_queue', 'pair', 'string', 'int', 'double', 'float', 'char', 'bool', 'void', 'long', 'size_t', 'unsigned', 'uint32_t', 'uint64_t', 'int32_t', 'int64_t'].includes(nextVal);
+        if (this.check('KEYWORD', 'std') || isTypeStart) {
+            const typeName = this.parseTypeString();
+            expr = { type: 'Identifier', name: typeName, line: this.previous().line };
+        } else if (this.match('IDENTIFIER')) {
+            expr = { type: 'Identifier', name: this.previous().value, line: this.previous().line };
+        } else if (this.match('PUNCTUATION', '(')) {
+            // Check if this is a type cast: (type)expr
+            // Handles: (int), (double), (long), (long long), (unsigned int), (uint32_t), etc.
+            const castTypeKeywords = ['int', 'double', 'float', 'char', 'bool', 'void', 'long', 'unsigned', 'signed', 'short',
+                                      'uint32_t', 'uint64_t', 'int32_t', 'int64_t', 'size_t'];
+            let isCast = false;
+            let castLen = 0;
+            if ((this.check('KEYWORD') || this.check('IDENTIFIER')) && castTypeKeywords.includes(this.peek().value)) {
+                // Try to find closing )
+                let offset = 0;
+                while (offset < 10 && this.peek(offset).type !== 'EOF') {
+                    const v = this.peek(offset).value;
+                    if (v === ')') { castLen = offset; isCast = true; break; }
+                    if (!castTypeKeywords.includes(v) && this.peek(offset).type !== 'KEYWORD' && this.peek(offset).type !== 'IDENTIFIER') break;
+                    offset++;
                 }
             }
-
-            expr = { type: 'Identifier', name, line: this.previous().line };
-        } else if (this.match('PUNCTUATION', '(')) {
+            if (isCast) {
+                // Consume type tokens until )
+                const typeParts: string[] = [];
+                while (!this.check('PUNCTUATION', ')')) {
+                    typeParts.push(this.advance().value);
+                }
+                const castType = typeParts.join(' ');
+                this.consume('PUNCTUATION', ')');
+                const argument = this.parseUnary();
+                return {
+                    type: 'CastExpression',
+                    castType,
+                    argument,
+                    line: this.previous().line
+                } as any;
+            }
             expr = this.parseExpression();
             this.consume('PUNCTUATION', ')');
         } else {

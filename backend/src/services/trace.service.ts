@@ -565,8 +565,8 @@ export class TraceService {
             }
         }
 
-        // If we have recursion, show call stack
-        if (this.callStack.length > 1 || this.detectedPattern?.name === 'Recursion') {
+        // If we have recursion (the function calls itself), show call stack
+        if (this.detectedPattern?.name === 'Recursion' && this.callStack.length > 1) {
             const visual: CallStackVisual = {
                 type: 'call_stack',
                 frames: [...this.callStack],

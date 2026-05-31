@@ -32,6 +32,8 @@ export interface ExecutionTrace {
     output?: string;
     explanation?: string;
     visualization?: VisualizationHint;  // Enhanced visualization data
+    visuals?: any;                      // Deterministic data structure visual instructions
+    assignmentDetail?: any;             // Capture details of dynamic variable assignments/transfers
 }
 
 export interface StackFrame {
@@ -128,12 +130,52 @@ export type ASTNode =
     | MemberExpression
     | NewExpression
     | ThisExpression
-    | ThisExpression
     | ArrayExpression
-    | BreakStatement;
+    | BreakStatement
+    | ContinueStatement
+    | StructuredBindingDeclaration
+    | ConditionalExpression
+    | CastExpression
+    | UnaryExpression
+    | DeleteStatement;
+
+export interface DeleteStatement extends BaseNode {
+    type: 'DeleteStatement';
+    argument: ASTNode;
+}
 
 export interface BreakStatement extends BaseNode {
     type: 'BreakStatement';
+}
+
+export interface ContinueStatement extends BaseNode {
+    type: 'ContinueStatement';
+}
+
+export interface StructuredBindingDeclaration extends BaseNode {
+    type: 'StructuredBindingDeclaration';
+    names: string[];
+    varType: string;
+    init?: ASTNode;
+}
+
+export interface ConditionalExpression extends BaseNode {
+    type: 'ConditionalExpression';
+    test: ASTNode;
+    consequent: ASTNode;
+    alternate: ASTNode;
+}
+
+export interface CastExpression extends BaseNode {
+    type: 'CastExpression';
+    castType: string;
+    argument: ASTNode;
+}
+
+export interface UnaryExpression extends BaseNode {
+    type: 'UnaryExpression';
+    operator: string;
+    argument: ASTNode;
 }
 
 export interface BaseNode {

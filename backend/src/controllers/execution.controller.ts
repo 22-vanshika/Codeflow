@@ -4,6 +4,7 @@ import { CompilerService } from '../services/compiler.service';
 import { CodeValidator } from '../services/validation.service';
 import { TraceService } from '../services/trace.service';
 import { AiService } from '../services/ai.service';
+import { Executor } from '../engine/languages/cpp/executor';
 import { ExecutionRequest, ExecutionResponse, ValidationPayload } from '../types';
 
 export class ExecutionController {
@@ -87,7 +88,7 @@ export class ExecutionController {
             const code = typeof payload === 'string' ? payload : payload.code || '';
             const input = typeof payload === 'object' ? (payload.input || '') : '';
 
-            console.log('Generating execution trace via AI...');
+            console.log('Generating deterministic execution trace...');
 
             // First validate the code
             const validation = this.codeValidator.validate(code);
@@ -112,14 +113,61 @@ export class ExecutionController {
                 return;
             }
 
-            // Generate trace with AI first for advanced Data Structures
-            let traceResult = await this.aiService.generateTrace(code, input);
-            
-            // Fallback to static AST analysis if AI fails
-            if (!traceResult || !traceResult.success) {
-                console.log('AI Trace failed, falling back to static AST parser...');
-                traceResult = this.traceService.generateTrace(code, input);
-            }
+            // Deterministic trace simulation and parallel AI analysis
+            const [traces, analysis] = await Promise.all([
+                (async () => {
+                    const executor = new Executor();
+                    const generator = executor.execute(code, input);
+                    const list: any[] = [];
+                    let stepLimit = 0;
+                    for (const trace of generator) {
+                        list.push(trace);
+                        if (stepLimit++ > 2000) {
+                            break;
+                        }
+                    }
+                    return list;
+                })(),
+                this.aiService.analyzeCode(code)
+            ]);
+
+            const codeLines = code.split('\n');
+            const traceSteps = traces.map((t, idx) => {
+                const topFrame = t.stack.length > 0 ? t.stack[t.stack.length - 1] : { locals: {} };
+                // Dereference heap pointers so the frontend sees actual array/map values
+                // instead of "#1000" style addresses.
+                const rawVars = { ...topFrame.locals };
+                const variables: Record<string, any> = {};
+                for (const [k, v] of Object.entries(rawVars)) {
+                    if (typeof v === 'string' && v.startsWith('#') && t.heap && t.heap[v] !== undefined) {
+                        variables[k] = t.heap[v];
+                    } else {
+                        variables[k] = v;
+                    }
+                }
+                return {
+                    step: idx + 1,
+                    line: t.line,
+                    lineContent: codeLines[t.line - 1]?.trim() || '',
+                    variables,
+                    visuals: t.visuals,
+                    assignmentDetail: t.assignmentDetail,
+                    teacherNote: {
+                        what: t.visualization?.explanation.what || t.explanation || '',
+                        why: t.visualization?.explanation.why || '',
+                        next: t.visualization?.explanation.next || ''
+                    },
+                    type: t.type === 'definition' ? 'assignment' : (t.type as any)
+                };
+            });
+
+            const traceResult = {
+                success: true,
+                steps: traceSteps,
+                totalSteps: traceSteps.length,
+                output: traces[traces.length - 1]?.output || '',
+                analysis
+            };
 
             this.safeSend(ws, {
                 type: 'TRACE_RESULT',

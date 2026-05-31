@@ -20,6 +20,7 @@ export interface VisualizationHint {
         target: string;                 // Variable name
         value?: any;
         index?: number;
+        isRejected?: boolean;
     };
     explanation: VisualizationExplanation;
 }
@@ -32,6 +33,42 @@ export interface ExecutionTrace {
     heap: Record<string, any>;
     output?: string;
     visualization?: VisualizationHint;
+    visuals?: any;
+    assignmentDetail?: any;
+}
+
+export interface ComplexityBreakdownItem {
+    operation: string;
+    complexity: string;
+}
+
+export interface SpaceBreakdownItem {
+    structure: string;
+    complexity: string;
+}
+
+export interface LearningModeDetails {
+    bruteForce: {
+        time: string;
+        space: string;
+        explanation?: string;
+    };
+    optimized: {
+        time: string;
+        space: string;
+        explanation?: string;
+    };
+    improvement: string;
+    optimizationReason: string;
+}
+
+export interface ComplexityDetectionDetail {
+    title: string;
+    detectedType: string;
+    codeSnippet: string;
+    complexity: string;
+    explanation: string;
+    visualTree?: string[];
 }
 
 export interface AlgorithmAnalysis {
@@ -42,6 +79,11 @@ export interface AlgorithmAnalysis {
     pattern: string;
     explanation: Record<string, string>;
     overview: string;
+    timeBreakdown?: ComplexityBreakdownItem[];
+    spaceBreakdown?: SpaceBreakdownItem[];
+    stepExplanations?: string[];
+    detections?: ComplexityDetectionDetail[];
+    learningMode?: LearningModeDetails;
 }
 
 // Flowchart node metadata for visualization
@@ -91,6 +133,7 @@ export interface ArrayVisual {
     pointers: PointerVisual[];
     highlightIndices?: number[];
     swapIndices?: [number, number];
+    windowRange?: [number, number];
 }
 
 export interface CallStackVisual {
@@ -105,6 +148,16 @@ export interface TreeVisual {
     currentNodeId?: string;
     activeNodes?: string[];
     visitedNodes?: string[];
+    pointers?: { name: string; nodeId: string; color: string }[];
+}
+
+export interface LinkedListVisual {
+    type: 'linked_list';
+    target: string;
+    nodes: { id: string; value: any; next?: string | null; prev?: string | null }[];
+    pointers: { name: string; nodeId: string; color: string }[];
+    hasCycle?: boolean;
+    cycleStartId?: string;
 }
 
 export interface GraphNode {
@@ -169,6 +222,7 @@ export interface TraceStep {
     visuals?: VisualInstruction;
     teacherNote: TeacherNote;
     type: 'assignment' | 'condition' | 'loop_start' | 'loop_continue' | 'loop_end' | 'function_call' | 'return' | 'comparison';
+    assignmentDetail?: any;
 }
 
 export interface TraceResult {
@@ -178,4 +232,5 @@ export interface TraceResult {
     totalSteps: number;
     error?: string;
     output?: string;
+    analysis?: AlgorithmAnalysis;
 }

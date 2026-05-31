@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import type { TreeVisual } from '../../../../types';
 import './visualizers.css';
 
@@ -13,7 +14,7 @@ interface Position {
 }
 
 export default function TreeVisualizer({ visual, className = '' }: TreeVisualizerProps) {
-    const { nodes, currentNodeId, activeNodes = [], visitedNodes = [] } = visual;
+    const { nodes, currentNodeId, activeNodes = [], visitedNodes = [], pointers = [] } = visual;
 
     // Calculate layout for tree nodes
     const { positions, edges, width, height } = useMemo(() => {
@@ -60,7 +61,7 @@ export default function TreeVisualizer({ visual, className = '' }: TreeVisualize
 
         const W = 800; // SVG Width
         const Y_SPACING = 80;
-        const TOP_PADDING = 50;
+        const TOP_PADDING = 80; // Add extra padding for pointer badges
 
         for (const node of nodes) {
             const d = nodeDepth.get(node.id) || 0;
@@ -99,6 +100,24 @@ export default function TreeVisualizer({ visual, className = '' }: TreeVisualize
     if (currentNodeId) activeSet.add(currentNodeId);
     const visitedSet = new Set(visitedNodes);
 
+    // Calculate coordinates for each tree pointer globally for smooth spring animations
+    const pointerPositions = useMemo(() => {
+        const counts: Record<string, number> = {};
+        return pointers.map(p => {
+            const pos = positions.get(p.nodeId);
+            if (!pos) return null;
+            const count = counts[p.nodeId] || 0;
+            counts[p.nodeId] = count + 1;
+            
+            return {
+                ...p,
+                x: pos.x,
+                y: pos.y - 35 - count * 20,
+                lineY: pos.y - 22
+            };
+        }).filter(Boolean) as any[];
+    }, [pointers, positions]);
+
     return (
         <div className={`tree-visualizer relative overflow-auto custom-scrollbar flex justify-center items-center w-full h-full ${className}`}>
             <svg width={width} height={height} className="min-w-max min-h-max" style={{ overflow: 'visible' }}>
@@ -107,9 +126,12 @@ export default function TreeVisualizer({ visual, className = '' }: TreeVisualize
                         <feGaussianBlur stdDeviation="4" result="blur" />
                         <feComposite in="SourceGraphic" in2="blur" operator="over" />
                     </filter>
+                    <marker id="marker-arrow-tree" markerWidth="8" markerHeight="6" refX="24" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="var(--color-border-subtle)" />
+                    </marker>
                 </defs>
 
-                {/* Edges */}
+                {/* B. DRAW EDGES WITH ARROWS */}
                 {edges.map((edge, i) => (
                     <line 
                         key={`edge-${i}`}
@@ -119,10 +141,62 @@ export default function TreeVisualizer({ visual, className = '' }: TreeVisualize
                         y2={edge.to.y} 
                         stroke="var(--color-border-subtle)" 
                         strokeWidth="2" 
+                        markerEnd="url(#marker-arrow-tree)"
                     />
                 ))}
 
-                {/* Nodes */}
+                {/* C. DRAW TREE POINTERS WITH SPRING ANIMS */}
+                {pointerPositions.map(p => {
+                    return (
+                        <g key={`ptr-group-${p.name}`}>
+                            {/* Dotted pointer reference line - slides dynamically! */}
+                            <motion.line 
+                                key={`line-${p.name}`}
+                                layout
+                                transition={{ type: 'spring', stiffness: 180, damping: 22 }}
+                                x1={p.x}
+                                y1={p.lineY}
+                                x2={p.x}
+                                y2={p.y}
+                                stroke="rgba(6, 182, 212, 0.4)"
+                                strokeWidth="1"
+                                strokeDasharray="2,2"
+                            />
+
+                            {/* Stacked pointer badge - slides smoothly! */}
+                            <motion.g
+                                key={`badge-${p.name}`}
+                                layout
+                                transition={{ type: 'spring', stiffness: 180, damping: 22 }}
+                                transform={`translate(${p.x}, ${p.y})`}
+                                className="font-mono"
+                            >
+                                <rect 
+                                    x="-24"
+                                    y="-8"
+                                    width="48"
+                                    height="16"
+                                    rx="4"
+                                    fill={`${p.color}15`}
+                                    stroke={p.color}
+                                    strokeWidth="1.2"
+                                />
+                                <text 
+                                    x="0"
+                                    y="4"
+                                    textAnchor="middle"
+                                    fill={p.color}
+                                    fontSize="8"
+                                    fontWeight="black"
+                                >
+                                    {p.name.toUpperCase()}
+                                </text>
+                            </motion.g>
+                        </g>
+                    );
+                })}
+
+                {/* D. DRAW NODES */}
                 {nodes.map(node => {
                     const pos = positions.get(node.id);
                     if (!pos) return null;
@@ -169,12 +243,12 @@ export default function TreeVisualizer({ visual, className = '' }: TreeVisualize
                             
                             {/* Optional small ID badge */}
                             <text 
-                                y="-28"
+                                y="34"
                                 textAnchor="middle" 
                                 fill="var(--color-text-muted)"
-                                fontSize="10"
+                                fontSize="9"
                             >
-                                {node.id.substring(0,3)}
+                                {node.id.startsWith('#') ? node.id : node.id.substring(0, 3)}
                             </text>
                         </g>
                     );

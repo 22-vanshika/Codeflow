@@ -27,9 +27,9 @@ export default function StackQueueVisualizer({ visual, className = '' }: StackQu
                  }}>
                  
                  {elements.length === 0 && (
-                     <div className="absolute inset-0 flex items-center justify-center text-text-muted italic opacity-50">
-                         Empty
-                     </div>
+                      <div className="absolute inset-0 flex items-center justify-center text-text-muted italic opacity-50">
+                          Empty
+                      </div>
                  )}
 
                 {elements.map((el, i) => {
@@ -72,7 +72,7 @@ export default function StackQueueVisualizer({ visual, className = '' }: StackQu
                                      }
                                      style={{ color: p.color || 'var(--color-accent-orange)' }}
                                      >
-                                    {p.name} {isStack ? '→' : '↓'}
+                                     {p.name} {isStack ? '→' : '↓'}
                                 </div>
                             ))}
                         </div>
