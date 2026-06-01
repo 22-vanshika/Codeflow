@@ -27,8 +27,8 @@ const items: RoadmapItem[] = [
     icon: Zap,
   },
   {
-    title: 'DSA 180 Problem Sheet',
-    description: 'Curated list of 180 essential interview problems organized by topic with progress tracking.',
+    title: 'DSA 200 Problem Sheet',
+    description: 'Curated list of 200 essential interview problems organized by topic with progress tracking.',
     status: 'completed',
     icon: BookOpen,
   },
@@ -51,18 +51,17 @@ const items: RoadmapItem[] = [
     icon: Globe,
   },
   {
+    title: 'Complexity Annotation',
+    description: 'Automatically annotate time and space complexity in best/average/worst case for each step.',
+    status: 'completed',
+    icon: Globe,
+  },
+  {
     title: 'Python Support',
     description: 'Extend the execution engine to handle Python algorithms with identical visualization quality.',
     status: 'in-progress',
     eta: 'Q3 2026',
     icon: Zap,
-  },
-  {
-    title: 'Complexity Annotation',
-    description: 'Automatically annotate time and space complexity in best/average/worst case for each step.',
-    status: 'in-progress',
-    eta: 'Q3 2026',
-    icon: Clock,
   },
   {
     title: 'Collaborative Whiteboarding',
