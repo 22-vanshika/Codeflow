@@ -135,11 +135,11 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative w-full max-w-md bg-surface border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-md liquid-glass-card shadow-2xl overflow-hidden"
                 >
                     <button 
                         onClick={onClose}
-                        className="absolute top-4 right-4 p-2 text-text-muted hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                        className="absolute top-4 right-4 p-2 text-text-muted hover:text-text-primary rounded-full hover:bg-border-subtle/20 transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -149,7 +149,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                             <div className="p-2 bg-primary/20 text-primary rounded-lg">
                                 <Save size={24} />
                             </div>
-                            <h2 className="text-2xl font-bold text-white">Save Visualization</h2>
+                            <h2 className="text-2xl font-bold text-text-primary">Save Visualization</h2>
                         </div>
 
                         {success ? (
@@ -167,14 +167,14 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
 
                                 {/* Choice: Overwrite or New copy */}
                                 {isOwner && (
-                                    <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/5 mb-4">
+                                    <div className="flex items-center p-1 bg-surface rounded-xl border border-border-subtle mb-4">
                                         <button
                                             type="button"
                                             onClick={() => setOverwriteMode(true)}
                                             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
                                                 overwriteMode 
                                                 ? 'bg-primary text-white shadow-lg' 
-                                                : 'text-text-muted hover:text-white'
+                                                : 'text-text-muted hover:text-text-primary'
                                             }`}
                                         >
                                             <RefreshCw size={14} />
@@ -186,7 +186,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                                             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
                                                 !overwriteMode 
                                                 ? 'bg-primary text-white shadow-lg' 
-                                                : 'text-text-muted hover:text-white'
+                                                : 'text-text-muted hover:text-text-primary'
                                             }`}
                                         >
                                             <Copy size={14} />
@@ -201,7 +201,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                                         type="text" 
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-white outline-none transition-all"
+                                        className="w-full px-4 py-2.5 bg-surface border border-border-subtle rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text-primary outline-none transition-all placeholder:text-text-muted/50"
                                         placeholder="e.g. Binary Search implementation"
                                         required
                                     />
@@ -212,7 +212,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                                     <textarea 
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-background border border-white/10 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-white outline-none transition-all h-24 resize-none"
+                                        className="w-full px-4 py-2.5 bg-surface border border-border-subtle rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary text-text-primary outline-none transition-all h-24 resize-none placeholder:text-text-muted/50"
                                         placeholder="Add some notes about this algorithm..."
                                     />
                                 </div>

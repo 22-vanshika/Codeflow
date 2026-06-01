@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useExecutionStore } from '../store/executionStore';
 import { useVisualizationStore } from '../store/visualizationStore';
@@ -12,12 +12,15 @@ import GitHubImportDialog from '../features/workspace/components/GitHubImportDia
 import ComplexityInfo from '../features/workspace/components/ComplexityInfo';
 import ProblemDescription from '../features/workspace/components/ProblemDescription';
 import SlidingConsole from '../features/workspace/components/SlidingConsole';
+import { problemsList } from '../data/problems/index';
+import { useProgressStore } from '../store/progressStore';
+import { useAuthStore } from '../store/authStore';
 import { 
     Play, Pause, SkipBack, SkipForward, RotateCcw, 
     ChevronLeft, ChevronRight, Sparkles, ChevronDown, 
     ChevronUp, Code2, Save, Github, BookOpen, 
     Zap, Terminal, Layers, MousePointer2,
-    Maximize2, Minimize2
+    Maximize2, Minimize2, Menu, Search, CheckCircle, Trophy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -63,8 +66,28 @@ export default function ProblemWorkspace() {
     const [loadedVis, setLoadedVis] = useState<SavedVisualization | null>(null);
     
     const location = useLocation();
+    const [dsaDrawerOpen, setDsaDrawerOpen] = useState(false);
     const hasAutoImported = useRef(false);
     const fetchVisualizationById = useVisualizationStore(s => s.fetchVisualizationById);
+    
+    const loadProblem = (problem: any) => {
+        const saved = localStorage.getItem(`codeflow_saved_code_${problem.id}`);
+        reset();
+        setCode(saved || problem.starterCode);
+        setProblemDetails({
+            id: problem.id,
+            title: problem.title,
+            difficulty: problem.difficulty,
+            category: problem.category,
+            starterCode: { cpp: problem.starterCode },
+            description: problem.description,
+            examples: problem.examples,
+            constraints: problem.constraints,
+            source: 'SWE180',
+            url: problem.url,
+        });
+        setActiveTab('description');
+    };
 
     // Load visualization if vid param is present
     useEffect(() => {
@@ -146,11 +169,119 @@ export default function ProblemWorkspace() {
     const speedMultiplier = (1050 - speed) / 500;
     const speedLabel = speedMultiplier.toFixed(1) + 'x';
 
+    const renderPlaybackControls = () => {
+        return (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-[760px]">
+                <div className="liquid-glass-card bg-surface/85 backdrop-blur-xl border border-border-subtle shadow-2xl rounded-2xl px-6 py-3 flex items-center justify-between gap-6 select-none">
+                    {/* Left Section: Playback buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={prevStep}
+                            disabled={!hasSteps || currentStepIndex <= 0}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary hover:border-primary disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+                            title="Previous Step"
+                        >
+                            <SkipBack size={16} />
+                        </button>
+                        <button
+                            onClick={togglePlay}
+                            disabled={!hasSteps}
+                            className={`group relative w-24 h-9 flex items-center justify-center gap-1.5 rounded-xl font-black text-[9px] tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed border overflow-hidden active:scale-95 ${
+                                isPlaying
+                                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20'
+                                    : 'bg-primary/10 border-primary/40 text-primary hover:bg-primary/20'
+                            }`}
+                        >
+                            {isPlaying ? <><Pause size={14} fill="currentColor" /> PAUSE</> : <><Play size={14} fill="currentColor" /> PLAY</>}
+                        </button>
+                        <button
+                            onClick={nextStep}
+                            disabled={!hasSteps || currentStepIndex >= stepsArray.length - 1}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-text-primary hover:border-primary disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-md active:scale-95"
+                            title="Next Step"
+                        >
+                            <SkipForward size={16} />
+                        </button>
+                        <button
+                            onClick={reset}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface border border-border-subtle text-text-secondary hover:text-accent-red hover:border-accent-red transition-all shadow-md active:scale-95"
+                            title="Reset Visualization"
+                        >
+                            <RotateCcw size={16} />
+                        </button>
+                    </div>
+
+                    {/* Center Section: Step Progression Slider */}
+                    <div className="flex-1 flex items-center gap-4 min-w-0">
+                        {hasSteps ? (
+                            <div className="flex-1 flex flex-col gap-1">
+                                <div className="flex items-center justify-between px-1">
+                                    <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">Step Progression</span>
+                                    <span className="text-[9px] font-black text-primary font-mono">{currentStepIndex + 1} / {stepsArray.length}</span>
+                                </div>
+                                <div className="relative h-1.5 rounded-full bg-border-subtle cursor-pointer group">
+                                    <div
+                                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-100 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                                        style={{ width: `${stepsArray.length > 1 ? (currentStepIndex / (stepsArray.length - 1)) * 100 : 0}%` }}
+                                    />
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={stepsArray.length - 1}
+                                        value={currentStepIndex}
+                                        onChange={e => useExecutionStore.getState().setStep(Number(e.target.value))}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    />
+                                    <div
+                                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-xl transition-all duration-100 pointer-events-none z-20 border border-primary"
+                                        style={{ left: `${stepsArray.length > 1 ? (currentStepIndex / (stepsArray.length - 1)) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col gap-1.5 opacity-30">
+                                <div className="flex items-center justify-between px-1">
+                                    <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">Awaiting Trace</span>
+                                </div>
+                                <div className="h-1 rounded-full bg-border-subtle" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right Section: Speed Controls */}
+                    <div className="flex items-center gap-4 shrink-0 border-l border-border-subtle pl-4">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between px-1">
+                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">Speed</span>
+                                <span className="text-[9px] font-black text-accent-cyan font-mono">{speedLabel}</span>
+                            </div>
+                            <div className="relative w-24">
+                                <input
+                                    type="range"
+                                    min={50}
+                                    max={1000}
+                                    step={50}
+                                    value={1050 - speed}
+                                    onChange={e => setSpeed(1050 - Number(e.target.value))}
+                                    className="w-full h-1 appearance-none bg-border-subtle rounded-full cursor-pointer
+                                               [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 
+                                               [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full 
+                                               [&::-webkit-slider-thumb]:bg-accent-cyan [&::-webkit-slider-thumb]:cursor-pointer
+                                               [&::-webkit-slider-thumb]:shadow-lg"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className="h-screen w-screen flex flex-col bg-bg-main overflow-hidden font-sans text-text-primary">
+        <div className="h-screen w-screen flex flex-col bg-transparent overflow-hidden font-sans text-text-primary">
 
             {/* ── PREMIUM HEADER ─────────────────────────────────────────── */}
-            <header className="flex-none h-14 glass-morphism border-b border-white/5 flex items-center justify-between px-6 z-40 shrink-0">
+            <header className="flex-none h-14 bg-bg-header backdrop-blur-md border-b border-border-subtle flex items-center justify-between px-6 z-40 shrink-0">
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
@@ -169,17 +300,17 @@ export default function ProblemWorkspace() {
                                     </span>
                                 )}
                             </div>
-                            <h2 className="text-sm font-bold text-white truncate max-w-[200px]">
+                            <h2 className="text-sm font-bold text-text-primary truncate max-w-[200px]">
                                 {problemDetails ? problemDetails.title : 'Playground (Untitled)'}
                             </h2>
                         </div>
                     </div>
 
-                    <div className="h-6 w-px bg-white/5" />
+                    <div className="h-6 w-px bg-border-subtle" />
 
                     {/* Language Selector */}
                     <div className="relative group">
-                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:border-primary/30 transition-all text-[11px] font-bold text-text-secondary hover:text-white group">
+                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface border border-border-subtle hover:border-primary transition-all text-[11px] font-bold text-text-secondary hover:text-text-primary group">
                             <Layers size={14} className="text-primary group-hover:scale-110 transition-transform" />
                             {selectedLanguage}
                             <ChevronDown size={14} />
@@ -189,7 +320,7 @@ export default function ProblemWorkspace() {
                     {/* Complexity Button */}
                     <button 
                         onClick={() => setComplexityOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary/50 transition-all text-[11px] font-black text-primary hover:text-white group"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary/50 transition-all text-[11px] font-black text-primary hover:text-text-primary group"
                     >
                         <Zap size={14} className="group-hover:animate-pulse" />
                         COMPLEXITY
@@ -201,7 +332,7 @@ export default function ProblemWorkspace() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setIsGithubImportOpen(true)}
-                            className="p-2.5 text-text-muted hover:text-white bg-white/5 border border-white/5 hover:border-white/20 rounded-xl transition-all"
+                            className="p-2.5 text-text-muted hover:text-text-primary bg-surface border border-border-subtle hover:border-border-active rounded-xl transition-all"
                             title="Import from GitHub"
                         >
                             <Github size={20} />
@@ -221,17 +352,26 @@ export default function ProblemWorkspace() {
             <div className="flex flex-1 overflow-hidden min-h-0 relative">
                 
                 {/* ── LEFT PANEL: Tabs + Content ─────────────────────────── */}
-                <div className={`flex flex-col shrink-0 glass-morphism border-r border-white/5 transition-all duration-500 ease-in-out ${
+                <div className={`flex flex-col shrink-0 bg-bg-panel/75 backdrop-blur-xl border-r border-border-subtle transition-all duration-500 ease-in-out ${
                     leftPanelOpen ? 'w-[440px]' : 'w-0 overflow-hidden opacity-0'
                 }`}>
                     {/* Tabs */}
-                    <div className="flex items-center p-1.5 bg-white/5 border-b border-white/5">
+                    <div className="flex items-center p-1.5 bg-surface border-b border-border-subtle gap-1.5">
+                        {/* Three line component which opens DSA sheet */}
+                        <button 
+                            onClick={() => setDsaDrawerOpen(true)}
+                            className="p-2 rounded-lg bg-surface border border-border-subtle text-text-muted hover:text-text-primary hover:bg-border-subtle/10 transition-all active:scale-95 shrink-0 flex items-center justify-center"
+                            title="Open DSA Sheet"
+                        >
+                            <Menu size={14} />
+                        </button>
+                        
                         <button 
                             onClick={() => setActiveTab('description')}
                             className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                                 activeTab === 'description' 
                                 ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                                : 'text-text-muted hover:text-white hover:bg-white/5'
+                                : 'text-text-muted hover:text-text-primary hover:bg-border-subtle/10'
                             }`}
                         >
                             <BookOpen size={14} />
@@ -242,7 +382,7 @@ export default function ProblemWorkspace() {
                             className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                                 activeTab === 'editor' 
                                 ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                                : 'text-text-muted hover:text-white hover:bg-white/5'
+                                : 'text-text-muted hover:text-text-primary hover:bg-border-subtle/10'
                             }`}
                         >
                             <Code2 size={14} />
@@ -271,7 +411,7 @@ export default function ProblemWorkspace() {
                                     exit={{ opacity: 0, x: 20 }}
                                     className="h-full flex flex-col relative"
                                 >
-                                    <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 shrink-0 bg-white/[0.02]">
+                                    <div className="flex items-center justify-between px-6 py-3 border-b border-border-subtle shrink-0 bg-surface/10">
                                         <div className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">
                                             <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                                             Active Editor
@@ -279,7 +419,7 @@ export default function ProblemWorkspace() {
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={requestTrace}
-                                                className="group relative flex items-center gap-2 px-4 py-1.5 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary hover:text-white hover:border-secondary transition-all text-[10px] font-black overflow-hidden"
+                                                className="group relative flex items-center gap-2 px-4 py-1.5 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary hover:text-text-primary hover:border-secondary transition-all text-[10px] font-black overflow-hidden"
                                             >
                                                 <div className="absolute inset-0 bg-secondary/20 translate-y-full group-hover:translate-y-0 transition-transform" />
                                                 <Sparkles size={12} className="relative z-10" />
@@ -319,22 +459,22 @@ export default function ProblemWorkspace() {
                 {/* ── PANEL TOGGLE ─────────────────────────────────────── */}
                 <button
                     onClick={() => setLeftPanelOpen(v => !v)}
-                    className="flex-none self-stretch w-4 bg-white/[0.02] border-r border-white/5 hover:bg-white/[0.05] flex items-center justify-center text-text-muted hover:text-primary transition-all group z-30"
+                    className="flex-none self-stretch w-4 bg-surface/10 border-r border-border-subtle hover:bg-surface/20 flex items-center justify-center text-text-muted hover:text-primary transition-all group z-30"
                     title={leftPanelOpen ? 'Collapse Panel' : 'Expand Panel'}
                 >
-                    <div className="w-px h-12 bg-white/10 group-hover:bg-primary/50 transition-colors" />
+                    <div className="w-px h-12 bg-border-subtle group-hover:bg-primary transition-colors" />
                     <div className="absolute flex flex-col gap-1 items-center">
                         {leftPanelOpen ? <ChevronLeft size={10} /> : <ChevronRight size={10} />}
                     </div>
                 </button>
 
                 {/* ── RIGHT PANEL: Visualizer ─────────────────────────────── */}
-                <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-main relative">
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent relative">
                     
                     <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-secondary/5 blur-[120px] rounded-full pointer-events-none" />
 
-                    <div className="flex items-center justify-between px-8 py-3 border-b border-white/5 bg-white/[0.02] shrink-0 z-10">
+                    <div className="flex items-center justify-between px-8 py-3 border-b border-border-subtle bg-surface/30 shrink-0 z-10">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                                 <MousePointer2 size={14} className="text-text-muted" />
@@ -343,13 +483,13 @@ export default function ProblemWorkspace() {
                             
                             {hasSteps && currentTraceStep && (
                                 <>
-                                    <div className="h-4 w-px bg-white/10" />
+                                    <div className="h-4 w-px bg-border-subtle" />
                                     <div className="flex items-center gap-2">
                                         <span className="text-primary font-black font-mono text-[11px] tracking-tight">
                                             {currentStepIndex + 1} <span className="text-text-muted font-medium mx-1">/</span> {stepsArray.length}
                                         </span>
                                         {currentPattern && (
-                                            <span className="px-2 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter border border-white/10"
+                                            <span className="px-2 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter border border-border-subtle"
                                                 style={{ color: currentPattern.color, borderColor: currentPattern.color + '44', backgroundColor: currentPattern.color + '15' }}>
                                                 {currentPattern.name}
                                             </span>
@@ -362,28 +502,29 @@ export default function ProblemWorkspace() {
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => setIsCanvasFullscreen(true)}
-                                className="p-2 text-text-muted hover:text-white rounded-lg hover:bg-white/5 transition-all group"
+                                className="p-2 text-text-muted hover:text-text-primary rounded-lg hover:bg-border-subtle/10 transition-all group"
                                 title="Fullscreen (F)"
                             >
                                 <Maximize2 size={16} className="group-hover:scale-110 transition-transform" />
                             </button>
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-[10px] font-bold text-text-muted">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-border-subtle text-[10px] font-bold text-text-muted">
                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                                 LIVE SYNC
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-hidden relative z-0">
+                    <div className="flex-1 min-h-0 overflow-hidden relative z-0 bg-transparent">
                         <WhiteboardPanel />
+                        {renderPlaybackControls()}
                     </div>
 
                     <motion.div 
                         animate={{ height: logicPanelOpen ? 220 : 44 }}
-                        className="border-t border-white/5 shrink-0 flex flex-col bg-bg-panel/90 backdrop-blur-xl z-20 overflow-hidden"
+                        className="border-t border-border-subtle shrink-0 flex flex-col bg-bg-panel/75 backdrop-blur-xl z-20 overflow-hidden"
                     >
                         <div
-                            className="flex items-center justify-between px-8 cursor-pointer h-11 shrink-0 hover:bg-white/5 transition-colors select-none"
+                            className="flex items-center justify-between px-8 cursor-pointer h-11 shrink-0 hover:bg-border-subtle/20 transition-colors select-none"
                             onClick={() => setLogicPanelOpen(v => !v)}
                         >
                             <div className="flex items-center gap-3">
@@ -394,7 +535,7 @@ export default function ProblemWorkspace() {
                                 <span className="text-[10px] font-black text-accent-cyan uppercase tracking-[0.2em]">Execution Trace Logic</span>
                             </div>
                             <div className="flex items-center gap-4">
-                                <span className="text-[9px] font-black px-2 py-0.5 bg-white/5 text-text-muted rounded border border-white/5 tracking-widest uppercase">
+                                <span className="text-[9px] font-black px-2 py-0.5 bg-surface text-text-secondary rounded border border-border-subtle tracking-widest uppercase">
                                     {logicPanelOpen ? 'Collapse' : 'Expand Details'}
                                 </span>
                                 {logicPanelOpen ? <ChevronDown size={16} className="text-text-muted"/> : <ChevronUp size={16} className="text-text-muted"/>}
@@ -417,7 +558,7 @@ export default function ProblemWorkspace() {
                                                     <div className="w-1 h-3 rounded-full bg-primary" />
                                                     <span className="text-[10px] font-black uppercase tracking-widest">What's Happening</span>
                                                 </div>
-                                                <p className="text-sm font-bold text-white leading-relaxed font-mono whitespace-pre-wrap">
+                                                <p className="text-sm font-bold text-text-primary leading-relaxed font-mono whitespace-pre-wrap">
                                                     {(currentTraceStep as any).teacherNote?.what || (currentTraceStep as any).explanation || ''}
                                                 </p>
                                             </div>
@@ -447,104 +588,6 @@ export default function ProblemWorkspace() {
                 </div>
             </div>
 
-            {/* ── BOTTOM PLAYBACK BAR ──────────────────────────────────────── */}
-            <footer className="flex-none h-16 glass-morphism border-t border-white/5 flex items-center px-8 gap-8 z-40 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={prevStep}
-                        disabled={!hasSteps || currentStepIndex <= 0}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-text-muted hover:text-white hover:border-primary/50 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg"
-                    >
-                        <SkipBack size={18} />
-                    </button>
-                    <button
-                        onClick={togglePlay}
-                        disabled={!hasSteps}
-                        className={`group relative w-28 h-10 flex items-center justify-center gap-2 rounded-xl font-black text-[10px] tracking-widest transition-all disabled:opacity-20 disabled:cursor-not-allowed border overflow-hidden ${
-                            isPlaying
-                                ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20'
-                                : 'bg-primary/10 border-primary/40 text-primary hover:bg-primary/20'
-                        }`}
-                    >
-                        {isPlaying ? <><Pause size={16} fill="currentColor" /> PAUSE</> : <><Play size={16} fill="currentColor" /> PLAY</>}
-                    </button>
-                    <button
-                        onClick={nextStep}
-                        disabled={!hasSteps || currentStepIndex >= stepsArray.length - 1}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-text-muted hover:text-white hover:border-primary/50 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg"
-                    >
-                        <SkipForward size={18} />
-                    </button>
-                    <button
-                        onClick={reset}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-text-muted hover:text-red-400 hover:border-red-500/40 transition-all ml-1"
-                    >
-                        <RotateCcw size={18} />
-                    </button>
-                </div>
-
-                <div className="flex-1 flex items-center gap-4 min-w-0">
-                    {hasSteps && (
-                        <div className="flex-1 flex flex-col gap-2">
-                            <div className="flex items-center justify-between px-1">
-                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Step Progression</span>
-                                <span className="text-[10px] font-black text-primary font-mono">{currentStepIndex + 1} / {stepsArray.length}</span>
-                            </div>
-                            <div className="relative h-2 rounded-full bg-white/5 cursor-pointer group">
-                                <div
-                                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-100 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-                                    style={{ width: `${stepsArray.length > 1 ? (currentStepIndex / (stepsArray.length - 1)) * 100 : 0}%` }}
-                                />
-                                <input
-                                    type="range"
-                                    min={0}
-                                    max={stepsArray.length - 1}
-                                    value={currentStepIndex}
-                                    onChange={e => useExecutionStore.getState().setStep(Number(e.target.value))}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                />
-                                <div
-                                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-xl transition-all duration-100 pointer-events-none z-20 border-2 border-primary"
-                                    style={{ left: `${stepsArray.length > 1 ? (currentStepIndex / (stepsArray.length - 1)) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}
-                                />
-                            </div>
-                        </div>
-                    )}
-                    {!hasSteps && (
-                        <div className="flex-1 flex flex-col gap-2 opacity-30">
-                            <div className="flex items-center justify-between px-1">
-                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Awaiting Trace</span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-white/5" />
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-6 shrink-0 border-l border-white/5 pl-8">
-                    <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between px-1">
-                            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Speed</span>
-                            <span className="text-[10px] font-black text-accent-cyan font-mono">{speedLabel}</span>
-                        </div>
-                        <div className="relative w-32">
-                            <input
-                                type="range"
-                                min={50}
-                                max={1000}
-                                step={50}
-                                value={1050 - speed}
-                                onChange={e => setSpeed(1050 - Number(e.target.value))}
-                                className="w-full h-1 appearance-none bg-white/5 rounded-full cursor-pointer
-                                           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 
-                                           [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full 
-                                           [&::-webkit-slider-thumb]:bg-accent-cyan [&::-webkit-slider-thumb]:cursor-pointer
-                                           [&::-webkit-slider-thumb]:shadow-lg"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </footer>
-
             {/* ── FULLSCREEN CANVAS OVERLAY ────────────────────────────── */}
             <AnimatePresence>
                 {isCanvasFullscreen && (
@@ -557,11 +600,12 @@ export default function ProblemWorkspace() {
                         {/* Canvas fills background */}
                         <div className="w-full h-full relative z-0">
                             <WhiteboardPanel />
+                            {renderPlaybackControls()}
                         </div>
 
                         {/* Controls on top with very high z-index */}
                         <div className="absolute top-6 right-6 z-[300] flex items-center gap-3">
-                            <span className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] bg-bg-panel/90 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-xl shadow-2xl">
+                            <span className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] bg-bg-panel/90 px-4 py-2 rounded-xl border border-border-subtle backdrop-blur-xl shadow-2xl">
                                 Fullscreen Mode (Esc to Exit)
                             </span>
                             <button 
@@ -609,6 +653,221 @@ export default function ProblemWorkspace() {
                 isOpen={isGithubImportOpen}
                 onClose={() => setIsGithubImportOpen(false)}
             />
+
+            {/* Sliding Drawer for DSA Sheet */}
+            <AnimatePresence>
+                {dsaDrawerOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.5 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setDsaDrawerOpen(false)}
+                            className="fixed inset-0 bg-black/60 z-[150] backdrop-blur-sm"
+                        />
+                        
+                        {/* Sliding Panel */}
+                        <motion.div 
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="fixed left-0 top-0 bottom-0 w-[440px] max-w-[90%] bg-bg-panel/95 backdrop-blur-2xl border-r border-border-subtle z-[160] flex flex-col shadow-2xl overflow-hidden text-text-primary"
+                        >
+                            {/* Drawer Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle shrink-0">
+                                <div className="flex items-center gap-2">
+                                    <Trophy size={18} className="text-primary animate-pulse" />
+                                    <span className="font-black text-sm uppercase tracking-wider text-text-primary">DSA Sheet Explorer</span>
+                                </div>
+                                <button 
+                                    onClick={() => setDsaDrawerOpen(false)}
+                                    className="p-2 rounded-lg hover:bg-surface border border-transparent hover:border-border-subtle text-text-muted hover:text-text-primary transition-all active:scale-95 flex items-center justify-center"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                            </div>
+                            
+                            {/* Drawer Content */}
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                <CuratedSheetDrawerContent onSelectProblem={(problem) => {
+                                    loadProblem(problem);
+                                    setDsaDrawerOpen(false);
+                                }} />
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+function CuratedSheetDrawerContent({ onSelectProblem }: { onSelectProblem: (p: any) => void }) {
+    const { user } = useAuthStore();
+    const { completed, toggleCompletion } = useProgressStore();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
+    
+    // Stable list of unique categories
+    const categories = useMemo(() => {
+        return Array.from(new Set((problemsList || []).map(p => p.category || 'Uncategorized')));
+    }, []);
+
+    const [selectedCategory, setSelectedCategory] = useState<string>(categories[0] || '');
+
+    const categoriesStats = useMemo(() => {
+        const stats: Record<string, { total: number; completedCount: number; percent: number }> = {};
+        
+        (problemsList || []).forEach(problem => {
+            const cat = problem.category || 'Uncategorized';
+            if (!stats[cat]) {
+                stats[cat] = { total: 0, completedCount: 0, percent: 0 };
+            }
+            stats[cat].total += 1;
+            if (completed[problem.id]) {
+                stats[cat].completedCount += 1;
+            }
+        });
+
+        Object.keys(stats).forEach(cat => {
+            const s = stats[cat];
+            s.percent = s.total > 0 ? Math.round((s.completedCount / s.total) * 100) : 0;
+        });
+
+        return stats;
+    }, [completed]);
+
+    const filteredProblems = useMemo(() => {
+        const catProblems = (problemsList || []).filter(p => (p.category || 'Uncategorized') === selectedCategory);
+        return catProblems.filter(problem => {
+            const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesFilter = activeFilter === 'All' || problem.difficulty === activeFilter;
+            return matchesSearch && matchesFilter;
+        });
+    }, [selectedCategory, searchQuery, activeFilter]);
+
+    return (
+        <div className="space-y-6">
+            {/* Category selection dropdown */}
+            <div className="space-y-2">
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-wider block">Category</label>
+                <div className="relative">
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full bg-surface border border-border-subtle rounded-xl py-3 px-4 text-sm text-text-primary focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all cursor-pointer appearance-none"
+                    >
+                        {categories.map(cat => {
+                            const stats = categoriesStats[cat] || { total: 0, completedCount: 0, percent: 0 };
+                            return (
+                                <option key={cat} value={cat} className="bg-bg-panel text-text-primary">
+                                    {cat} ({stats.completedCount}/{stats.total} completed)
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                        <ChevronDown size={16} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Search & Filters */}
+            <div className="space-y-3">
+                <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={16} />
+                    <input 
+                        type="text"
+                        placeholder="Search problems..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-surface border border-border-subtle rounded-xl py-2.5 pl-10 pr-4 text-xs text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    />
+                </div>
+                
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {(['All', 'Easy', 'Medium', 'Hard'] as const).map((filter) => (
+                        <button
+                            key={filter}
+                            onClick={() => setActiveFilter(filter)}
+                            className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0 ${
+                                activeFilter === filter 
+                                ? 'bg-primary text-white border border-primary' 
+                                : 'bg-surface text-text-secondary hover:text-text-primary hover:bg-border-subtle/20 border border-border-subtle'
+                            }`}
+                        >
+                            {filter}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Problems List */}
+            <div className="space-y-2.5">
+                {filteredProblems.map((problem) => (
+                    <div 
+                        key={problem.id} 
+                        onClick={() => onSelectProblem(problem)}
+                        className="group liquid-glass-card hover:border-primary/50 transition-all duration-300 relative overflow-hidden border border-border-subtle p-4 flex flex-col justify-between h-32 cursor-pointer bg-surface/20"
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-2.5 min-w-0">
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleCompletion(problem.id, user);
+                                    }}
+                                    className={`mt-0.5 relative w-5 h-5 rounded flex items-center justify-center transition-all duration-300 border-2 shrink-0 ${
+                                        completed[problem.id] 
+                                        ? 'bg-primary/20 border-primary text-primary shadow-[0_0_8px_rgba(123,116,209,0.3)]' 
+                                        : 'border-border-subtle text-transparent hover:border-text-muted'
+                                    }`}
+                                >
+                                    <CheckCircle size={12} className={completed[problem.id] ? "scale-100" : "scale-0"} />
+                                </button>
+                                
+                                <div className="min-w-0">
+                                    <h4 className={`text-sm font-black tracking-tight leading-snug transition-all duration-300 ${
+                                        completed[problem.id] 
+                                        ? 'text-text-muted line-through opacity-50' 
+                                        : 'text-text-primary group-hover:text-primary'
+                                    }`}>
+                                        {problem.title}
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-auto">
+                            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                                problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
+                                problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
+                                'border-red-500/30 text-red-400 bg-red-500/5'
+                            }`}>
+                                {problem.difficulty}
+                            </span>
+
+                            <motion.button 
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="flex items-center gap-1 text-[9px] font-black text-white bg-primary px-3 py-1.5 rounded-md transition-all shadow-md shadow-primary/20 opacity-0 group-hover:opacity-100"
+                            >
+                                <Play size={8} fill="currentColor" /> 
+                                <span>Visualize</span>
+                                <ChevronRight size={8} />
+                            </motion.button>
+                        </div>
+                    </div>
+                ))}
+
+                {filteredProblems.length === 0 && (
+                    <div className="text-center py-10 border border-border-subtle rounded-2xl bg-surface/10">
+                        <p className="text-xs text-text-muted">No matches found</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

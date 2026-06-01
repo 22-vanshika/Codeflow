@@ -59,15 +59,15 @@ export default function ImportProblemDialog({ isOpen, onClose, onImportSuccess }
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-bg-panel border border-border-subtle rounded-xl w-[500px] shadow-2xl animate-slide-up overflow-hidden">
-                <div className="h-12 border-b border-border-subtle flex items-center justify-between px-4 bg-bg-main/50">
+            <div className="liquid-glass-card w-[500px] shadow-2xl overflow-hidden">
+                <div className="h-12 border-b border-border-subtle flex items-center justify-between px-4 bg-surface/50">
                     <h3 className="font-bold text-text-primary flex items-center gap-2">
                         <Search size={16} className="text-accent-primary" />
                         Import Problem
                     </h3>
                     <button 
                         onClick={onClose}
-                        className="text-text-muted hover:text-text-primary p-1 rounded-md hover:bg-white/5 transition-colors"
+                        className="text-text-muted hover:text-text-primary p-1 rounded-md hover:bg-border-subtle/20 transition-colors"
                     >
                         <X size={16} />
                     </button>
@@ -89,7 +89,7 @@ export default function ImportProblemDialog({ isOpen, onClose, onImportSuccess }
                                 value={url}
                                 onChange={(e) => setUrl(e.target.value)}
                                 placeholder="https://leetcode.com/problems/two-sum/"
-                                className="w-full bg-bg-main border border-border-subtle rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary transition-colors placeholder:text-text-muted/50"
+                                className="w-full bg-surface border border-border-subtle rounded-md px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary transition-colors placeholder:text-text-muted/50"
                                 disabled={loading}
                             />
                         </div>
@@ -102,7 +102,7 @@ export default function ImportProblemDialog({ isOpen, onClose, onImportSuccess }
                     </div>
                 </div>
 
-                <div className="h-14 border-t border-border-subtle bg-bg-main/30 flex items-center justify-end px-4 gap-3">
+                <div className="h-14 border-t border-border-subtle bg-surface/30 flex items-center justify-end px-4 gap-3">
                     <button 
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-text-muted hover:text-text-primary transition-colors"
@@ -113,7 +113,7 @@ export default function ImportProblemDialog({ isOpen, onClose, onImportSuccess }
                     <button 
                         onClick={handleImport}
                         disabled={loading || !url.trim()}
-                        className="px-5 py-2 text-sm font-medium bg-accent-primary text-bg-main rounded-md hover:bg-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-glow"
+                        className="px-5 py-2 text-sm font-medium bg-accent-primary text-white rounded-md hover:bg-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-glow"
                     >
                         {loading ? (
                             <>

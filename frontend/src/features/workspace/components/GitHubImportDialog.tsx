@@ -87,21 +87,21 @@ export default function GitHubImportDialog({ isOpen, onClose }: GitHubImportDial
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative w-full max-w-2xl bg-surface border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+                    className="relative w-full max-w-2xl liquid-glass-card shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
                 >
-                    <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
+                    <div className="flex items-center justify-between p-6 border-b border-border-subtle shrink-0">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-[#24292e] text-white rounded-lg border border-white/10">
+                            <div className="p-2 bg-[#24292e] text-white rounded-lg border border-border-subtle">
                                 <Github size={20} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-white">Import from GitHub</h2>
+                                <h2 className="text-xl font-bold text-text-primary">Import from GitHub</h2>
                                 <p className="text-xs text-text-muted">Select a C++ file to import into the workspace</p>
                             </div>
                         </div>
                         <button 
                             onClick={onClose}
-                            className="p-2 text-text-muted hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                            className="p-2 text-text-muted hover:text-text-primary rounded-full hover:bg-border-subtle/20 transition-colors"
                         >
                             <X size={20} />
                         </button>
@@ -115,7 +115,7 @@ export default function GitHubImportDialog({ isOpen, onClose }: GitHubImportDial
                         )}
 
                         {/* Repos List */}
-                        <div className="w-1/2 flex flex-col border-r border-white/10 pr-6">
+                        <div className="w-1/2 flex flex-col border-r border-border-subtle pr-6">
                             <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">Repositories</h3>
                             {isLoading && repos.length === 0 ? (
                                 <div className="flex items-center justify-center py-8 text-text-muted"><Loader2 className="animate-spin" /></div>
@@ -126,7 +126,7 @@ export default function GitHubImportDialog({ isOpen, onClose }: GitHubImportDial
                                             key={repo.id}
                                             onClick={() => fetchFiles(repo.name)}
                                             className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                                selectedRepo === repo.name ? 'bg-primary/20 text-primary border border-primary/30' : 'text-text-primary hover:bg-white/5 border border-transparent'
+                                                selectedRepo === repo.name ? 'bg-primary/20 text-primary border border-primary/30' : 'text-text-primary hover:bg-border-subtle/10 border border-transparent'
                                             }`}
                                         >
                                             {repo.name}
@@ -153,7 +153,7 @@ export default function GitHubImportDialog({ isOpen, onClose }: GitHubImportDial
                             ) : (
                                 <div className="space-y-2 overflow-y-auto pr-2">
                                     {files.map(file => (
-                                        <div key={file.sha} className="flex items-center justify-between p-2 rounded-lg border border-white/5 hover:border-white/20 bg-background transition-colors group">
+                                        <div key={file.sha} className="flex items-center justify-between p-2 rounded-lg border border-border-subtle hover:border-primary bg-surface/50 transition-colors group">
                                             <span className="text-sm text-text-primary truncate mr-2">{file.name}</span>
                                             <button 
                                                 onClick={() => importFile(file.download_url)}
