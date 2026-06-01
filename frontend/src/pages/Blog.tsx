@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Clock, Tag, ArrowRight, Search, Building, ExternalLink, PlusCircle, Send, X, Trophy } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
+import { useAuthStore } from '../store/authStore';
 
 interface Post {
   id: string;
@@ -97,6 +98,28 @@ const posts: Post[] = [
     authorInitials: 'AA',
     gradient: 'from-primary to-accent-cyan',
   },
+  {
+    id: 'red-black-trees-demystified',
+    title: 'Red-Black Trees Demystified: The Self-Balancing Magic',
+    excerpt: 'Struggling with self-balancing trees? We break down Red-Black tree insertions, rotations, and color flips with clear, interactive step-by-step logic.',
+    date: 'Jun 1, 2026',
+    readTime: '8 min read',
+    tags: ['Trees', 'Self-Balancing', 'Advanced'],
+    author: 'Anshika Asati',
+    authorInitials: 'AA',
+    gradient: 'from-secondary to-accent-cyan',
+  },
+  {
+    id: 'mastering-graph-cycles',
+    title: "Mastering Graph Cycles: Tarjan's vs Kosaraju's Algorithm",
+    excerpt: "Identifying cycles and strongly connected components (SCCs) is a common pattern in advanced coding interviews. We contrast Tarjan's and Kosaraju's algorithms.",
+    date: 'May 30, 2026',
+    readTime: '10 min read',
+    tags: ['Graphs', 'Cycles', 'Algorithms'],
+    author: 'Anshika Asati',
+    authorInitials: 'AA',
+    gradient: 'from-accent-purple to-accent-orange',
+  },
 ];
 
 const experiences: InterviewExperience[] = [
@@ -141,12 +164,41 @@ const experiences: InterviewExperience[] = [
     sourceUrl: 'https://leetcode.com/discuss/interview-experience',
     author: 'Cited from LeetCode (user: binary_star)',
     gradient: 'from-secondary to-accent-purple'
+  },
+  {
+    id: 'microsoft-sde1-onsite',
+    company: 'Microsoft',
+    role: 'Software Engineer I',
+    year: '2026',
+    difficulty: 'Medium',
+    title: 'Microsoft SDE-1: Min-Heaps & Top-K Frequent Elements',
+    excerpt: "A detailed account of Microsoft's SDE-1 interview focusing heavily on heaps, boundary maps, and custom comparator sorting logic.",
+    keyQuestions: 'Top K Frequent Elements (Min-Heap / Bucket Sort), Find Median from Data Stream (Two Heaps)',
+    keyLearnings: 'Ensure you can explain why a Min-Heap is more optimal than a Max-Heap for keeping Top-K elements (keeping size of heap limited to K makes push/pop O(log K) instead of O(log N)).',
+    sourceUrl: 'https://leetcode.com/discuss/interview-experience',
+    author: 'Cited from LeetCode (user: stack_pointer)',
+    gradient: 'from-accent-green to-primary'
+  },
+  {
+    id: 'google-l5-onsite',
+    company: 'Google',
+    role: 'Senior Software Engineer (L5)',
+    year: '2026',
+    difficulty: 'Hard',
+    title: 'Google Senior SWE (L5): Complex Range Queries & Segment Tree Focus',
+    excerpt: 'Insights into a onsite loop involving advanced tree structures and modular system design for low-latency metric aggregations.',
+    keyQuestions: 'Range Sum Query - Mutable (Segment Tree / Binary Indexed Tree), Design Twitter (System Design)',
+    keyLearnings: 'Segment trees are highly preferred for mutable range sum queries where updates need to run in O(log N). Be prepared to discuss clean class-based segment tree pointer rewiring.',
+    sourceUrl: 'https://leetcode.com/discuss/interview-experience',
+    author: 'Cited from LeetCode (user: senior_dev_99)',
+    gradient: 'from-accent-red to-secondary'
   }
 ];
 
 const allTags = Array.from(new Set(posts.flatMap(p => p.tags)));
 
 export default function Blog() {
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'guides' | 'experiences'>('guides');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -156,6 +208,7 @@ export default function Blog() {
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Form inputs
   const [formCompany, setFormCompany] = useState('Google');
@@ -236,27 +289,65 @@ export default function Blog() {
     return matchesSearch && matchesCompany;
   });
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRole || !formTitle || !formQuestions || !formLearnings) return;
 
     setSubmitting(true);
-    // Simulate API request saving it for moderation
-    setTimeout(() => {
-      setSubmitting(false);
+    setErrorMsg('');
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = await user?.getIdToken();
+
+      const response = await fetch(`${API_URL}/api/blogs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: formTitle,
+          excerpt: `${formRole} Interview Experience (${formYear}) - Difficulty: ${formDifficulty}`,
+          content: `### Interview Questions\n${formQuestions}\n\n### Strategy & Advice\n${formLearnings}`,
+          category: 'Interview Experience',
+          company: formCompany,
+          sourceUrl: 'Self-submitted by member'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit experience.');
+      }
+
+      const data = await response.json();
+      
+      // Update local state to include the new blog post dynamically at the top
+      if (data.blog) {
+        setBlogsList(prev => [data.blog, ...prev]);
+      }
+
       setSubmitSuccess(true);
       // Reset form
       setFormRole('');
       setFormTitle('');
       setFormQuestions('');
       setFormLearnings('');
-    }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCloseSubmit = () => {
     setIsSubmitOpen(false);
     // Delay success reset so it looks smooth
-    setTimeout(() => setSubmitSuccess(false), 300);
+    setTimeout(() => {
+      setSubmitSuccess(false);
+      setErrorMsg('');
+    }, 300);
   };
 
   const [featured, ...rest] = filteredPosts;
@@ -327,7 +418,13 @@ export default function Blog() {
             
             {activeTab === 'experiences' && (
               <button
-                onClick={() => setIsSubmitOpen(true)}
+                onClick={() => {
+                  if (!user) {
+                    document.dispatchEvent(new CustomEvent('open-auth-modal'));
+                  } else {
+                    setIsSubmitOpen(true);
+                  }
+                }}
                 className="px-5 py-3.5 bg-primary hover:bg-primary/95 text-white rounded-2xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/25 shrink-0"
               >
                 <PlusCircle size={15} />
@@ -457,7 +554,7 @@ export default function Blog() {
               )}
 
               {/* Grid of Posts */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {(searchQuery || activeTag ? filteredPosts : rest).map((post, i) => (
                   <motion.div
                     key={post.id}
@@ -505,7 +602,7 @@ export default function Blog() {
               <p>No interview experiences found matching that query.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {filteredExperiences.map((exp, i) => (
                 <motion.div
                   key={exp.id}
@@ -620,6 +717,12 @@ export default function Blog() {
                       <h3 className="text-2xl font-black text-white tracking-tight">Share Your Journey 🚀</h3>
                       <p className="text-text-secondary text-xs mt-1">Help fellow engineers prepare for interviews by detailing your technical rounds.</p>
                     </div>
+
+                    {errorMsg && (
+                      <div className="p-3 bg-accent-red/10 border border-accent-red/20 rounded-xl text-accent-red text-xs font-bold text-center">
+                        {errorMsg}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>

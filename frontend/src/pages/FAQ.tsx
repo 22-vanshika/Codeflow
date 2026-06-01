@@ -81,31 +81,38 @@ const faqs = [
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <motion.div layout className="border border-border-subtle rounded-2xl overflow-hidden">
+    <motion.div 
+      layout 
+      className={`liquid-glass-card border rounded-2xl overflow-hidden transition-all duration-300 relative ${
+        isOpen ? 'border-primary/30 shadow-[0_0_25px_rgba(59,130,246,0.1)]' : 'border-white/10 hover:border-white/20'
+      }`}
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-6 text-left hover:bg-white/3 transition-colors group"
+        className={`w-full flex items-center justify-between p-6 text-left transition-all duration-300 group ${
+          isOpen ? 'bg-primary/5' : 'hover:bg-white/3'
+        }`}
       >
-        <span className="font-bold text-text-primary group-hover:text-white transition-colors pr-4">
+        <span className={`font-bold transition-colors pr-4 ${isOpen ? 'text-white' : 'text-text-primary group-hover:text-white'}`}>
           {q}
         </span>
         <ChevronDown
           size={18}
           className={`text-text-muted flex-shrink-0 transition-transform duration-300 ${
-            isOpen ? 'rotate-180 text-primary' : ''
+            isOpen ? 'rotate-180 text-primary' : 'group-hover:text-white'
           }`}
         />
       </button>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden bg-gradient-to-b from-primary/5 to-transparent"
           >
-            <div className="px-6 pb-6 text-text-secondary text-sm leading-relaxed border-t border-border-subtle pt-4">
+            <div className="px-6 pb-6 text-text-secondary text-sm leading-relaxed border-t border-white/5 pt-4">
               {a}
             </div>
           </motion.div>
@@ -181,10 +188,10 @@ export default function FAQ() {
           <div className="flex flex-wrap gap-2 mb-10">
             <button
               onClick={() => setActiveCategory(null)}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+              className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${
                 !activeCategory
-                  ? 'bg-primary text-white'
-                  : 'bg-white/5 border border-border-subtle text-text-secondary hover:text-white'
+                  ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                  : 'bg-white/5 border-border-subtle text-text-secondary hover:text-white hover:border-primary/30'
               }`}
             >
               All
@@ -193,10 +200,10 @@ export default function FAQ() {
               <button
                 key={cat.category}
                 onClick={() => setActiveCategory(cat.category === activeCategory ? null : cat.category)}
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${
                   activeCategory === cat.category
-                    ? 'bg-primary text-white'
-                    : 'bg-white/5 border border-border-subtle text-text-secondary hover:text-white'
+                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                    : 'bg-white/5 border-border-subtle text-text-secondary hover:text-white hover:border-primary/30'
                 }`}
               >
                 {cat.category}

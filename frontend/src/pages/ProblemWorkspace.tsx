@@ -24,9 +24,10 @@ import {
     Zap, Terminal, Layers, MousePointer2,
     Maximize2, Minimize2, Menu, Search, CheckCircle, Trophy,
     Cpu, LogOut, LayoutDashboard, Settings, Newspaper, Brain,
-    Star, FileText, Bookmark, Edit3, User
+    Star, FileText, Bookmark, Edit3, User, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import DynamicBackground from '../components/DynamicBackground';
 
 interface ProblemData {
     id: string;
@@ -238,6 +239,13 @@ export default function ProblemWorkspace() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Auto-popup auth modal in workspace if logged out
+    useEffect(() => {
+        if (!user) {
+            setIsAuthOpen(true);
+        }
+    }, [user]);
+
     const speedMultiplier = (1050 - speed) / 500;
     const speedLabel = speedMultiplier.toFixed(1) + 'x';
 
@@ -348,6 +356,81 @@ export default function ProblemWorkspace() {
             </div>
         );
     };
+
+    if (!user) {
+        return (
+            <div className="h-screen w-screen flex flex-col bg-transparent text-text-primary relative overflow-hidden font-sans">
+                <DynamicBackground />
+                
+                {/* Slim Header */}
+                <header className="flex-none h-14 bg-bg-header backdrop-blur-md border-b border-border-subtle flex items-center justify-between px-6 z-40 shrink-0">
+                    <Link to="/" className="flex items-center gap-3 group shrink-0">
+                        <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-all duration-300">
+                            <Cpu size={20} className="text-white" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="font-bold text-base leading-none tracking-tighter text-white">
+                                Code<span className="text-primary">Flow</span>
+                            </span>
+                            <span className="text-[9px] uppercase tracking-[0.2em] text-text-muted font-bold leading-none mt-0.5">Visualizer</span>
+                        </div>
+                    </Link>
+                    
+                    <button
+                        onClick={() => setIsAuthOpen(true)}
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary hover:text-white text-primary text-xs font-black tracking-wide transition-all active:scale-95 shadow-md shadow-primary/5 shrink-0"
+                    >
+                        <User size={14} />
+                        <span>Sign In</span>
+                    </button>
+                </header>
+
+                {/* Locked Workspace Content */}
+                <div className="flex-1 flex items-center justify-center relative z-10 p-6">
+                    <div className="absolute inset-0 bg-black/40 blur-[100px] pointer-events-none" />
+                    
+                    <motion.div 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                        className="max-w-md w-full liquid-glass-card border border-white/10 p-8 text-center space-y-6 shadow-2xl relative"
+                    >
+                        <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-[0_0_20px_rgba(123,116,209,0.2)]">
+                            <Lock size={30} className="animate-pulse text-primary" />
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <h2 className="text-2xl font-black tracking-tight text-white">Workspace Locked</h2>
+                            <p className="text-text-secondary text-sm leading-relaxed">
+                                The CodeFlow interactive workspace is encrypted and restricted to members. Please sign in or create an account to write, execute, and visualize C++ algorithms.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3 pt-2">
+                            <button
+                                onClick={() => setIsAuthOpen(true)}
+                                className="w-full py-3 bg-primary text-white text-sm font-black rounded-xl hover:shadow-lg hover:shadow-primary/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                <User size={16} />
+                                Sign In / Register
+                            </button>
+                            <Link 
+                                to="/"
+                                className="w-full py-3 bg-surface border border-border-subtle hover:border-text-muted text-text-secondary hover:text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center"
+                            >
+                                Return to Home
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
+
+                <AuthModal
+                    isOpen={isAuthOpen}
+                    onClose={() => setIsAuthOpen(false)}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen w-screen flex flex-col bg-transparent overflow-hidden font-sans text-text-primary">

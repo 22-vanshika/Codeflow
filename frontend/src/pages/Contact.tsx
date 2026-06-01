@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, MessageSquare, Bug, Send, CheckCircle, AlertCircle, Upload, Trash2 } from 'lucide-react';
+import { Mail, MessageSquare, Bug, Send, CheckCircle, AlertCircle, Upload, Trash2, Github, Linkedin } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
 
 type FormType = 'feedback' | 'bug';
@@ -370,18 +370,60 @@ export default function Contact() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-8 max-w-md mx-auto w-full"
+          className="mt-12 w-full"
         >
-          <div className="liquid-glass-card p-6 flex items-center gap-4 justify-center">
-            <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl">
-              <Mail size={20} className="text-primary" />
-            </div>
-            <div className="text-left">
-              <p className="text-xs text-text-muted font-bold uppercase tracking-wider mb-1">Email</p>
-              <a href="mailto:codeflowvisualizer@gmail.com" className="text-white font-bold hover:text-primary transition-colors">
-                codeflowvisualizer@gmail.com
-              </a>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Email Card */}
+            <a 
+              href="mailto:codeflowvisualizer@gmail.com"
+              className="liquid-glass-card p-6 flex flex-col items-center justify-center text-center gap-3 group border border-primary/10 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+                <Mail size={22} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-text-muted font-black uppercase tracking-wider mb-1">Email</p>
+                <p className="text-sm text-white font-bold group-hover:text-primary transition-colors">
+                  codeflowvisualizer@gmail.com
+                </p>
+              </div>
+            </a>
+
+            {/* LinkedIn Card */}
+            <a 
+              href="https://linkedin.com/in/anshika-asati-8ba882245"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="liquid-glass-card p-6 flex flex-col items-center justify-center text-center gap-3 group border border-[#0a66c2]/10 hover:border-[#0a66c2]/40 hover:shadow-[0_0_20px_rgba(10,102,194,0.15)] transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <div className="p-3 bg-[#0a66c2]/10 border border-[#0a66c2]/20 rounded-xl group-hover:bg-[#0a66c2]/20 group-hover:scale-110 transition-all duration-300">
+                <Linkedin size={22} className="text-[#0a66c2]" />
+              </div>
+              <div>
+                <p className="text-xs text-text-muted font-black uppercase tracking-wider mb-1">LinkedIn</p>
+                <p className="text-sm text-white font-bold group-hover:text-[#0a66c2] transition-colors">
+                  Anshika Asati
+                </p>
+              </div>
+            </a>
+
+            {/* GitHub Card */}
+            <a 
+              href="https://github.com/anshikaasati/codeflow"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="liquid-glass-card p-6 flex flex-col items-center justify-center text-center gap-3 group border border-white/5 hover:border-white/20 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all duration-300 transform hover:-translate-y-1"
+            >
+              <div className="p-3 bg-white/5 border border-white/10 rounded-xl group-hover:bg-white/10 group-hover:scale-110 transition-all duration-300">
+                <Github size={22} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs text-text-muted font-black uppercase tracking-wider mb-1">GitHub</p>
+                <p className="text-sm text-white font-bold group-hover:text-primary transition-colors">
+                  anshikaasati/codeflow
+                </p>
+              </div>
+            </a>
           </div>
         </motion.div>
       </div>

@@ -10,7 +10,6 @@ import Testimonials from '../features/home/components/Testimonials';
 import SupportedTopics from '../features/home/components/SupportedTopics';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Mail } from 'lucide-react';
-import Footer from '../components/Footer';
 
 export default function Home() {
   return (
@@ -99,8 +98,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 11. Redesigned Premium Footer */}
-      <Footer />
     </div>
   );
 }

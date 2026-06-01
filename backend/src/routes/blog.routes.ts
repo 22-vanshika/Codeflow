@@ -152,4 +152,65 @@ router.post('/:id/bookmark', requireAuth, async (req: AuthRequest, res: Response
     }
 });
 
+// 5. Create new blog or interview experience
+router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { title, excerpt, content, category, company, sourceUrl } = req.body;
+
+        if (!title || !excerpt || !content) {
+            res.status(400).json({ message: 'Title, excerpt, and content are required' });
+            return;
+        }
+
+        const user = req.user;
+        const authorName = user?.displayName || user?.email?.split('@')[0] || 'Member';
+        const initials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'M';
+
+        // Helper to generate slug
+        let baseSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        if (!baseSlug) baseSlug = 'post';
+        const slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+
+        // Calculate read time
+        const wordCount = content.split(/\s+/).length;
+        const readTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
+
+        // Pick random gradient
+        const gradients = [
+            'from-primary/20 via-accent-cyan/10 to-transparent',
+            'from-secondary/20 via-accent-purple/10 to-transparent',
+            'from-accent-orange/20 via-accent-red/10 to-transparent',
+            'from-accent-green/20 via-accent-cyan/10 to-transparent'
+        ];
+        const gradient = gradients[Math.floor(Math.random() * gradients.length)];
+
+        const date = new Date().toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        const newBlog = new Blog({
+            slug,
+            title,
+            excerpt,
+            content,
+            date,
+            readTime,
+            author: authorName,
+            authorInitials: initials,
+            gradient,
+            category: category || 'Tutorial',
+            company,
+            sourceUrl
+        });
+
+        await newBlog.save();
+        res.status(201).json({ message: 'Blog post created successfully', blog: newBlog });
+    } catch (error) {
+        console.error('Error creating blog post:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 export default router;

@@ -83,6 +83,18 @@ export default function Navbar() {
         };
     }, []);
 
+    // Auto-popup auth modal on first website entry if logged out
+    useEffect(() => {
+        const hasPrompted = sessionStorage.getItem('cf_initial_auth_prompt');
+        if (!user && !hasPrompted) {
+            const timer = setTimeout(() => {
+                setIsAuthOpen(true);
+                sessionStorage.setItem('cf_initial_auth_prompt', 'true');
+            }, 1500); // Premium delay of 1.5s
+            return () => clearTimeout(timer);
+        }
+    }, [user]);
+
     const closeDropdown = () => setIsProfileOpen(false);
 
     return (

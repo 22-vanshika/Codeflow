@@ -135,30 +135,7 @@ export default function HeroSection() {
             </button>
           </motion.div>
 
-          {/* Metrics / Social Proof */}
-          <motion.div 
-            variants={itemVariants} 
-            className="mt-12 flex items-center gap-6 text-text-secondary border-t border-border-subtle pt-8 max-w-md"
-          >
-            <div className="flex -space-x-2.5">
-              {[1, 2, 3, 4].map(i => (
-                <div 
-                  key={i} 
-                  className="w-9 h-9 rounded-full border-2 border-bg-main bg-surface flex items-center justify-center overflow-hidden shadow-md"
-                >
-                  <div className={`w-full h-full bg-gradient-to-br ${
-                    i === 1 ? 'from-primary/50 to-accent-cyan/50' : 
-                    i === 2 ? 'from-secondary/50 to-primary/50' : 
-                    i === 3 ? 'from-accent-cyan/50 to-accent-green/50' : 
-                    'from-accent-orange/50 to-secondary/50'
-                  }`} />
-                </div>
-              ))}
-            </div>
-            <p className="text-xs font-semibold">
-              Trusted by <span className="text-text-primary font-bold">1,200+ developers</span> learning data structures.
-            </p>
-          </motion.div>
+
         </div>
 
         {/* Right Side: Interactive Algorithmic Simulator */}

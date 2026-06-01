@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Cpu, Users, Target, Zap, Github, Heart } from 'lucide-react';
+import { Cpu, Users, Target, Zap, Github, Heart, Linkedin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DynamicBackground from '../components/DynamicBackground';
 
@@ -10,6 +10,8 @@ const team = [
     bio: 'Passionate about making DSA accessible through visual learning.',
     avatar: 'AA',
     gradient: 'from-primary to-secondary',
+    linkedin: 'https://linkedin.com/in/anshika-asati-8ba882245',
+    github: 'https://github.com/anshikaasati/codeflow',
   },
 ];
 
@@ -127,7 +129,31 @@ export default function About() {
                 <p className="text-primary text-xs font-bold uppercase tracking-wider mb-3">
                   {member.role}
                 </p>
-                <p className="text-text-secondary text-sm leading-relaxed">{member.bio}</p>
+                <p className="text-text-secondary text-sm leading-relaxed mb-4">{member.bio}</p>
+                <div className="flex items-center justify-center gap-3">
+                  {member.linkedin && (
+                    <a
+                      href={member.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white/5 border border-white/10 hover:border-primary/45 hover:bg-primary/10 rounded-xl text-text-secondary hover:text-white transition-all active:scale-95 flex items-center justify-center"
+                      title="Connect on LinkedIn"
+                    >
+                      <Linkedin size={15} className="text-primary" />
+                    </a>
+                  )}
+                  {member.github && (
+                    <a
+                      href={member.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white/5 border border-white/10 hover:border-primary/45 hover:bg-primary/10 rounded-xl text-text-secondary hover:text-white transition-all active:scale-95 flex items-center justify-center"
+                      title="Follow on GitHub"
+                    >
+                      <Github size={15} />
+                    </a>
+                  )}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -147,7 +173,7 @@ export default function About() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/anshikaasati/codeflow"
               target="_blank"
               rel="noopener noreferrer"
               className="capsule-btn-primary flex items-center gap-2"

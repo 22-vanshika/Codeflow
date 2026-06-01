@@ -104,6 +104,62 @@ Once you recognize these patterns, DP becomes a game of template matching rather
         gradient: 'from-secondary to-accent-purple',
         category: 'Tutorial'
     },
+    {
+        slug: 'red-black-trees-demystified',
+        title: 'Red-Black Trees Demystified: The Self-Balancing Magic',
+        excerpt: 'Struggling with self-balancing trees? We break down Red-Black tree insertions, rotations, and color flips with clear, interactive step-by-step logic.',
+        content: `### Self-Balancing Trees: Red-Black Trees
+
+Balancing a Binary Search Tree (BST) is critical to maintaining its optimal **O(log N)** operation lookup time. Unbalanced trees degrade into O(N) linked lists. One of the most common ways to balance a tree is the **Red-Black Tree**.
+
+#### Rules of a Red-Black Tree
+1. Every node is either **red** or **black**.
+2. The root node is always **black**.
+3. Every leaf (NIL node) is **black**.
+4. If a node is **red**, then both its children must be **black** (no consecutive red nodes).
+5. For each node, any simple path from this node to any of its descendant leaf nodes contains the same number of **black** nodes (black-height consistency).
+
+#### Balancing Actions: Rotations and Color Flips
+When an insertion violates a rule, we perform:
+- **Color Flips**: Swap color of parent, uncle, and grandparent.
+- **Left/Right Rotations**: Pivoting parent and child nodes to balance subtree weight.
+
+Visualizing these rotations sequentially makes tree balancing feel like an intuitive structural flow rather than high-friction pointer arithmetic!`,
+        date: 'Jun 1, 2026',
+        readTime: '8 min read',
+        author: 'Anshika Asati',
+        authorInitials: 'AA',
+        gradient: 'from-secondary to-accent-cyan',
+        category: 'Tutorial'
+    },
+    {
+        slug: 'mastering-graph-cycles',
+        title: "Mastering Graph Cycles: Tarjan's vs Kosaraju's Algorithm",
+        excerpt: "Identifying cycles and strongly connected components (SCCs) is a common pattern in advanced coding interviews. We contrast Tarjan's and Kosaraju's algorithms.",
+        content: `### Cycles and Strongly Connected Components (SCCs)
+
+A **Strongly Connected Component (SCC)** of a directed graph is a maximal subgraph where every vertex is reachable from any other vertex. Finding SCCs and cycles is critical for complex system dependencies, network routing, and deadlock detection.
+
+We have two primary linear-time algorithms to find SCCs:
+
+#### 1. Kosaraju's Algorithm (Two-Pass DFS)
+- **Phase 1**: Run standard DFS on the graph and push completed vertices to a stack (ordered by completion time).
+- **Phase 2**: Transpose (reverse) all directed edges in the graph.
+- **Phase 3**: Pop elements from the stack and run DFS on the transposed graph. Each tree in this secondary DFS forest defines an SCC.
+- **Complexity**: O(V + E) — highly intuitive and easy to implement.
+
+#### 2. Tarjan's Algorithm (One-Pass DFS)
+- **Strategy**: Uses a single DFS traversal to trace "discovery time" and "low-link values" (the lowest-indexed vertex reachable from a subtree).
+- **Complexity**: O(V + E) — highly efficient, one-pass but slightly more mathematically complex.
+
+Practice visualizing search trees to build a concrete, intuitive grasp of graph frontiers.`,
+        date: 'May 30, 2026',
+        readTime: '10 min read',
+        author: 'Anshika Asati',
+        authorInitials: 'AA',
+        gradient: 'from-accent-purple to-accent-orange',
+        category: 'Tutorial'
+    },
     // Cited Interview Experiences
     {
         slug: 'google-swe-onsite',
@@ -167,6 +223,57 @@ Be prepared for standard LeetCode Mediums and know your behavioral stories insid
         category: 'Interview Experience',
         company: 'Amazon',
         sourceUrl: 'https://www.geeksforgeeks.org/amazon-interview-experience'
+    },
+    {
+        slug: 'microsoft-sde1-onsite',
+        title: 'Microsoft SDE-1: Min-Heaps & Top-K Frequent Elements',
+        excerpt: "A detailed account of Microsoft's SDE-1 interview focusing heavily on heaps, boundary maps, and custom comparator sorting logic.",
+        content: `### Microsoft SDE-1 Interview Loop
+
+* **Role**: Software Engineer I
+* **Format**: 4 technical rounds
+* **Focus**: Data structure choice rationale and O-notation proofs.
+
+### The Heap Challenge
+Asked to solve a variant of **Top K Frequent Elements**.
+- **Strategy**: Randon scan to build a frequency HashMap, then insert elements into a Min-Heap.
+- **Key Insight**: Keeping the heap size limited to K makes the operational push/pop run in **O(log K)** instead of **O(log N)**. For N = 1,000,000 and K = 10, this is a massive optimization!
+
+### Design Strategy
+Articulate boundaries and explain why custom sorting is preferred in memory-scarce environments.`,
+        date: 'June 2026',
+        readTime: '5 min read',
+        author: 'Cited from LeetCode (user: stack_pointer)',
+        authorInitials: 'SP',
+        gradient: 'from-accent-green to-primary',
+        category: 'Interview Experience',
+        company: 'Microsoft',
+        sourceUrl: 'https://leetcode.com/discuss/interview-experience'
+    },
+    {
+        slug: 'google-l5-onsite',
+        title: 'Google Senior SWE (L5): Complex Range Queries & Segment Tree Focus',
+        excerpt: 'Insights into a senior onsite loop involving advanced tree structures and modular system design for low-latency metric aggregations.',
+        content: `### Google L5 Onsite Breakdown
+
+* **Role**: Senior Software Engineer (L5)
+* **Format**: 5 rounds (4 Technical, 1 Googlyness)
+* **Emphasis**: System scale combined with state-of-the-art algorithmic queries.
+
+### Segment Trees for Mutable Ranges
+Asked to solve a complex mutable range search problem.
+- **Solution Strategy**: Implement a Segment Tree storing interval nodes to allow both point updates and range queries in O(log N) runtime.
+- **Verification**: Walked through memory boundary index rewirings dynamically on a digital visualizer board.
+
+Google onsite interviewers love recursive depth. Practice modular segment trees to ensure your code is clean and understandable!`,
+        date: 'June 2026',
+        readTime: '6 min read',
+        author: 'Cited from LeetCode (user: senior_dev_99)',
+        authorInitials: 'SD',
+        gradient: 'from-accent-red to-secondary',
+        category: 'Interview Experience',
+        company: 'Google',
+        sourceUrl: 'https://leetcode.com/discuss/interview-experience'
     }
 ];
 
