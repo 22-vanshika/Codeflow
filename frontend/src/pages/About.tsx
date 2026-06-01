@@ -43,13 +43,13 @@ export default function About() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-5xl mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-5xl mx-auto px-6 py-10 sm:py-16 relative z-10">
         {/* Hero */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-20"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
             <Cpu size={12} />
@@ -72,7 +72,7 @@ export default function About() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="liquid-glass-card p-10 mb-16 text-center"
+          className="liquid-glass-card p-6 sm:p-10 mb-8 sm:mb-16 text-center"
         >
           <h2 className="text-2xl font-black mb-4 text-white">Our Mission</h2>
           <p className="text-text-secondary text-base max-w-2xl mx-auto leading-relaxed">
@@ -83,8 +83,8 @@ export default function About() {
         </motion.div>
 
         {/* Values */}
-        <div className="mb-20">
-          <h2 className="text-2xl font-black mb-10 text-center">What Drives Us</h2>
+        <div className="mb-10 sm:mb-20">
+          <h2 className="text-2xl font-black mb-6 sm:mb-10 text-center">What Drives Us</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {values.map((v, i) => (
               <motion.div
@@ -108,8 +108,8 @@ export default function About() {
         </div>
 
         {/* Team */}
-        <div className="mb-20">
-          <h2 className="text-2xl font-black mb-10 text-center">The Team</h2>
+        <div className="mb-10 sm:mb-20">
+          <h2 className="text-2xl font-black mb-6 sm:mb-10 text-center">The Team</h2>
           <div className="flex flex-wrap justify-center gap-8">
             {team.map((member, i) => (
               <motion.div
@@ -164,7 +164,7 @@ export default function About() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center liquid-glass-card p-12"
+          className="text-center liquid-glass-card p-6 sm:p-12"
         >
           <h2 className="text-2xl font-black mb-4">Want to Contribute?</h2>
           <p className="text-text-secondary mb-8 max-w-md mx-auto">

@@ -120,12 +120,12 @@ export default function Contact() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-4xl mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-4xl mx-auto px-6 py-10 sm:py-16 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
             <Mail size={12} />
@@ -165,7 +165,7 @@ export default function Contact() {
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="liquid-glass-card p-8"
+          className="liquid-glass-card p-5 sm:p-8"
         >
           <div className="mb-8 flex items-start gap-4">
             <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl">
@@ -370,7 +370,7 @@ export default function Contact() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-12 w-full"
+          className="mt-8 sm:mt-12 w-full"
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Email Card */}

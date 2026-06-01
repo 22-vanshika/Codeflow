@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, Rocket, Zap, Globe, BookOpen } from 'lucide-react';
+import { CheckCircle, Rocket, Zap, Globe, BookOpen } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
 
 type Status = 'completed' | 'in-progress' | 'planned' | 'considering';
@@ -110,12 +110,12 @@ export default function Roadmap() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-4xl mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-4xl mx-auto px-6 py-10 sm:py-16 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
             <Rocket size={12} />
@@ -190,7 +190,7 @@ export default function Roadmap() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center liquid-glass-card p-10"
+          className="text-center liquid-glass-card p-6 sm:p-10"
         >
           <h2 className="text-2xl font-black mb-4">Have a Feature Request?</h2>
           <p className="text-text-secondary mb-6 max-w-md mx-auto text-sm">

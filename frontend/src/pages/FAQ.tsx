@@ -145,12 +145,12 @@ export default function FAQ() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-3xl mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-3xl mx-auto px-6 py-10 sm:py-16 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
             <HelpCircle size={12} />
@@ -213,7 +213,7 @@ export default function FAQ() {
         )}
 
         {/* FAQ Items */}
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {filtered.map(cat => (
             <div key={cat.category}>
               <h2 className="text-xs font-black uppercase tracking-wider text-text-muted mb-4 ml-1">

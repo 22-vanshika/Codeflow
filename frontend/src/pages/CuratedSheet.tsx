@@ -87,7 +87,7 @@ export default function CuratedSheet() {
     }, [selectedCategory, searchQuery, activeFilter]);
 
     return (
-        <div className="min-h-screen pt-24 pb-20 bg-transparent relative overflow-x-hidden">
+        <div className="min-h-screen pt-20 pb-12 sm:pt-24 sm:pb-20 bg-transparent relative overflow-x-hidden">
             <DynamicBackground />
             
             <div className="max-w-6xl mx-auto px-6 relative z-10">
@@ -95,7 +95,7 @@ export default function CuratedSheet() {
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-16"
+                    className="text-center mb-10 sm:mb-16"
                 >
                     <motion.div 
                         initial={{ scale: 0.8, opacity: 0 }}
@@ -119,7 +119,7 @@ export default function CuratedSheet() {
                 <motion.div 
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="w-full mb-12 liquid-glass-card p-6 md:p-8 relative overflow-hidden group border border-border-subtle"
+                    className="w-full mb-8 sm:mb-12 liquid-glass-card p-5 sm:p-6 md:p-8 relative overflow-hidden group border border-border-subtle"
                 >
                     <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
                         <Zap size={100} className="text-primary" />

@@ -266,7 +266,7 @@ export default function Docs() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-6xl mx-auto px-6 py-16 relative z-10 flex gap-10">
+      <div className="max-w-6xl mx-auto px-6 py-10 sm:py-16 relative z-10 flex gap-6 lg:gap-10">
         {/* Sidebar TOC */}
         <aside className="hidden lg:flex flex-col gap-1.5 w-56 flex-shrink-0 sticky top-28 h-fit">
           <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-4 pl-3">
@@ -297,7 +297,7 @@ export default function Docs() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-12"
+            className="mb-8 sm:mb-12"
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
               <BookOpen size={12} />
@@ -324,7 +324,7 @@ export default function Docs() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
-                className="liquid-glass-card p-8 scroll-mt-32 border border-white/5 hover:border-white/10 hover:shadow-xl transition-all duration-300"
+                className="liquid-glass-card p-5 sm:p-8 scroll-mt-32 border border-white/5 hover:border-white/10 hover:shadow-xl transition-all duration-300"
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">

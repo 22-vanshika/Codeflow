@@ -356,12 +356,12 @@ export default function Blog() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-5xl mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-5xl mx-auto px-6 py-10 sm:py-16 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
             <BookOpen size={12} />
@@ -515,7 +515,7 @@ export default function Blog() {
                   className="liquid-glass-card overflow-hidden mb-8 group cursor-pointer hover:shadow-2xl hover:shadow-primary/10 transition-all"
                 >
                   <div className={`h-3 w-full bg-gradient-to-r ${featured.gradient}`} />
-                  <div className="p-8 md:p-10">
+                  <div className="p-5 sm:p-8 md:p-10">
                     <div className="flex items-center gap-3 mb-4">
                       <span className="text-[10px] font-black uppercase bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-full tracking-wider">
                         Featured
@@ -613,7 +613,7 @@ export default function Blog() {
                   className="liquid-glass-card overflow-hidden group shadow-xl border border-white/5"
                 >
                   <div className={`h-2 w-full bg-gradient-to-r ${exp.gradient}`} />
-                  <div className="p-6 sm:p-8">
+                  <div className="p-5 sm:p-8">
                     {/* Upper row: badging details */}
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                       <div className="flex items-center gap-2">

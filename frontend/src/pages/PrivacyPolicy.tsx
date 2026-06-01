@@ -142,12 +142,12 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
-      <div className="max-w-6xl mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-6xl mx-auto px-6 py-10 sm:py-16 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-14"
+          className="text-center mb-10 sm:mb-14"
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-6">
             <Shield size={12} />
@@ -179,7 +179,7 @@ export default function PrivacyPolicy() {
           </p>
         </motion.div>
 
-        <div className="flex gap-10">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
           {/* Sticky Sidebar TOC */}
           <aside className="hidden lg:flex flex-col gap-1 w-56 flex-shrink-0 sticky top-28 h-fit">
             <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-4">
@@ -216,7 +216,7 @@ export default function PrivacyPolicy() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.04 }}
-                  className={`liquid-glass-card p-8 border ${section.borderColor} hover:shadow-xl transition-all duration-300 scroll-mt-32`}
+                  className={`liquid-glass-card p-5 sm:p-8 border ${section.borderColor} hover:shadow-xl transition-all duration-300 scroll-mt-32`}
                 >
                   <div className="flex items-center gap-3 mb-5">
                     <div
