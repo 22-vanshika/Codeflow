@@ -1,4 +1,5 @@
 import HeroSection from '../features/home/components/HeroSection';
+import { Link } from 'react-router-dom';
 import FeaturesGrid from '../features/home/components/FeaturesGrid';
 import PopularVisualizations from '../features/home/components/PopularVisualizations';
 import DynamicBackground from '../components/DynamicBackground';
@@ -9,7 +10,7 @@ import PerformanceMetrics from '../features/home/components/PerformanceMetrics';
 import Testimonials from '../features/home/components/Testimonials';
 import SupportedTopics from '../features/home/components/SupportedTopics';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Mail, Github, Twitter, MessageSquare, ExternalLink } from 'lucide-react';
+import { ArrowRight, Sparkles, Mail, Github, ExternalLink } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -119,12 +120,6 @@ export default function Home() {
                 <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 border border-white/5 hover:border-primary/20 hover:text-white transition-all">
                   <Github size={16} />
                 </a>
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 border border-white/5 hover:border-primary/20 hover:text-white transition-all">
-                  <Twitter size={16} />
-                </a>
-                <a href="https://discord.com" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 border border-white/5 hover:border-primary/20 hover:text-white transition-all">
-                  <MessageSquare size={16} />
-                </a>
               </div>
             </div>
 
@@ -143,10 +138,11 @@ export default function Home() {
             <div className="flex flex-col text-left gap-3.5">
               <h4 className="text-xs font-black uppercase tracking-wider text-text-primary">Resources</h4>
               <ul className="space-y-2 text-sm text-text-secondary">
-                <li><a href="#" className="hover:text-primary transition-colors flex items-center gap-1.5">Documentation <ExternalLink size={11} /></a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Algorithm Guides</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Starter Templates</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">API Reference</a></li>
+                <li><Link to="/docs" className="hover:text-primary transition-colors flex items-center gap-1.5">Documentation <ExternalLink size={11} /></Link></li>
+                <li><Link to="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
+                <li><Link to="/algorithm" className="hover:text-primary transition-colors">Algorithm Guide</Link></li>
+                <li><Link to="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
+                <li><Link to="/about" className="hover:text-primary transition-colors">About Us</Link></li>
               </ul>
             </div>
 
@@ -154,10 +150,10 @@ export default function Home() {
             <div className="flex flex-col text-left gap-3.5">
               <h4 className="text-xs font-black uppercase tracking-wider text-text-primary">Company</h4>
               <ul className="space-y-2 text-sm text-text-secondary">
-                <li><a href="#" className="hover:text-primary transition-colors">Roadmap</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Contact Support</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Terms of Service</a></li>
+                <li><Link to="/roadmap" className="hover:text-primary transition-colors">Roadmap</Link></li>
+                <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Support</Link></li>
+                <li><Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
 

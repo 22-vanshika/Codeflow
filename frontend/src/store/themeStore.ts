@@ -6,45 +6,20 @@ interface ThemeState {
   setTheme: (theme: 'dark' | 'light') => void;
 }
 
-export const useThemeStore = create<ThemeState>((set) => {
-  // Check initial theme from localStorage or system preference
-  const getInitialTheme = (): 'dark' | 'light' => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark' || saved === 'light') return saved;
-    return 'dark'; // Default to dark theme as requested
-  };
-
-  const initialTheme = getInitialTheme();
-  
-  // Apply initial theme class to HTML element
+export const useThemeStore = create<ThemeState>(() => {
+  // Enforce dark class on HTML element and remove light class
   if (typeof window !== 'undefined') {
-    if (initialTheme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
+    document.documentElement.classList.remove('light');
+    document.documentElement.classList.add('dark');
   }
 
   return {
-    theme: initialTheme,
-    toggleTheme: () => set((state) => {
-      const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', nextTheme);
-      if (nextTheme === 'light') {
-        document.documentElement.classList.add('light');
-      } else {
-        document.documentElement.classList.remove('light');
-      }
-      return { theme: nextTheme };
-    }),
-    setTheme: (theme) => {
-      localStorage.setItem('theme', theme);
-      if (theme === 'light') {
-        document.documentElement.classList.add('light');
-      } else {
-        document.documentElement.classList.remove('light');
-      }
-      set({ theme });
+    theme: 'dark',
+    toggleTheme: () => {
+      // Day mode removed: do nothing
+    },
+    setTheme: () => {
+      // Day mode removed: do nothing
     }
   };
 });

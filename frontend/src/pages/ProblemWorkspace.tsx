@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useExecutionStore } from '../store/executionStore';
 import { useVisualizationStore } from '../store/visualizationStore';
 import type { SavedVisualization } from '../store/visualizationStore';
@@ -12,6 +12,7 @@ import GitHubImportDialog from '../features/workspace/components/GitHubImportDia
 import ComplexityInfo from '../features/workspace/components/ComplexityInfo';
 import ProblemDescription from '../features/workspace/components/ProblemDescription';
 import SlidingConsole from '../features/workspace/components/SlidingConsole';
+import FeedbackModal from '../components/FeedbackModal';
 import { problemsList } from '../data/problems/index';
 import { useProgressStore } from '../store/progressStore';
 import { useAuthStore } from '../store/authStore';
@@ -20,7 +21,9 @@ import {
     ChevronLeft, ChevronRight, Sparkles, ChevronDown, 
     ChevronUp, Code2, Save, Github, BookOpen, 
     Zap, Terminal, Layers, MousePointer2,
-    Maximize2, Minimize2, Menu, Search, CheckCircle, Trophy
+    Maximize2, Minimize2, Menu, Search, CheckCircle, Trophy,
+    Cpu, LogOut, User, LayoutDashboard, Settings, Newspaper, Brain,
+    Star, FileText, Bookmark
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -42,7 +45,38 @@ interface ProblemData {
     url?: string;
 }
 
+interface DropdownItemProps {
+    to?: string;
+    onClick?: () => void;
+    icon: React.ElementType;
+    label: string;
+    description?: string;
+    danger?: boolean;
+    accent?: boolean;
+}
 
+function DropdownItem({ to, onClick, icon: Icon, label, description, danger, accent }: DropdownItemProps) {
+    const colorClass = danger
+        ? 'text-accent-red hover:bg-accent-red/10 hover:text-accent-red'
+        : accent
+        ? 'text-primary hover:bg-primary/10 hover:text-primary'
+        : 'text-text-secondary hover:text-white hover:bg-white/5';
+
+    const content = (
+        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all cursor-pointer ${colorClass}`}>
+            <Icon size={17} className="flex-shrink-0" />
+            <div>
+                <p className="text-sm font-bold leading-none">{label}</p>
+                {description && <p className="text-[11px] text-text-muted mt-0.5">{description}</p>}
+            </div>
+        </div>
+    );
+
+    if (to) {
+        return <Link to={to} onClick={onClick}>{content}</Link>;
+    }
+    return <button className="w-full text-left" onClick={onClick}>{content}</button>;
+}
 
 export default function ProblemWorkspace() {
     const {
@@ -51,6 +85,21 @@ export default function ProblemWorkspace() {
         currentStepIndex, traceSteps, traces,
         currentPattern, speed, setSpeed
     } = useExecutionStore();
+
+    const { user, logout } = useAuthStore();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Dropdown click outside listener
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsProfileOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const [activeTab, setActiveTab] = useState<'description' | 'editor'>('editor');
     const [leftPanelOpen, setLeftPanelOpen] = useState(true);
@@ -67,12 +116,33 @@ export default function ProblemWorkspace() {
     
     const location = useLocation();
     const [dsaDrawerOpen, setDsaDrawerOpen] = useState(false);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
+    useEffect(() => {
+        if (traceSteps && traceSteps.length > 0 && currentStepIndex === traceSteps.length - 1) {
+            const alreadySubmitted = sessionStorage.getItem('cf_feedback_submitted') === 'true';
+            const shownThisSession = sessionStorage.getItem('cf_feedback_shown') === 'true';
+            if (!alreadySubmitted && !shownThisSession) {
+                const timer = setTimeout(() => {
+                    setIsFeedbackOpen(true);
+                    sessionStorage.setItem('cf_feedback_shown', 'true');
+                }, 1000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [currentStepIndex, traceSteps?.length]);
     const hasAutoImported = useRef(false);
     const fetchVisualizationById = useVisualizationStore(s => s.fetchVisualizationById);
     
     const loadProblem = (problem: any) => {
         const saved = localStorage.getItem(`codeflow_saved_code_${problem.id}`);
         reset();
+        setLoadedVis(null);
+        // Clear vid from URL search params to prevent reload sync bugs
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('vid')) {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
         setCode(saved || problem.starterCode);
         setProblemDetails({
             id: problem.id,
@@ -283,28 +353,17 @@ export default function ProblemWorkspace() {
             {/* ── PREMIUM HEADER ─────────────────────────────────────────── */}
             <header className="flex-none h-14 bg-bg-header backdrop-blur-md border-b border-border-subtle flex items-center justify-between px-6 z-40 shrink-0">
                 <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/20">
-                            <Code2 size={20} className="text-primary" />
+                    <Link to="/" className="flex items-center gap-3 group shrink-0">
+                        <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-all duration-300">
+                            <Cpu size={20} className="text-white" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Workspace</span>
-                                {problemDetails && (
-                                    <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter ${
-                                        problemDetails.difficulty === 'Easy' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                                        problemDetails.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                        'bg-red-500/10 text-red-400 border border-red-500/20'
-                                    }`}>
-                                        {problemDetails.difficulty}
-                                    </span>
-                                )}
-                            </div>
-                            <h2 className="text-sm font-bold text-text-primary truncate max-w-[200px]">
-                                {problemDetails ? problemDetails.title : 'Playground (Untitled)'}
-                            </h2>
+                        <div className="flex flex-col">
+                            <span className="font-bold text-base leading-none tracking-tighter text-white">
+                                Code<span className="text-primary">Flow</span>
+                            </span>
+                            <span className="text-[9px] uppercase tracking-[0.2em] text-text-muted font-bold leading-none mt-0.5">Visualizer</span>
                         </div>
-                    </div>
+                    </Link>
 
                     <div className="h-6 w-px bg-border-subtle" />
 
@@ -345,6 +404,83 @@ export default function ProblemWorkspace() {
                             <Save size={20} />
                         </button>
                     </div>
+
+                    {/* Profile Dropdown Section */}
+                    {user && (
+                        <div className="relative shrink-0 flex items-center" ref={dropdownRef}>
+                            <button
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                className="flex items-center gap-2 p-1 pr-1 sm:pr-2 bg-white/5 hover:bg-white/10 rounded-full transition-all border border-white/10 group cursor-pointer"
+                            >
+                                <div className="relative">
+                                    {user.photoURL ? (
+                                        <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-white/10 object-cover" />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-black text-white">
+                                            {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-bg-main rounded-full" />
+                                </div>
+                                <ChevronDown size={12} className={`text-text-muted group-hover:text-white transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            <AnimatePresence>
+                                {isProfileOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute right-0 mt-14 w-64 bg-surface/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 shadow-2xl z-[60] top-0"
+                                    >
+                                        {/* User Info */}
+                                        <div className="px-4 py-3 mb-1 text-left">
+                                            <div className="flex items-center gap-3">
+                                                {user.photoURL ? (
+                                                    <img src={user.photoURL} alt="Avatar" className="w-9 h-9 rounded-xl object-cover border border-white/10" />
+                                                ) : (
+                                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-xs">
+                                                        {(user.displayName || user.email || 'U')[0].toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <p className="text-white font-bold text-sm truncate">{user.displayName || 'User'}</p>
+                                                    <p className="text-text-muted text-xs truncate">{user.email}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-white/5 pt-1 space-y-0.5 text-left">
+                                            <DropdownItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" description="Your visualizations & stats" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/profile-settings" icon={User} label="Edit Profile" description="Name, avatar, social links" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/dashboard" icon={BookOpen} label="Saved Visualizations" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/sheet" icon={Star} label="Learning Progress" description="Track DSA topics" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/blog" icon={Newspaper} label="Blog" description="Insights & interview experiences" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/algorithm" icon={Brain} label="Algorithm Guide" description="Master core patterns" onClick={() => setIsProfileOpen(false)} />
+                                        </div>
+
+                                        <div className="border-t border-white/5 mt-1 pt-1 space-y-0.5 text-left">
+                                            <DropdownItem to="/docs" icon={FileText} label="Documentation" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/contact" icon={Bookmark} label="Feedback & Suggestions" onClick={() => setIsProfileOpen(false)} />
+                                            <DropdownItem to="/profile-settings" icon={Settings} label="Settings" description="Theme & preferences" onClick={() => setIsProfileOpen(false)} />
+                                        </div>
+
+                                        <div className="border-t border-white/5 mt-1 pt-1 text-left">
+                                            <DropdownItem
+                                                icon={LogOut}
+                                                label="Sign Out"
+                                                danger
+                                                onClick={async () => {
+                                                    setIsProfileOpen(false);
+                                                    await logout();
+                                                }}
+                                            />
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -412,9 +548,18 @@ export default function ProblemWorkspace() {
                                     className="h-full flex flex-col relative"
                                 >
                                     <div className="flex items-center justify-between px-6 py-3 border-b border-border-subtle shrink-0 bg-surface/10">
-                                        <div className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-[0.2em]">
+                                        <div className="flex items-center gap-2.5 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] flex-wrap">
                                             <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                            Active Editor
+                                            <span> {problemDetails ? problemDetails.title : 'Playground (Untitled)'}</span>
+                                            {problemDetails && (
+                                                <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-tighter normal-case shrink-0 ${
+                                                    problemDetails.difficulty === 'Easy' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                                                    problemDetails.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                                    'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                }`}>
+                                                    {problemDetails.difficulty}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
@@ -626,6 +771,11 @@ export default function ProblemWorkspace() {
 
             {/* Dialogs */}
             <FixPermissionDialog />
+            <FeedbackModal
+                isOpen={isFeedbackOpen}
+                onClose={() => setIsFeedbackOpen(false)}
+                topicViewed={problemDetails?.title || 'Algorithm Workspace'}
+            />
             <ComplexityInfo 
                 isOpen={complexityOpen} 
                 onClose={() => setComplexityOpen(false)} 

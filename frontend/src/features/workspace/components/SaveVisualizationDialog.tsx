@@ -57,10 +57,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
         }
 
         const steps = traceSteps.length > 0 ? traceSteps : traces;
-        if (!steps || steps.length === 0) {
-            setError("Please generate a trace before saving.");
-            return;
-        }
+        const saveSteps = steps || [];
 
         setIsSaving(true);
         setError('');
@@ -78,7 +75,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                     title,
                     description,
                     code,
-                    traceSteps: steps,
+                    traceSteps: saveSteps,
                     settings,
                     metadata
                 }, token);
@@ -96,7 +93,7 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                         description,
                         code,
                         language: 'cpp',
-                        traceSteps: steps,
+                        traceSteps: saveSteps,
                         isPublic: true,
                         settings,
                         metadata

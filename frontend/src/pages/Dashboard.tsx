@@ -5,9 +5,28 @@ import type { SavedVisualization } from '../store/visualizationStore';
 import { useNavigate } from 'react-router-dom';
 import { 
     LogOut, Code2, Play, Calendar, Search, ArrowUpDown, 
-    Trash2, Edit3, Copy, AlertCircle, RefreshCw, Clock, X
+    Trash2, Edit3, Copy, AlertCircle, RefreshCw, Clock, X,
+    BookOpen, Brain, Settings, Trophy, Zap, Star, LayoutGrid, CheckCircle2,
+    Github
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useProgressStore } from '../store/progressStore';
+import { problemsList } from '../data/problems/index';
+
+const TOPIC_MAPPING: Record<string, string[]> = {
+  'Arrays & Hashing': ['Arrays & Hashing', 'Sorting'],
+  'Two Pointers': ['Two Pointers'],
+  'Sliding Window': ['Sliding Window'],
+  'Binary Search': ['Binary Search'],
+  'Stack': ['Stack'],
+  'Linked List': ['Linked List'],
+  'Trees': ['Trees', 'Trie'],
+  'Heaps & Queues': ['Heap', 'Heap / Priority Queue'],
+  'Backtracking': ['Backtracking'],
+  'Graphs': ['Graphs'],
+  'Dynamic Programming': ['Dynamic Programming'],
+  'Bit Manipulation': ['Bit Manipulation', 'Intervals']
+};
 
 export default function Dashboard() {
     const { user, logout } = useAuthStore();
@@ -16,10 +35,41 @@ export default function Dashboard() {
         updateVisualization, deleteVisualization, duplicateVisualization 
     } = useVisualizationStore();
     const navigate = useNavigate();
+    const { completed } = useProgressStore();
 
     // State for search and sort
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'updatedAt' | 'createdAtNewest' | 'createdAtOldest' | 'nameAZ' | 'nameZA'>('updatedAt');
+
+    // Dynamic stats and logs
+    const [dashboardData, setDashboardData] = useState<{
+        stats: { solvedCount: number; savedTracesCount: number; streak: number };
+        activityLogs: { title: string; type: string; createdAt: string }[];
+        learningStats: { id: string; completed: number }[];
+    } | null>(null);
+
+    useEffect(() => {
+        const loadDashboardStats = async () => {
+            if (!user) return;
+            try {
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                const token = await user.getIdToken();
+                const res = await fetch(`${API_URL}/api/dashboard`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                const data = await res.json();
+                if (data.stats) {
+                    setDashboardData(data);
+                }
+            } catch (err) {
+                console.error("Failed to load dashboard stats:", err);
+            }
+        };
+
+        loadDashboardStats();
+    }, [user]);
 
     // Dialog state for Rename/Edit Details
     const [editingVis, setEditingVis] = useState<SavedVisualization | null>(null);
@@ -142,6 +192,12 @@ export default function Dashboard() {
         return 0;
     });
 
+    const totalProblems = problemsList?.length ?? 0;
+    const solvedProblems = problemsList.filter(p => completed[p.id]);
+    const solvedCount = dashboardData?.stats?.solvedCount ?? solvedProblems.length;
+    const savedCount = dashboardData?.stats?.savedTracesCount ?? visualizations.length;
+    const streakCount = dashboardData?.stats?.streak ?? Number(localStorage.getItem('cf_streak') || '3');
+
     return (
         <div className="min-h-screen pt-[80px] px-6 pb-12 bg-bg-main text-text-primary relative overflow-x-hidden">
             {/* Ambient Background Glows */}
@@ -154,7 +210,7 @@ export default function Dashboard() {
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="glass-morphism border border-white/5 rounded-2xl p-8 mb-12 flex items-center justify-between shadow-2xl"
+                    className="glass-morphism border border-white/5 rounded-2xl p-8 mb-10 flex items-center justify-between shadow-2xl"
                 >
                     <div className="flex items-center gap-6">
                         <div className="relative group">
@@ -185,6 +241,175 @@ export default function Dashboard() {
                         Logout
                     </button>
                 </motion.div>
+
+                {/* ── STATS ROW ──────────────────────────────────────────────── */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
+                >
+                    <div className="glass-morphism border border-white/5 rounded-2xl p-6 flex items-center justify-between shadow-lg relative overflow-hidden group">
+                        <div className="absolute -right-6 -bottom-6 text-primary/5 group-hover:text-primary/10 transition-colors transform scale-150 pointer-events-none">
+                            <Trophy size={96} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-black uppercase text-text-muted tracking-wider mb-1 font-mono">Problems Solved</p>
+                            <h3 className="text-3xl font-black text-white font-mono">{solvedCount} <span className="text-sm font-normal text-text-secondary">/ {totalProblems}</span></h3>
+                            <p className="text-[10px] font-bold text-primary mt-1.5 flex items-center gap-1">
+                                <Star size={10} fill="currentColor" /> {totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0}% of sheet completed
+                            </p>
+                        </div>
+                        <div className="p-3 bg-primary/10 rounded-2xl text-primary shrink-0 border border-primary/20 shadow-inner">
+                            <Trophy size={24} />
+                        </div>
+                    </div>
+
+                    <div className="glass-morphism border border-white/5 rounded-2xl p-6 flex items-center justify-between shadow-lg relative overflow-hidden group">
+                        <div className="absolute -right-6 -bottom-6 text-secondary/5 group-hover:text-secondary/10 transition-colors transform scale-150 pointer-events-none">
+                            <Code2 size={96} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-black uppercase text-text-muted tracking-wider mb-1 font-mono">Saved Workspaces</p>
+                            <h3 className="text-3xl font-black text-white font-mono">{savedCount}</h3>
+                            <p className="text-[10px] font-bold text-secondary mt-1.5 flex items-center gap-1">
+                                <Clock size={10} /> Persistent algorithm visualizers
+                            </p>
+                        </div>
+                        <div className="p-3 bg-secondary/10 rounded-2xl text-secondary shrink-0 border border-secondary/20 shadow-inner">
+                            <Code2 size={24} />
+                        </div>
+                    </div>
+
+                    <div className="glass-morphism border border-white/5 rounded-2xl p-6 flex items-center justify-between shadow-lg relative overflow-hidden group">
+                        <div className="absolute -right-6 -bottom-6 text-accent-yellow/5 group-hover:text-accent-yellow/10 transition-colors transform scale-150 pointer-events-none">
+                            <Zap size={96} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-black uppercase text-text-muted tracking-wider mb-1 font-mono">Daily Streak</p>
+                            <h3 className="text-3xl font-black text-white font-mono">{streakCount} <span className="text-sm font-normal text-text-secondary">Days</span></h3>
+                            <p className="text-[10px] font-bold text-accent-yellow mt-1.5 flex items-center gap-1">
+                                <Zap size={10} fill="currentColor" className="animate-pulse" /> Active coding momentum
+                            </p>
+                        </div>
+                        <div className="p-3 bg-accent-yellow/10 rounded-2xl text-accent-yellow shrink-0 border border-accent-yellow/20 shadow-inner">
+                            <Zap size={24} fill="currentColor" />
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* ── QUICK ACTIONS ─────────────────────────────────────────── */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
+                >
+                    {[
+                        { label: 'Sandbox Visualizer', to: '/workspace', desc: 'Create code trace', icon: Play, color: 'bg-primary/10 border-primary/20 hover:border-primary/50 text-primary' },
+                        { label: 'DSA Sheet', to: '/sheet', desc: 'Practice problems', icon: BookOpen, color: 'bg-accent-green/10 border-accent-green/20 hover:border-accent-green/50 text-accent-green' },
+                        { label: 'Algorithms Hub', to: '/algorithms', desc: 'Learn core concepts', icon: Brain, color: 'bg-accent-yellow/10 border-accent-yellow/20 hover:border-accent-yellow/50 text-accent-yellow' },
+                        { label: 'Edit Profile', to: '/profile-settings', desc: 'Theme & details', icon: Settings, color: 'bg-secondary/10 border-secondary/20 hover:border-secondary/50 text-secondary' }
+                    ].map((act, i) => (
+                        <button
+                            key={i}
+                            onClick={() => navigate(act.to)}
+                            className={`flex flex-col items-start p-5 rounded-2xl border transition-all text-left group shadow-sm active:scale-95 ${act.color}`}
+                        >
+                            <div className="p-2 rounded-xl bg-white/5 mb-3 group-hover:scale-110 transition-transform">
+                                <act.icon size={18} />
+                            </div>
+                            <span className="text-sm font-extrabold text-white block leading-tight">{act.label}</span>
+                            <span className="text-[10px] text-text-muted mt-1 leading-tight font-mono">{act.desc}</span>
+                        </button>
+                    ))}
+                </motion.div>
+
+                {/* ── TOPIC PROGRESS GRID ─────────────────────────────────────── */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="glass-morphism border border-white/5 rounded-2xl p-6 mb-12 shadow-xl"
+                >
+                    <h3 className="text-lg font-black flex items-center gap-2 mb-6 text-white tracking-tight">
+                        <LayoutGrid size={18} className="text-primary" />
+                        Topic Progress Grid
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {Object.entries(TOPIC_MAPPING).map(([topic, cats]) => {
+                            const topicProblems = problemsList.filter(p => cats.includes(p.category));
+                            const total = topicProblems.length;
+                            const solved = topicProblems.filter(p => completed[p.id]).length;
+                            const percent = total > 0 ? Math.round((solved / total) * 100) : 0;
+
+                            return (
+                                <div key={topic} className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all flex flex-col justify-between group">
+                                    <div>
+                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                            <span className="text-xs font-black text-white leading-tight group-hover:text-primary transition-colors">{topic}</span>
+                                            <span className="text-[10px] font-bold text-text-muted font-mono shrink-0">{solved}/{total}</span>
+                                        </div>
+                                        {/* Progress bar */}
+                                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
+                                            <div 
+                                                className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500" 
+                                                style={{ width: `${percent}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1">
+                                        <span className="text-[10px] font-bold text-text-muted font-mono">{percent}% done</span>
+                                        {percent === 100 && (
+                                            <CheckCircle2 size={12} className="text-accent-green" />
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+
+                {/* ── RECENT ACTIVITY FEED ────────────────────────────────────── */}
+                {dashboardData && dashboardData.activityLogs && dashboardData.activityLogs.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.22 }}
+                        className="glass-morphism border border-white/5 rounded-2xl p-6 mb-12 shadow-xl"
+                    >
+                        <h3 className="text-lg font-black flex items-center gap-2 mb-6 text-white tracking-tight">
+                            <Clock size={18} className="text-secondary" />
+                            Recent Activity Feed
+                        </h3>
+
+                        <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                            {dashboardData.activityLogs.map((log, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2.5 rounded-xl ${
+                                            log.type === 'streak_keep' || log.type === 'streak_start' ? 'bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/20' :
+                                            log.type === 'github_connect' ? 'bg-primary/15 text-primary border border-primary/20' :
+                                            log.type === 'profile_update' || log.type === 'avatar_update' ? 'bg-secondary/15 text-secondary border border-secondary/20' :
+                                            'bg-accent-green/15 text-accent-green border border-accent-green/20'
+                                        }`}>
+                                            {log.type === 'streak_keep' || log.type === 'streak_start' ? <Zap size={15} fill="currentColor" /> :
+                                             log.type === 'github_connect' ? <Github size={15} /> :
+                                             log.type === 'profile_update' || log.type === 'avatar_update' ? <Settings size={15} /> :
+                                             <CheckCircle2 size={15} />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-white leading-tight">{log.title}</p>
+                                            <p className="text-[10px] text-text-muted mt-0.5 font-mono">{log.type.replace('_', ' ').toUpperCase()}</p>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-text-muted font-mono">{new Date(log.createdAt).toLocaleDateString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* ── FILTER & CONTROL BAR ──────────────────────────────────── */}
                 <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
