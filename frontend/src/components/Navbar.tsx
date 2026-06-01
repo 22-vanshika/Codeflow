@@ -6,6 +6,7 @@ import { problemsList } from '../data/problems/index';
 import { useState, useEffect, useRef } from 'react';
 import AuthModal from '../features/auth/components/AuthModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
     const location = useLocation();
@@ -58,8 +59,8 @@ export default function Navbar() {
         <nav 
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className={`fixed top-0 left-0 right-0 h-[60px] z-50 bg-bg-main/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 shadow-2xl transition-transform duration-500 ease-in-out ${
-                isWorkspace && !isHovered ? '-translate-y-full' : 'translate-y-0'
+            className={`fixed top-3 left-1/2 -translate-x-1/2 max-w-7xl w-[calc(100%-2rem)] h-[64px] z-50 bg-bg-header/80 backdrop-blur-2xl border border-card-border rounded-full flex items-center justify-between px-6 sm:px-8 shadow-xl transition-all duration-500 ease-in-out ${
+                isWorkspace && !isHovered ? '-translate-y-[calc(100%+24px)]' : 'translate-y-0'
             }`}
         >
             {/* Left: Logo */}
@@ -86,6 +87,8 @@ export default function Navbar() {
                 </Link>
                 
                 <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
+
+                <ThemeToggle />
 
                 {/* Progress Mini Widget */}
                 <div className="hidden lg:flex items-center gap-3 bg-white/5 border border-white/5 px-4 py-1.5 rounded-full">
@@ -160,13 +163,10 @@ export default function Navbar() {
                 ) : (
                     <button 
                         onClick={() => setIsAuthOpen(true)}
-                        className="group relative px-6 py-2 bg-primary text-white font-bold rounded-full transition-all overflow-hidden"
+                        className="capsule-btn-primary py-2 px-5 text-xs flex items-center gap-2"
                     >
-                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                        <span className="relative flex items-center gap-2">
-                            <User size={16} />
-                            Sign In
-                        </span>
+                        <User size={15} />
+                        Sign In
                     </button>
                 )}
             </div>
