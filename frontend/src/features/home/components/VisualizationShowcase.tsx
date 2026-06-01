@@ -122,16 +122,16 @@ export default function VisualizationShowcase() {
                 {/* Tree Animation preview */}
                 {card.id === 'tree' && (
                   <svg className="w-full h-full p-4" viewBox="0 0 200 100">
-                    <line x1="100" y1="20" x2="60" y2="50" stroke="var(--border-subtle)" strokeWidth="2" />
-                    <line x1="100" y1="20" x2="140" y2="50" stroke="var(--border-subtle)" strokeWidth="2" />
-                    <line x1="60" y1="50" x2="35" y2="80" stroke="var(--border-subtle)" strokeWidth="1.5" />
-                    <line x1="60" y1="50" x2="85" y2="80" stroke="var(--border-subtle)" strokeWidth="1.5" />
+                    <line x1="100" y1="20" x2="60" y2="50" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="2" />
+                    <line x1="100" y1="20" x2="140" y2="50" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="2" />
+                    <line x1="60" y1="50" x2="35" y2="80" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1.5" />
+                    <line x1="60" y1="50" x2="85" y2="80" stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1.5" />
                     
                     {/* Root */}
                     <circle 
                       cx="100" cy="20" r="10" 
                       className={`transition-all duration-300 ${
-                        hoveredCard === 'tree' ? 'fill-primary stroke-white stroke-2 shadow-lg animate-pulse' : 'fill-surface stroke-border-subtle'
+                        hoveredCard === 'tree' ? 'fill-primary stroke-white stroke-2 shadow-lg animate-pulse' : 'fill-surface stroke-white/40 stroke-[1.5]'
                       }`}
                     />
                     
@@ -139,14 +139,14 @@ export default function VisualizationShowcase() {
                     <circle 
                       cx="60" cy="50" r="8" 
                       className={`transition-all duration-300 delay-100 ${
-                        hoveredCard === 'tree' ? 'fill-accent-cyan stroke-white stroke-2 shadow-lg' : 'fill-surface stroke-border-subtle'
+                        hoveredCard === 'tree' ? 'fill-accent-cyan stroke-white stroke-2 shadow-lg' : 'fill-surface stroke-white/40 stroke-[1.5]'
                       }`}
                     />
                     {/* Right node */}
                     <circle 
                       cx="140" cy="50" r="8" 
                       className={`transition-all duration-300 delay-200 ${
-                        hoveredCard === 'tree' ? 'fill-secondary stroke-white stroke-2 shadow-lg' : 'fill-surface stroke-border-subtle'
+                        hoveredCard === 'tree' ? 'fill-secondary stroke-white stroke-2 shadow-lg' : 'fill-surface stroke-white/40 stroke-[1.5]'
                       }`}
                     />
                     
@@ -154,14 +154,14 @@ export default function VisualizationShowcase() {
                     <circle 
                       cx="35" cy="80" r="7" 
                       className={`transition-all duration-300 delay-300 ${
-                        hoveredCard === 'tree' ? 'fill-accent-green stroke-white stroke-2 shadow-lg' : 'fill-surface stroke-border-subtle'
+                        hoveredCard === 'tree' ? 'fill-accent-green stroke-white stroke-2 shadow-lg' : 'fill-surface stroke-white/40 stroke-[1.5]'
                       }`}
                     />
                     {/* Leaf 2 */}
                     <circle 
                       cx="85" cy="80" r="7" 
                       className={`transition-all duration-300 delay-400 ${
-                        hoveredCard === 'tree' ? 'fill-accent-green stroke-white stroke-2' : 'fill-surface stroke-border-subtle'
+                        hoveredCard === 'tree' ? 'fill-accent-green stroke-white stroke-2' : 'fill-surface stroke-white/40 stroke-[1.5]'
                       }`}
                     />
                   </svg>
@@ -173,20 +173,20 @@ export default function VisualizationShowcase() {
                     <path 
                       d="M 30 50 Q 80 15 100 50 T 170 50" 
                       fill="none" 
-                      stroke="var(--border-subtle)" 
+                      stroke="rgba(255, 255, 255, 0.4)" 
                       strokeWidth="2" 
                     />
                     <path 
                       d="M 30 50 Q 100 85 170 50" 
                       fill="none" 
-                      stroke="var(--border-subtle)" 
+                      stroke="rgba(255, 255, 255, 0.4)" 
                       strokeWidth="2" 
                     />
                     
                     {/* Node points */}
-                    <circle cx="30" cy="50" r="8" className="fill-surface stroke-border-subtle" />
-                    <circle cx="100" cy="50" r="8" className="fill-surface stroke-border-subtle" />
-                    <circle cx="170" cy="50" r="8" className="fill-surface stroke-border-subtle" />
+                    <circle cx="30" cy="50" r="8" className="fill-surface stroke-white/40 stroke-[1.5]" />
+                    <circle cx="100" cy="50" r="8" className="fill-surface stroke-white/40 stroke-[1.5]" />
+                    <circle cx="170" cy="50" r="8" className="fill-surface stroke-white/40 stroke-[1.5]" />
                     
                     {/* Path pulse animation */}
                     {hoveredCard === 'graph' && (
@@ -216,7 +216,7 @@ export default function VisualizationShowcase() {
                 {card.id === 'stack' && (
                   <svg className="w-full h-full p-4" viewBox="0 0 200 100">
                     {/* Container frame */}
-                    <path d="M 80 20 L 80 85 L 120 85 L 120 20" fill="none" stroke="var(--border-subtle)" strokeWidth="2.5" />
+                    <path d="M 80 20 L 80 85 L 120 85 L 120 20" fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth="2.5" />
                     
                     {/* Floating block 1 */}
                     <rect 
@@ -246,22 +246,22 @@ export default function VisualizationShowcase() {
                 {card.id === 'list' && (
                   <svg className="w-full h-full p-4" viewBox="0 0 200 100">
                     {/* Node 1 */}
-                    <rect x="25" y="35" width="30" height="25" rx="4" className="fill-surface stroke-border-subtle" />
-                    <line x1="45" y1="35" x2="45" y2="60" stroke="var(--border-subtle)" />
+                    <rect x="25" y="35" width="30" height="25" rx="4" className="fill-surface stroke-white/40 stroke-[1.5]" />
+                    <line x1="45" y1="35" x2="45" y2="60" stroke="rgba(255, 255, 255, 0.3)" />
                     <text x="35" y="51" fill="currentColor" className="text-[10px] font-bold">12</text>
                     
                     {/* Node 2 */}
-                    <rect x="85" y="35" width="30" height="25" rx="4" className="fill-surface stroke-border-subtle" />
-                    <line x1="105" y1="35" x2="105" y2="60" stroke="var(--border-subtle)" />
+                    <rect x="85" y="35" width="30" height="25" rx="4" className="fill-surface stroke-white/40 stroke-[1.5]" />
+                    <line x1="105" y1="35" x2="105" y2="60" stroke="rgba(255, 255, 255, 0.3)" />
                     <text x="95" y="51" fill="currentColor" className="text-[10px] font-bold">45</text>
 
                     {/* Node 3 */}
-                    <rect x="145" y="35" width="30" height="25" rx="4" className="fill-surface stroke-border-subtle" />
-                    <line x1="165" y1="35" x2="165" y2="60" stroke="var(--border-subtle)" />
+                    <rect x="145" y="35" width="30" height="25" rx="4" className="fill-surface stroke-white/40 stroke-[1.5]" />
+                    <line x1="165" y1="35" x2="165" y2="60" stroke="rgba(255, 255, 255, 0.3)" />
                     <text x="155" y="51" fill="currentColor" className="text-[10px] font-bold">99</text>
 
                     {/* Arrow Connections */}
-                    <g stroke="var(--border-subtle)" strokeWidth="1.5">
+                    <g stroke="rgba(255, 255, 255, 0.4)" strokeWidth="1.5">
                       <line x1="50" y1="47.5" x2="80" y2="47.5" />
                       <line x1="110" y1="47.5" x2="140" y2="47.5" />
                     </g>
@@ -277,7 +277,6 @@ export default function VisualizationShowcase() {
                     )}
                   </svg>
                 )}
-
                 {/* DP Grid calculation preview */}
                 {card.id === 'dp' && (
                   <div className="grid grid-cols-4 gap-1 p-2 w-32 h-20 items-center justify-center font-mono text-[9px] font-bold text-center">
@@ -289,7 +288,7 @@ export default function VisualizationShowcase() {
                           className={`w-7 h-7 flex items-center justify-center border rounded transition-all duration-300 ${
                             fillIndex > i 
                               ? 'bg-accent-orange/15 border-accent-orange text-accent-orange font-black scale-105 shadow-md shadow-accent-orange/5' 
-                              : 'bg-white/5 border-white/5 text-text-muted/40'
+                              : 'bg-white/5 border-white/20 text-text-muted/40'
                           }`}
                         >
                           {fillIndex > i ? (i * 2 + 1) : '0'}

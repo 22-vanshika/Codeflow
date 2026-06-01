@@ -220,7 +220,7 @@ export default function LiveDemo() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleReset}
-                  className="p-2.5 rounded-full bg-white/5 border border-border-subtle hover:border-primary/20 text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-white/5 border border-border-subtle hover:border-primary/20 text-text-secondary hover:text-text-primary transition-colors flex items-center justify-center cursor-pointer"
                   title="Reset Playback"
                 >
                   <RotateCcw size={14} />
@@ -228,14 +228,14 @@ export default function LiveDemo() {
                 <button
                   onClick={handlePrev}
                   disabled={stepIndex === 0}
-                  className="p-2.5 rounded-full bg-white/5 border border-border-subtle hover:border-primary/20 text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-white/5 border border-border-subtle hover:border-primary/20 text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
                   title="Step Backward"
                 >
                   <ChevronLeft size={14} />
                 </button>
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="capsule-btn-primary py-2 px-5 text-xs flex items-center gap-2"
+                  className="bg-text-primary text-bg-main border border-text-primary font-bold text-xs rounded-full h-9 px-5 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all cursor-pointer"
                   title={isPlaying ? "Pause" : "Play Trace"}
                 >
                   {isPlaying ? <Pause size={13} /> : <Play size={13} />}
@@ -244,7 +244,7 @@ export default function LiveDemo() {
                 <button
                   onClick={handleNext}
                   disabled={stepIndex === stepsList.length - 1}
-                  className="p-2.5 rounded-full bg-white/5 border border-border-subtle hover:border-primary/20 text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-white/5 border border-border-subtle hover:border-primary/20 text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
                   title="Step Forward"
                 >
                   <ChevronRight size={14} />
@@ -252,7 +252,7 @@ export default function LiveDemo() {
               </div>
 
               {/* Center: Slider */}
-              <div className="flex items-center gap-3 w-full sm:w-auto max-w-xs">
+              <div className="flex items-center gap-3 w-full sm:w-auto max-w-xs h-9">
                 <span className="text-[10px] uppercase font-bold text-text-muted select-none">Speed</span>
                 <input
                   type="range"
@@ -268,8 +268,8 @@ export default function LiveDemo() {
 
               {/* Right: Step indices */}
               <div className="flex items-center gap-2 font-mono text-xs">
-                <span className="text-text-muted">Step:</span>
-                <span className="font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-lg">
+                <span className="text-text-muted uppercase text-[10px] font-bold select-none">Step:</span>
+                <span className="font-bold text-primary bg-primary/10 border border-primary/20 h-9 px-3.5 rounded-xl flex items-center justify-center min-w-[70px]">
                   {stepIndex + 1} / {stepsList.length}
                 </span>
               </div>
@@ -327,10 +327,10 @@ export default function LiveDemo() {
                               className={`w-full rounded-t-lg border transition-all duration-300 ${
                                 isHighlighted
                                   ? 'bg-accent-cyan/25 border-accent-cyan shadow-[0_0_15px_rgba(6,182,212,0.3)] scale-105'
-                                  : 'bg-primary/10 border-primary/20'
+                                  : 'bg-primary/25 border-primary/45'
                               }`}
                             />
-                            <span className="text-[10px] font-bold text-text-muted mt-2">{val}</span>
+                            <span className="text-[10px] font-bold text-text-secondary mt-2">{val}</span>
                           </div>
                         );
                       })}
@@ -347,7 +347,7 @@ export default function LiveDemo() {
                         const isHighlighted = currentStep.highlightedIndices.includes(idx);
                         const isExcluded = idx < currentStep.pointers.low || idx > currentStep.pointers.high;
 
-                        let styleClass = "border-white/5 bg-white/5 text-text-secondary";
+                        let styleClass = "border-white/20 bg-white/10 text-text-secondary";
                         if (isExcluded) {
                           styleClass = "border-white/5 bg-white/5 opacity-15 text-text-muted";
                         } else if (isMid) {
@@ -395,7 +395,7 @@ export default function LiveDemo() {
                         const isVisited = (currentStep.dataState as number[]).includes(node.id);
                         const isCurrent = currentStep.pointers.root === node.id;
                         
-                        let fillClass = "fill-surface stroke-border-subtle";
+                        let fillClass = "fill-surface stroke-white/25";
                         if (isCurrent) {
                           fillClass = "fill-accent-cyan stroke-white stroke-2 shadow-lg scale-105 animate-pulse";
                         } else if (isVisited) {

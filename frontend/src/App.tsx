@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Monitor, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './config/firebase';
+import { useAuthStore } from './store/authStore';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -122,6 +125,19 @@ function AppContent() {
 }
 
 function App() {
+  const { setUser, setLoading } = useAuthStore();
+
+  // Restore Firebase auth session on every page load / refresh.
+  // Without this, the Zustand store always starts with user=null,
+  // so the app wrongly thinks the user is logged out after a refresh.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [setUser, setLoading]);
+
   return (
     <Router>
       <AppContent />

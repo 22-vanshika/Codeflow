@@ -102,10 +102,27 @@ export default function Contact() {
     e.preventDefault();
     setStatus('loading');
 
-    // Simulate submission (replace with real API call)
     try {
-      await new Promise(res => setTimeout(res, 1200));
-      // In production: POST to /api/contact with form data & optional attachedImage (Base64 or multipart)
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: form.subject,
+          message: form.message,
+          type: form.type,
+          attachedImage: imagePreview || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit contact form');
+      }
+
       setStatus('success');
       setForm({ name: '', email: '', subject: '', message: '', type: activeTab });
       removeImage();
@@ -113,6 +130,7 @@ export default function Contact() {
       setStatus('error');
     }
   };
+
 
   const activeTabData = TABS.find(t => t.id === activeTab)!;
 

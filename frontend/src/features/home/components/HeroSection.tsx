@@ -1,6 +1,8 @@
 import { ArrowRight, Sparkles, Zap, Code2, Play, Pause, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../../store/authStore';
 
 // Code lines for the live Binary Search simulator
 const codeLines = [
@@ -64,6 +66,8 @@ const itemVariants = {
 };
 
 export default function HeroSection() {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [stepIndex, setStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const playTimerRef = useRef<any>(null);
@@ -125,7 +129,13 @@ export default function HeroSection() {
             className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 w-full sm:w-auto"
           >
             <button
-              onClick={() => document.dispatchEvent(new CustomEvent('open-auth-modal'))}
+              onClick={() => {
+                if (user) {
+                  navigate('/workspace');
+                } else {
+                  document.dispatchEvent(new CustomEvent('open-auth-modal'));
+                }
+              }}
               className="capsule-btn-primary group w-full sm:w-auto flex items-center justify-center gap-2"
               style={{
                 boxShadow: '0 4px 20px var(--card-glow)'

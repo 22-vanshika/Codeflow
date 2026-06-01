@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
+    "@types/nodemailer": "^8.0.0",
     "axios": "^1.13.3",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
@@ -32,6 +33,7 @@
     "firebase-admin": "^13.8.0",
     "groq-sdk": "^0.37.0",
     "helmet": "^8.1.0",
-    "mongoose": "^9.6.1"
+    "mongoose": "^9.6.1",
+    "nodemailer": "^8.0.10"
   }
 }

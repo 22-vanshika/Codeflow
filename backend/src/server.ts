@@ -16,6 +16,7 @@ import githubRoutes from './routes/github.routes';
 import blogRoutes from './routes/blog.routes';
 import docRoutes from './routes/doc.routes';
 import notificationRoutes from './routes/notification.routes';
+import contactRoutes from './routes/contact.routes';
 import { connectDB } from './config/db';
 import { initFirebaseAdmin } from './config/firebase';
 
@@ -43,6 +44,7 @@ app.use('/api/github', githubRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/docs', docRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/contact', contactRoutes);
 
 
 const server = createServer(app);

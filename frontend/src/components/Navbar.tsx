@@ -46,7 +46,7 @@ function DropdownItem({ to, onClick, icon: Icon, label, description, danger, acc
 
 export default function Navbar() {
     const location = useLocation();
-    const { user, logout } = useAuthStore();
+    const { user, logout, isLoading: authLoading } = useAuthStore();
     const { getProgressPercent, fetchFromBackend, reset } = useProgressStore();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -83,17 +83,24 @@ export default function Navbar() {
         };
     }, []);
 
-    // Auto-popup auth modal on first website entry if logged out
+    // Auto-popup auth modal on first website entry if logged out.
+    // Key rules:
+    //  1. Wait until Firebase has finished its auth check (authLoading=false)
+    //     so we don't fire during the brief window before the session restores.
+    //  2. Use localStorage (not sessionStorage) so the flag persists across
+    //     tab closes — a previously-visited user never sees the popup again.
+    //  3. Only show if the user is genuinely NOT signed in after loading.
     useEffect(() => {
-        const hasPrompted = sessionStorage.getItem('cf_initial_auth_prompt');
+        if (authLoading) return; // Firebase still resolving — wait
+        const hasPrompted = localStorage.getItem('cf_initial_auth_prompt');
         if (!user && !hasPrompted) {
             const timer = setTimeout(() => {
                 setIsAuthOpen(true);
-                sessionStorage.setItem('cf_initial_auth_prompt', 'true');
-            }, 1500); // Premium delay of 1.5s
+                localStorage.setItem('cf_initial_auth_prompt', 'true');
+            }, 1500); // Premium 1.5 s delay
             return () => clearTimeout(timer);
         }
-    }, [user]);
+    }, [user, authLoading]);
 
     const closeDropdown = () => setIsProfileOpen(false);
 
