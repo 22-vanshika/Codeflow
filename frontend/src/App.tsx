@@ -22,6 +22,8 @@ import Blog from './pages/Blog';
 import ProfileSettings from './pages/ProfileSettings';
 import AlgorithmsHub from './pages/AlgorithmsHub';
 
+import { useProgressStore } from './store/progressStore';
+
 function MobileDeviceWarning() {
   const [showWarning, setShowWarning] = useState(false);
 
@@ -105,6 +107,7 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/workspace" element={<ProblemWorkspace />} />
         <Route path="/sheet" element={<CuratedSheet />} />
+        <Route path="/problems/:category" element={<CuratedSheet />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
@@ -134,6 +137,14 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
+
+      if (firebaseUser) {
+        // Sync DSA progress from MongoDB immediately
+        useProgressStore.getState().fetchFromBackend(firebaseUser);
+      } else {
+        // User logged out explicitly, clear state safely
+        useProgressStore.getState().reset();
+      }
     });
     return unsubscribe;
   }, [setUser, setLoading]);

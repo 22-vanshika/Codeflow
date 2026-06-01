@@ -1,29 +1,78 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, CheckCircle, ExternalLink, Play, Search, Trophy, Zap, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { BookOpen, CheckCircle, ExternalLink, Play, Search, Trophy, Zap, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { problemsList, type ProblemDefinition } from '../data/problems/index';
 import { useProgressStore } from '../store/progressStore';
 import { useAuthStore } from '../store/authStore';
+import { useVisualizationStore } from '../store/visualizationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
+
+const URL_TO_CAT_MAP: Record<string, string> = {
+  'arrays': 'Arrays & Hashing',
+  'sorting': 'Sorting',
+  'two-pointers': 'Two Pointers',
+  'sliding-window': 'Sliding Window',
+  'binary-search': 'Binary Search',
+  'linked-list': 'Linked List',
+  'stack': 'Stack',
+  'intervals': 'Intervals',
+  'trees': 'Trees',
+  'graphs': 'Graphs',
+  'backtracking': 'Backtracking',
+  'heap': 'Heap',
+  'heaps': 'Heap',
+  'queues': 'Heap',
+  'dp': 'Dynamic Programming',
+  'dynamic-programming': 'Dynamic Programming',
+  'trie': 'Trie',
+  'bit-manipulation': 'Bit Manipulation'
+};
 
 export default function CuratedSheet() {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { completed, toggleCompletion } = useProgressStore();
+    const { category: categoryParam } = useParams<{ category?: string }>();
+    const { visualizations, fetchUserVisualizations } = useVisualizationStore();
+    
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
+    const [sortBy, setSortBy] = useState<'Default' | 'Difficulty' | 'Completion'>('Default');
     
     // Stable list of unique categories
     const categories = useMemo(() => {
         return Array.from(new Set((problemsList || []).map(p => p.category || 'Uncategorized')));
     }, []);
 
-    // Initial selected category
+    // Initial selected category based on URL parameter
     const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+        if (categoryParam) {
+            const mapped = URL_TO_CAT_MAP[categoryParam.toLowerCase()];
+            if (mapped) return mapped;
+        }
         const unique = Array.from(new Set((problemsList || []).map(p => p.category || 'Uncategorized')));
         return unique[0] || '';
     });
+
+    // Keep active selection in sync if category URL changes
+    useEffect(() => {
+        if (categoryParam) {
+            const mapped = URL_TO_CAT_MAP[categoryParam.toLowerCase()];
+            if (mapped) {
+                setSelectedCategory(mapped);
+            }
+        }
+    }, [categoryParam]);
+
+    // Fetch user's saved visualizations to determine "In Progress" status
+    useEffect(() => {
+        if (user) {
+            user.getIdToken().then(t => {
+                fetchUserVisualizations(t);
+            });
+        }
+    }, [user, fetchUserVisualizations]);
 
     // Compute stats for all categories
     const categoriesStats = useMemo(() => {
@@ -76,15 +125,30 @@ export default function CuratedSheet() {
     const solvedCount = Object.values(completed).filter(Boolean).length;
     const progressPercent = totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0;
 
-    // Filter problems of the selected category based on search and difficulty filter
+    // Filter and Sort problems of the selected category based on search, difficulty filter, and sorting options
     const filteredProblems = useMemo(() => {
         const catProblems = (problemsList || []).filter(p => (p.category || 'Uncategorized') === selectedCategory);
-        return catProblems.filter(problem => {
+        let result = catProblems.filter(problem => {
             const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesFilter = activeFilter === 'All' || problem.difficulty === activeFilter;
             return matchesSearch && matchesFilter;
         });
-    }, [selectedCategory, searchQuery, activeFilter]);
+
+        // Apply sorting
+        if (sortBy === 'Difficulty') {
+            const diffRank: Record<string, number> = { Easy: 0, Medium: 1, Hard: 2 };
+            result.sort((a, b) => diffRank[a.difficulty] - diffRank[b.difficulty]);
+        } else if (sortBy === 'Completion') {
+            // Solved first
+            result.sort((a, b) => {
+                const aCompleted = completed[a.id] ? 1 : 0;
+                const bCompleted = completed[b.id] ? 1 : 0;
+                return bCompleted - aCompleted; // 1 (solved) before 0 (unsolved)
+            });
+        }
+
+        return result;
+    }, [selectedCategory, searchQuery, activeFilter, completed, sortBy]);
 
     return (
         <div className="min-h-screen pt-20 pb-12 sm:pt-24 sm:pb-20 bg-transparent relative overflow-x-hidden">
@@ -280,7 +344,7 @@ export default function CuratedSheet() {
                                 />
                             </div>
                             
-                            <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0">
+                            <div className="flex flex-wrap items-center gap-2 pb-1 md:pb-0">
                                 {(['All', 'Easy', 'Medium', 'Hard'] as const).map((filter) => (
                                     <button
                                         key={filter}
@@ -294,83 +358,131 @@ export default function CuratedSheet() {
                                         {filter}
                                     </button>
                                 ))}
+
+                                <div className="h-6 w-[1px] bg-border-subtle mx-2 hidden sm:block" />
+
+                                <div className="flex items-center gap-1.5 bg-surface/50 border border-border-subtle rounded-xl p-1 backdrop-blur-xl">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-text-muted px-2 flex items-center gap-1 shrink-0">
+                                        <ArrowUpDown size={11} />
+                                        Sort
+                                    </span>
+                                    {(['Default', 'Difficulty', 'Completion'] as const).map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => setSortBy(option)}
+                                            className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0 uppercase tracking-wider ${
+                                                sortBy === option 
+                                                ? 'bg-secondary text-white shadow-md shadow-secondary/15' 
+                                                : 'text-text-secondary hover:text-white hover:bg-white/5'
+                                            }`}
+                                        >
+                                            {option}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                            </div>
 
                         {/* Problems Cards Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <AnimatePresence mode="popLayout">
-                                {filteredProblems.map((problem) => (
-                                    <motion.div 
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
-                                        key={problem.id} 
-                                        onClick={() => handleSolve(problem)}
-                                        className="group liquid-glass-card hover:translate-y-[-2px] hover:border-primary/50 transition-all duration-300 relative overflow-hidden border border-border-subtle p-5 flex flex-col justify-between h-40 cursor-pointer"
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex items-start gap-3 min-w-0">
-                                                {/* Checkbox button */}
-                                                <button 
-                                                    onClick={(e) => handleToggle(problem.id, e)}
-                                                    className={`mt-0.5 relative w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-300 border-2 shrink-0 ${
-                                                        completed[problem.id] 
-                                                        ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(123,116,209,0.3)]' 
-                                                        : 'border-border-subtle text-transparent hover:border-text-muted'
-                                                    }`}
-                                                >
-                                                    <CheckCircle size={14} className={completed[problem.id] ? "scale-100" : "scale-0"} />
-                                                </button>
-                                                
-                                                <div className="min-w-0">
-                                                    <h4 className={`text-base font-black tracking-tight leading-snug transition-all duration-300 ${
-                                                        completed[problem.id] 
-                                                        ? 'text-text-muted line-through opacity-50' 
-                                                        : 'text-text-primary group-hover:text-primary'
-                                                    }`}>
-                                                        {problem.title}
-                                                    </h4>
+                                {filteredProblems.map((problem) => {
+                                    const isSolved = completed[problem.id];
+                                    const isInProgress = !isSolved && (
+                                        visualizations.some(v => 
+                                            v.metadata?.problemDetails?.id === problem.id || 
+                                            v.title.toLowerCase().includes(problem.title.toLowerCase())
+                                        )
+                                    );
+
+                                    return (
+                                        <motion.div 
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.2 }}
+                                            key={problem.id} 
+                                            onClick={() => handleSolve(problem)}
+                                            className="group liquid-glass-card hover:translate-y-[-2px] hover:border-primary/50 transition-all duration-300 relative overflow-hidden border border-border-subtle p-5 flex flex-col justify-between h-42 cursor-pointer"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex items-start gap-3 min-w-0">
+                                                    {/* Checkbox button */}
+                                                    <button 
+                                                        onClick={(e) => handleToggle(problem.id, e)}
+                                                        className={`mt-0.5 relative w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-300 border-2 shrink-0 ${
+                                                            isSolved 
+                                                            ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(123,116,209,0.3)]' 
+                                                            : isInProgress
+                                                            ? 'bg-accent-yellow/10 border-accent-yellow/60 text-accent-yellow shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                                                            : 'border-border-subtle text-transparent hover:border-text-muted'
+                                                        }`}
+                                                    >
+                                                        {isSolved ? (
+                                                            <CheckCircle size={14} className="scale-100" />
+                                                        ) : isInProgress ? (
+                                                            <div className="w-2 h-2 rounded-full bg-accent-yellow animate-pulse" />
+                                                        ) : null}
+                                                    </button>
+                                                    
+                                                    <div className="min-w-0">
+                                                        <h4 className={`text-base font-black tracking-tight leading-snug transition-all duration-300 ${
+                                                            isSolved 
+                                                            ? 'text-text-muted line-through opacity-50' 
+                                                            : 'text-text-primary group-hover:text-primary'
+                                                        }`}>
+                                                            {problem.title}
+                                                        </h4>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        
-                                        <div className="flex items-center justify-between mt-auto">
-                                            <div className="flex items-center gap-3">
-                                                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
-                                                    problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
-                                                    problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
-                                                    'border-red-500/30 text-red-400 bg-red-500/5'
-                                                }`}>
-                                                    {problem.difficulty}
-                                                </span>
-                                                {problem.url && (
-                                                    <a 
-                                                        href={problem.url} 
-                                                        target="_blank" 
-                                                        rel="noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="text-[9px] font-black text-text-muted hover:text-text-primary flex items-center gap-1 transition-colors uppercase tracking-wider"
-                                                    >
-                                                        LeetCode <ExternalLink size={9} />
-                                                    </a>
-                                                )}
-                                            </div>
+                                            
+                                            <div className="flex items-center justify-between mt-auto">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                                        problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
+                                                        problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
+                                                        'border-red-500/30 text-red-400 bg-red-500/5'
+                                                    }`}>
+                                                        {problem.difficulty}
+                                                    </span>
+                                                    
+                                                    {/* Status Badge */}
+                                                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                                        isSolved ? 'border-accent-green/30 text-accent-green bg-accent-green/5' :
+                                                        isInProgress ? 'border-accent-yellow/30 text-accent-yellow bg-accent-yellow/5' :
+                                                        'border-white/5 text-text-muted bg-white/5'
+                                                    }`}>
+                                                        {isSolved ? '✅ Solved' : isInProgress ? '🟡 In Progress' : '⚪ Not Started'}
+                                                    </span>
 
-                                            <motion.button 
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="flex items-center gap-1.5 text-[10px] font-black text-white bg-primary px-3.5 py-2 rounded-lg transition-all shadow-md shadow-primary/20 opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Play size={10} fill="currentColor" /> 
-                                                <span>Visualize</span>
-                                                <ChevronRight size={10} />
-                                            </motion.button>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                                    {problem.url && (
+                                                        <a 
+                                                            href={problem.url} 
+                                                            target="_blank" 
+                                                            rel="noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-[9px] font-black text-text-muted hover:text-text-primary flex items-center gap-1 transition-colors uppercase tracking-wider ml-1"
+                                                        >
+                                                            LeetCode <ExternalLink size={9} />
+                                                        </a>
+                                                    )}
+                                                </div>
+
+                                                <motion.button 
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="flex items-center gap-1.5 text-[10px] font-black text-white bg-primary px-3.5 py-2 rounded-lg transition-all shadow-md shadow-primary/20 opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Play size={10} fill="currentColor" /> 
+                                                    <span>Visualize</span>
+                                                    <ChevronRight size={10} />
+                                                </motion.button>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                             </AnimatePresence>
                         </div>
 

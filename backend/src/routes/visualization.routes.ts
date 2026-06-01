@@ -1,6 +1,7 @@
 import { Router, Response, Request } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { Visualization } from '../models/Visualization';
+import { recordUserActivity } from '../services/activity';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.post('/save', requireAuth, async (req: AuthRequest, res: Response): Promi
         });
 
         await newVis.save();
+        await recordUserActivity(req.user);
         res.status(201).json({ message: 'Visualization saved successfully', visualization: newVis });
     } catch (error) {
         console.error('Error saving visualization:', error);

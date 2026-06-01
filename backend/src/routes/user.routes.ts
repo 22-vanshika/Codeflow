@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
+import { recordUserActivity } from '../services/activity';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.post('/sync', requireAuth, async (req: AuthRequest, res: Response): Promi
             if (githubAccessToken) {
                 user.githubAccessToken = githubAccessToken;
             }
-            await user.save();
+            await recordUserActivity(user);
         } else {
             // Create new user
             user = new User({
@@ -35,7 +36,7 @@ router.post('/sync', requireAuth, async (req: AuthRequest, res: Response): Promi
                 photoURL,
                 githubAccessToken
             });
-            await user.save();
+            await recordUserActivity(user);
         }
 
         res.json({ message: 'User synced successfully', user });
@@ -86,7 +87,7 @@ router.post('/progress', requireAuth, async (req: AuthRequest, res: Response): P
 
         // Update Map correctly for Mongoose
         user.progress = new Map(Object.entries(progress));
-        await user.save();
+        await recordUserActivity(user);
 
         console.log('[POST /progress] Successfully saved.');
         res.json({ message: 'Progress updated', progress: Object.fromEntries(user.progress) });

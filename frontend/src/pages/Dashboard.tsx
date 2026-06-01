@@ -29,6 +29,21 @@ const TOPIC_MAPPING: Record<string, string[]> = {
   'Bit Manipulation': ['Bit Manipulation', 'Intervals']
 };
 
+export const TOPIC_SLUGS: Record<string, string> = {
+  'Arrays & Hashing': 'arrays',
+  'Two Pointers': 'two-pointers',
+  'Sliding Window': 'sliding-window',
+  'Binary Search': 'binary-search',
+  'Stack': 'stack',
+  'Linked List': 'linked-list',
+  'Trees': 'trees',
+  'Heaps & Queues': 'heaps',
+  'Backtracking': 'backtracking',
+  'Graphs': 'graphs',
+  'Dynamic Programming': 'dp',
+  'Bit Manipulation': 'bit-manipulation'
+};
+
 export default function Dashboard() {
     const { user, logout } = useAuthStore();
     const { 
@@ -347,7 +362,14 @@ export default function Dashboard() {
                             const percent = total > 0 ? Math.round((solved / total) * 100) : 0;
 
                             return (
-                                <div key={topic} className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all flex flex-col justify-between group">
+                                <div 
+                                    key={topic} 
+                                    onClick={() => {
+                                        const slug = TOPIC_SLUGS[topic] || 'arrays';
+                                        navigate(`/problems/${slug}`);
+                                    }}
+                                    className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-primary/40 hover:shadow-[0_0_15px_rgba(59,130,246,0.12)] cursor-pointer active:scale-[0.98] transition-all flex flex-col justify-between group"
+                                >
                                     <div>
                                         <div className="flex justify-between items-start gap-2 mb-2">
                                             <span className="text-xs font-black text-white leading-tight group-hover:text-primary transition-colors">{topic}</span>

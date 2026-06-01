@@ -47,7 +47,7 @@ function DropdownItem({ to, onClick, icon: Icon, label, description, danger, acc
 export default function Navbar() {
     const location = useLocation();
     const { user, logout, isLoading: authLoading } = useAuthStore();
-    const { getProgressPercent, fetchFromBackend, reset } = useProgressStore();
+    const { getProgressPercent } = useProgressStore();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
@@ -58,13 +58,7 @@ export default function Navbar() {
     const totalProblems = problemsList?.length ?? 0;
     const progressPercent = getProgressPercent(totalProblems);
 
-    useEffect(() => {
-        if (user) {
-            fetchFromBackend(user);
-        } else {
-            reset();
-        }
-    }, [user, fetchFromBackend, reset]);
+
 
     useEffect(() => {
         const handleOpenAuth = () => setIsAuthOpen(true);
