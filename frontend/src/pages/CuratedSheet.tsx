@@ -37,7 +37,7 @@ export default function CuratedSheet() {
     const { visualizations, fetchUserVisualizations } = useVisualizationStore();
     
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
+    const [activeFilter, setActiveFilter] = useState<'All' | 'Completed' | 'Not Completed'>('All');
     const [sortBy, setSortBy] = useState<'Default' | 'Difficulty' | 'Completion'>('Default');
     
     // Stable list of unique categories
@@ -125,12 +125,16 @@ export default function CuratedSheet() {
     const solvedCount = Object.values(completed).filter(Boolean).length;
     const progressPercent = totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0;
 
-    // Filter and Sort problems of the selected category based on search, difficulty filter, and sorting options
+    // Filter and Sort problems of the selected category based on search, completion filter, and sorting options
     const filteredProblems = useMemo(() => {
         const catProblems = (problemsList || []).filter(p => (p.category || 'Uncategorized') === selectedCategory);
         let result = catProblems.filter(problem => {
             const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesFilter = activeFilter === 'All' || problem.difficulty === activeFilter;
+            const isSolved = completed[problem.id];
+            const matchesFilter = 
+                activeFilter === 'All' || 
+                (activeFilter === 'Completed' && isSolved) || 
+                (activeFilter === 'Not Completed' && !isSolved);
             return matchesSearch && matchesFilter;
         });
 
@@ -332,8 +336,9 @@ export default function CuratedSheet() {
                         </div>
 
                         {/* Search & Filters */}
-                        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-                            <div className="relative flex-1 group">
+                        <div className="space-y-4">
+                            {/* Search Input Row (Full-width) */}
+                            <div className="relative group">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
                                 <input 
                                     type="text"
@@ -344,24 +349,25 @@ export default function CuratedSheet() {
                                 />
                             </div>
                             
-                            <div className="flex flex-wrap items-center gap-2 pb-1 md:pb-0">
-                                {(['All', 'Easy', 'Medium', 'Hard'] as const).map((filter) => (
-                                    <button
-                                        key={filter}
-                                        onClick={() => setActiveFilter(filter)}
-                                        className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shrink-0 ${
-                                            activeFilter === filter 
-                                            ? 'bg-primary text-white border border-primary' 
-                                            : 'bg-surface text-text-secondary hover:text-text-primary hover:bg-border-subtle/20 border border-border-subtle'
-                                        }`}
-                                    >
-                                        {filter}
-                                    </button>
-                                ))}
+                            {/* Filters & Sort Row (Responsive flex container) */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {(['All', 'Completed', 'Not Completed'] as const).map((filter) => (
+                                        <button
+                                            key={filter}
+                                            onClick={() => setActiveFilter(filter)}
+                                            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shrink-0 ${
+                                                activeFilter === filter 
+                                                ? 'bg-primary text-white border border-primary' 
+                                                : 'bg-surface text-text-secondary hover:text-text-primary hover:bg-border-subtle/20 border border-border-subtle'
+                                            }`}
+                                        >
+                                            {filter}
+                                        </button>
+                                    ))}
+                                </div>
 
-                                <div className="h-6 w-[1px] bg-border-subtle mx-2 hidden sm:block" />
-
-                                <div className="flex items-center gap-1.5 bg-surface/50 border border-border-subtle rounded-xl p-1 backdrop-blur-xl">
+                                <div className="flex items-center gap-1.5 bg-surface/50 border border-border-subtle rounded-xl p-1 backdrop-blur-xl self-start sm:self-auto">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-text-muted px-2 flex items-center gap-1 shrink-0">
                                         <ArrowUpDown size={11} />
                                         Sort
@@ -381,7 +387,7 @@ export default function CuratedSheet() {
                                     ))}
                                 </div>
                             </div>
-                            </div>
+                        </div>
 
                         {/* Problems Cards Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
