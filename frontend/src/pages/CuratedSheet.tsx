@@ -454,14 +454,7 @@ export default function CuratedSheet() {
                                                         {problem.difficulty}
                                                     </span>
                                                     
-                                                    {/* Status Badge */}
-                                                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
-                                                        isSolved ? 'border-accent-green/30 text-accent-green bg-accent-green/5' :
-                                                        isInProgress ? 'border-accent-yellow/30 text-accent-yellow bg-accent-yellow/5' :
-                                                        'border-white/5 text-text-muted bg-white/5'
-                                                    }`}>
-                                                        {isSolved ? '✅ Solved' : isInProgress ? '🟡 In Progress' : '⚪ Not Started'}
-                                                    </span>
+
 
                                                     {problem.url && (
                                                         <a 
