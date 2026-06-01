@@ -19,11 +19,11 @@ export default function ProblemDescription({ problem }: ProblemDescriptionProps)
     if (!problem) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-text-muted p-8 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-surface border border-border-subtle flex items-center justify-center">
                     <Info size={32} />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold text-white">No Problem Selected</h3>
+                    <h3 className="text-lg font-bold text-text-primary">No Problem Selected</h3>
                     <p className="text-sm">Select a problem from the DSA Sheet to view its description and constraints.</p>
                 </div>
             </div>
@@ -42,9 +42,9 @@ export default function ProblemDescription({ problem }: ProblemDescriptionProps)
                     }`}>
                         {problem.difficulty}
                     </span>
-                    <div className="flex-1 h-px bg-white/5" />
+                    <div className="flex-1 h-px bg-border-subtle" />
                 </div>
-                <h1 className="text-2xl font-black text-white tracking-tight leading-tight">
+                <h1 className="text-2xl font-black text-text-primary tracking-tight leading-tight">
                     {problem.title}
                 </h1>
             </div>
@@ -53,7 +53,7 @@ export default function ProblemDescription({ problem }: ProblemDescriptionProps)
             {problem.topicTags && problem.topicTags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                     {problem.topicTags.map(tag => (
-                        <span key={tag} className="px-3 py-1 rounded-full bg-white/5 border border-white/5 text-[11px] font-bold text-text-secondary hover:text-white hover:border-primary/30 transition-all cursor-default">
+                        <span key={tag} className="px-3 py-1 rounded-full bg-surface border border-border-subtle text-[11px] font-bold text-text-secondary hover:text-text-primary hover:border-primary transition-all cursor-default">
                             {tag}
                         </span>
                     ))}
@@ -90,7 +90,7 @@ export default function ProblemDescription({ problem }: ProblemDescriptionProps)
                             {problem.examples.map((example, i) => (
                                 <div key={i} className="space-y-3">
                                     <h4 className="text-[10px] font-black text-text-muted uppercase tracking-widest">Example {i + 1}</h4>
-                                    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-3 font-mono text-[12px]">
+                                    <div className="p-4 rounded-xl bg-surface border border-border-subtle space-y-3 font-mono text-[12px]">
                                         <div>
                                             <span className="text-secondary font-bold mr-2">Input:</span>
                                             <span className="text-text-primary">{example.input}</span>
@@ -123,7 +123,7 @@ export default function ProblemDescription({ problem }: ProblemDescriptionProps)
                             {problem.constraints.map((constraint, i) => (
                                 <li key={i} className="flex items-start gap-3 text-[12px] text-text-secondary">
                                     <div className="mt-1.5 w-1 h-1 rounded-full bg-accent-cyan shrink-0" />
-                                    <code className="bg-white/5 px-1.5 py-0.5 rounded text-accent-cyan">{constraint}</code>
+                                    <code className="bg-border-subtle px-1.5 py-0.5 rounded text-accent-cyan">{constraint}</code>
                                 </li>
                             ))}
                         </ul>

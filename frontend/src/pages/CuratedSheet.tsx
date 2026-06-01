@@ -1,58 +1,101 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, CheckCircle, ExternalLink, Play, Search, Trophy, Zap, ChevronRight, ChevronDown } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { BookOpen, CheckCircle, ExternalLink, Play, Search, Trophy, Zap, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { problemsList, type ProblemDefinition } from '../data/problems/index';
 import { useProgressStore } from '../store/progressStore';
 import { useAuthStore } from '../store/authStore';
+import { useVisualizationStore } from '../store/visualizationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import DynamicBackground from '../components/DynamicBackground';
 
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { staggerChildren: 0.1 }
-    }
-};
-
-const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-        y: 0,
-        opacity: 1,
-        transition: { type: 'spring' as any, stiffness: 100 }
-    }
+const URL_TO_CAT_MAP: Record<string, string> = {
+  'arrays': 'Arrays & Hashing',
+  'sorting': 'Sorting',
+  'two-pointers': 'Two Pointers',
+  'sliding-window': 'Sliding Window',
+  'binary-search': 'Binary Search',
+  'linked-list': 'Linked List',
+  'stack': 'Stack',
+  'intervals': 'Intervals',
+  'trees': 'Trees',
+  'graphs': 'Graphs',
+  'backtracking': 'Backtracking',
+  'heap': 'Heap',
+  'heaps': 'Heap',
+  'queues': 'Heap',
+  'dp': 'Dynamic Programming',
+  'dynamic-programming': 'Dynamic Programming',
+  'trie': 'Trie',
+  'bit-manipulation': 'Bit Manipulation'
 };
 
 export default function CuratedSheet() {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { completed, toggleCompletion } = useProgressStore();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
-    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+    const { category: categoryParam } = useParams<{ category?: string }>();
+    const { visualizations, fetchUserVisualizations } = useVisualizationStore();
     
-    // Group problems by category
-    const groupedProblems = useMemo(() => {
-        return (problemsList ?? []).reduce((acc, problem) => {
-            const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesFilter = activeFilter === 'All' || problem.difficulty === activeFilter;
-            
-            if (matchesSearch && matchesFilter) {
-                const category = problem.category || 'Uncategorized';
-                if (!acc[category]) acc[category] = [];
-                acc[category].push(problem);
-            }
-            return acc;
-        }, {} as Record<string, ProblemDefinition[]>);
-    }, [searchQuery, activeFilter]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState<'All' | 'Solved' | 'Not Solved'>('All');
+    const [sortBy, setSortBy] = useState<'Default' | 'Difficulty' | 'Completion'>('Default');
+    
+    // Stable list of unique categories
+    const categories = useMemo(() => {
+        return Array.from(new Set((problemsList || []).map(p => p.category || 'Uncategorized')));
+    }, []);
 
-    const toggleCategory = (category: string) => {
-        setExpandedCategories(prev => ({
-            ...prev,
-            [category]: !prev[category]
-        }));
-    };
+    // Initial selected category based on URL parameter
+    const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+        if (categoryParam) {
+            const mapped = URL_TO_CAT_MAP[categoryParam.toLowerCase()];
+            if (mapped) return mapped;
+        }
+        const unique = Array.from(new Set((problemsList || []).map(p => p.category || 'Uncategorized')));
+        return unique[0] || '';
+    });
+
+    // Keep active selection in sync if category URL changes
+    useEffect(() => {
+        if (categoryParam) {
+            const mapped = URL_TO_CAT_MAP[categoryParam.toLowerCase()];
+            if (mapped) {
+                setSelectedCategory(mapped);
+            }
+        }
+    }, [categoryParam]);
+
+    // Fetch user's saved visualizations to determine "In Progress" status
+    useEffect(() => {
+        if (user) {
+            user.getIdToken().then(t => {
+                fetchUserVisualizations(t);
+            });
+        }
+    }, [user, fetchUserVisualizations]);
+
+    // Compute stats for all categories
+    const categoriesStats = useMemo(() => {
+        const stats: Record<string, { total: number; completedCount: number; percent: number }> = {};
+        
+        (problemsList || []).forEach(problem => {
+            const cat = problem.category || 'Uncategorized';
+            if (!stats[cat]) {
+                stats[cat] = { total: 0, completedCount: 0, percent: 0 };
+            }
+            stats[cat].total += 1;
+            if (completed[problem.id]) {
+                stats[cat].completedCount += 1;
+            }
+        });
+
+        Object.keys(stats).forEach(cat => {
+            const s = stats[cat];
+            s.percent = s.total > 0 ? Math.round((s.completedCount / s.total) * 100) : 0;
+        });
+
+        return stats;
+    }, [completed]);
 
     const handleToggle = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -82,8 +125,37 @@ export default function CuratedSheet() {
     const solvedCount = Object.values(completed).filter(Boolean).length;
     const progressPercent = totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0;
 
+    // Filter and Sort problems of the selected category based on search, completion filter, and sorting options
+    const filteredProblems = useMemo(() => {
+        const catProblems = (problemsList || []).filter(p => (p.category || 'Uncategorized') === selectedCategory);
+        let result = catProblems.filter(problem => {
+            const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase());
+            const isSolved = completed[problem.id];
+            const matchesFilter = 
+                activeFilter === 'All' || 
+                (activeFilter === 'Solved' && isSolved) || 
+                (activeFilter === 'Not Solved' && !isSolved);
+            return matchesSearch && matchesFilter;
+        });
+
+        // Apply sorting
+        if (sortBy === 'Difficulty') {
+            const diffRank: Record<string, number> = { Easy: 0, Medium: 1, Hard: 2 };
+            result.sort((a, b) => diffRank[a.difficulty] - diffRank[b.difficulty]);
+        } else if (sortBy === 'Completion') {
+            // Solved first
+            result.sort((a, b) => {
+                const aCompleted = completed[a.id] ? 1 : 0;
+                const bCompleted = completed[b.id] ? 1 : 0;
+                return bCompleted - aCompleted; // 1 (solved) before 0 (unsolved)
+            });
+        }
+
+        return result;
+    }, [selectedCategory, searchQuery, activeFilter, completed, sortBy]);
+
     return (
-        <div className="min-h-screen pt-24 pb-20 bg-bg-main relative overflow-x-hidden">
+        <div className="min-h-screen pt-20 pb-12 sm:pt-24 sm:pb-20 bg-transparent relative overflow-x-hidden">
             <DynamicBackground />
             
             <div className="max-w-6xl mx-auto px-6 relative z-10">
@@ -91,7 +163,7 @@ export default function CuratedSheet() {
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-16"
+                    className="text-center mb-10 sm:mb-16"
                 >
                     <motion.div 
                         initial={{ scale: 0.8, opacity: 0 }}
@@ -102,236 +174,331 @@ export default function CuratedSheet() {
                         Master the Patterns
                     </motion.div>
                     
-                    <h1 className="text-5xl md:text-6xl font-black text-white mb-6 tracking-tighter">
+                    <h1 className="text-5xl md:text-6xl font-black text-text-primary mb-6 tracking-tighter">
                         DSA <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-gradient-x">Sheet</span>
                     </h1>
                     
-                    <p className="text-text-muted text-lg max-w-2xl mx-auto leading-relaxed">
+                    <p className="text-text-secondary text-lg max-w-2xl mx-auto leading-relaxed">
                         A high-fidelity roadmap to mastering DSA. 200 curated problems that cover every pattern you need for top-tier technical interviews.
                     </p>
                 </motion.div>
 
-                {/* Statistics & Search Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-                    {/* Progress Card */}
+                {/* Overall Progression Banner */}
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full mb-8 sm:mb-12 liquid-glass-card p-5 sm:p-6 md:p-8 relative overflow-hidden group border border-border-subtle"
+                >
+                    <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Zap size={100} className="text-primary" />
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h3 className="text-xs font-black text-text-secondary uppercase tracking-[0.2em] mb-1.5">Overall Progression</h3>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl md:text-5xl font-black text-text-primary tracking-tight">{progressPercent}%</span>
+                                <span className="text-text-secondary text-sm font-bold">Complete</span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 max-w-md w-full">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-black text-text-muted uppercase tracking-wider">Solved Problems</span>
+                                <div>
+                                    <span className="text-primary font-black text-base">{solvedCount}</span>
+                                    <span className="text-text-secondary text-xs font-bold"> / {totalProblems}</span>
+                                </div>
+                            </div>
+                            <div className="relative h-2.5 bg-border-subtle rounded-full overflow-hidden border border-border-subtle">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${progressPercent}%` }}
+                                    transition={{ duration: 1.5, ease: "circOut" }}
+                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-secondary"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Two-Column Explorer Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    {/* Left Category Navigation Panel */}
                     <motion.div 
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="lg:col-span-5 glass-morphism p-8 rounded-3xl border border-white/10 relative overflow-hidden group"
+                        className="lg:col-span-4 space-y-3 lg:sticky lg:top-24 h-fit"
                     >
-                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Zap size={80} className="text-primary" />
-                        </div>
-                        
-                        <div className="flex justify-between items-end mb-6">
-                            <div>
-                                <h3 className="text-sm font-bold text-text-muted uppercase tracking-widest mb-1">Overall Progress</h3>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-4xl font-black text-white">{progressPercent}%</span>
-                                    <span className="text-text-muted font-bold">Complete</span>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-primary font-black text-xl">{solvedCount}</span>
-                                <span className="text-text-muted text-sm font-bold"> / {totalProblems}</span>
-                            </div>
-                        </div>
-
-                        <div className="relative h-4 bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${progressPercent}%` }}
-                                transition={{ duration: 1.5, ease: "circOut" }}
-                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-secondary shadow-[0_0_20px_rgba(59,130,246,0.4)]"
-                            />
+                        <h3 className="text-xs font-black text-text-muted uppercase tracking-[0.2em] mb-4 px-2">
+                            Categories
+                        </h3>
+                        <div className="space-y-2.5">
+                            {categories.map((category) => {
+                                const stats = categoriesStats[category] || { total: 0, completedCount: 0, percent: 0 };
+                                const isSelected = selectedCategory === category;
+                                
+                                return (
+                                    <button
+                                        key={category}
+                                        onClick={() => setSelectedCategory(category)}
+                                        className={`w-full text-left p-4 rounded-2xl flex items-center justify-between gap-4 transition-all duration-300 border ${
+                                            isSelected 
+                                            ? 'liquid-glass-card bg-primary/10 border-primary shadow-lg shadow-primary/5 text-text-primary' 
+                                            : 'bg-surface/30 hover:bg-surface/60 border-border-subtle text-text-secondary hover:text-text-primary'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all shrink-0 ${
+                                                isSelected 
+                                                ? 'bg-primary/20 border-primary/30 text-primary' 
+                                                : 'bg-surface border-border-subtle text-text-muted'
+                                            }`}>
+                                                <BookOpen size={16} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <span className="block text-sm font-bold truncate leading-tight tracking-tight">
+                                                    {category}
+                                                </span>
+                                                <span className="block text-[10px] font-black text-text-muted uppercase tracking-wider mt-0.5">
+                                                    {stats.total} Problems
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Circular Progress Ring */}
+                                        <div className="relative flex items-center justify-center shrink-0 w-11 h-11">
+                                            <svg className="w-11 h-11 transform -rotate-90" viewBox="0 0 36 36">
+                                                <circle
+                                                    cx="18"
+                                                    cy="18"
+                                                    r="14"
+                                                    fill="none"
+                                                    className={isSelected ? "stroke-primary/10" : "stroke-border-subtle/50"}
+                                                    strokeWidth="3.5"
+                                                />
+                                                <circle
+                                                    cx="18"
+                                                    cy="18"
+                                                    r="14"
+                                                    fill="none"
+                                                    className={`transition-all duration-500 ease-out ${
+                                                        isSelected ? "stroke-primary" : "stroke-secondary"
+                                                    }`}
+                                                    strokeWidth="3.5"
+                                                    strokeDasharray="87.96"
+                                                    strokeDashoffset={87.96 - (87.96 * stats.percent) / 100}
+                                                    strokeLinecap="round"
+                                                />
+                                            </svg>
+                                            <span className="absolute text-[9px] font-black text-text-primary font-mono">
+                                                {stats.percent}%
+                                            </span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </motion.div>
 
-                    {/* Search & Filters */}
+                    {/* Right Explorer Main Area */}
                     <motion.div 
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="lg:col-span-7 flex flex-col justify-center gap-6"
+                        className="lg:col-span-8 space-y-6"
                     >
-                        <div className="relative group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={20} />
-                            <input 
-                                type="text"
-                                placeholder="Search by problem title..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-surface/50 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-white placeholder:text-text-muted focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all backdrop-blur-xl"
-                            />
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                            {(['All', 'Easy', 'Medium', 'Hard'] as const).map((filter) => (
-                                <button
-                                    key={filter}
-                                    onClick={() => setActiveFilter(filter)}
-                                    className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                                        activeFilter === filter 
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/30 border border-primary/50' 
-                                        : 'bg-white/5 text-text-muted hover:text-white hover:bg-white/10 border border-white/5'
-                                    }`}
-                                >
-                                    {filter}
-                                </button>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Category Sections */}
-                <motion.div 
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="space-y-6"
-                >
-                    {Object.entries(groupedProblems).map(([category, problems]) => {
-                        const catSolved = problems.filter(p => completed[p.id]).length;
-                        const catProgress = Math.round((catSolved / problems.length) * 100);
-                        const isExpanded = expandedCategories[category] || false;
-                        
-                        return (
-                            <motion.div 
-                                key={category} 
-                                variants={itemVariants}
-                                className="glass-morphism rounded-3xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-300"
-                            >
-                                {/* Category Header */}
-                                <button 
-                                    onClick={() => toggleCategory(category)}
-                                    className="w-full px-8 py-6 bg-white/5 hover:bg-white/[0.08] border-b border-white/10 flex items-center justify-between flex-wrap gap-4 transition-all"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-white/10">
-                                            <BookOpen size={20} className="text-primary" />
+                        {/* Right Header Stats & Banner */}
+                        <div className="liquid-glass-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-border-subtle">
+                            <div>
+                                <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Selected Category</span>
+                                <h2 className="text-2xl font-black text-text-primary mt-1 tracking-tight">{selectedCategory}</h2>
+                            </div>
+                            
+                            {/* Category Stats Display */}
+                            {selectedCategory && (
+                                <div className="flex items-center gap-6 w-full md:w-auto">
+                                    <div className="flex flex-col gap-1 w-full md:w-44">
+                                        <div className="flex justify-between items-center text-[10px] font-black text-text-muted uppercase">
+                                            <span>Completed</span>
+                                            <span>{categoriesStats[selectedCategory]?.completedCount || 0} / {categoriesStats[selectedCategory]?.total || 0}</span>
                                         </div>
-                                        <div className="text-left">
-                                            <h2 className="text-xl font-black text-white tracking-tight">{category}</h2>
-                                            <p className="text-xs font-bold text-text-muted uppercase tracking-widest">
-                                                {problems.length} Problems
-                                            </p>
+                                        <div className="h-1.5 bg-border-subtle rounded-full overflow-hidden border border-border-subtle">
+                                            <motion.div 
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${categoriesStats[selectedCategory]?.percent || 0}%` }}
+                                                className="h-full bg-primary"
+                                            />
                                         </div>
                                     </div>
-                                    
-                                    <div className="flex items-center gap-6">
-                                        <div className="hidden md:flex items-center gap-4">
-                                            <div className="w-32 h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                <motion.div 
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${catProgress}%` }}
-                                                    className="h-full bg-secondary"
-                                                />
-                                            </div>
-                                            <span className="px-4 py-1.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-xs font-black min-w-[70px] text-center">
-                                                {catSolved} / {problems.length}
-                                            </span>
-                                        </div>
-                                        <div className={`p-2 rounded-full bg-white/5 text-text-muted transition-transform duration-300 ${isExpanded ? 'rotate-180 text-white' : ''}`}>
-                                            <ChevronDown size={20} />
-                                        </div>
-                                    </div>
-                                </button>
-                                
-                                {/* Problem Items (Collapsible) */}
-                                <AnimatePresence initial={false}>
-                                    {isExpanded && (
-                                        <motion.div 
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                            className="overflow-hidden"
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Search & Filters */}
+                        <div className="space-y-4">
+                            {/* Search Input Row (Full-width) */}
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
+                                <input 
+                                    type="text"
+                                    placeholder="Search problems in this category..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-surface border border-border-subtle rounded-xl py-3 pl-11 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all backdrop-blur-xl"
+                                />
+                            </div>
+                            
+                            {/* Filters & Sort Row (Responsive flex container) */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {(['All', 'Solved', 'Not Solved'] as const).map((filter) => (
+                                        <button
+                                            key={filter}
+                                            onClick={() => setActiveFilter(filter)}
+                                            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shrink-0 ${
+                                                activeFilter === filter 
+                                                ? 'bg-primary text-white border border-primary' 
+                                                : 'bg-surface text-text-secondary hover:text-text-primary hover:bg-border-subtle/20 border border-border-subtle'
+                                            }`}
                                         >
-                                            <div className="divide-y divide-white/5">
-                                                {problems.map((problem) => (
-                                                    <motion.div 
-                                                        key={problem.id} 
-                                                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-                                                        className="group px-8 py-5 flex items-center justify-between cursor-pointer transition-all"
-                                                        onClick={() => handleSolve(problem)}
+                                            {filter}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex items-center gap-1.5 bg-surface/50 border border-border-subtle rounded-xl p-1 backdrop-blur-xl self-start sm:self-auto">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-text-muted px-2 flex items-center gap-1 shrink-0">
+                                        <ArrowUpDown size={11} />
+                                        Sort
+                                    </span>
+                                    {(['Default', 'Difficulty', 'Completion'] as const).map((option) => (
+                                        <button
+                                            key={option}
+                                            onClick={() => setSortBy(option)}
+                                            className={`px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shrink-0 uppercase tracking-wider ${
+                                                sortBy === option 
+                                                ? 'bg-secondary text-white shadow-md shadow-secondary/15' 
+                                                : 'text-text-secondary hover:text-white hover:bg-white/5'
+                                            }`}
+                                        >
+                                            {option}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Problems Cards Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <AnimatePresence mode="popLayout">
+                                {filteredProblems.map((problem) => {
+                                    const isSolved = completed[problem.id];
+                                    const isInProgress = !isSolved && (
+                                        visualizations.some(v => 
+                                            v.metadata?.problemDetails?.id === problem.id || 
+                                            v.title.toLowerCase().includes(problem.title.toLowerCase())
+                                        )
+                                    );
+
+                                    return (
+                                        <motion.div 
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.2 }}
+                                            key={problem.id} 
+                                            onClick={() => handleSolve(problem)}
+                                            className="group liquid-glass-card hover:translate-y-[-2px] hover:border-primary/50 transition-all duration-300 relative overflow-hidden border border-border-subtle p-5 flex flex-col justify-between h-42 cursor-pointer"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex items-start gap-3 min-w-0">
+                                                    {/* Checkbox button */}
+                                                    <button 
+                                                        onClick={(e) => handleToggle(problem.id, e)}
+                                                        className={`mt-0.5 relative w-6 h-6 rounded-lg flex items-center justify-center transition-all duration-300 border-2 shrink-0 ${
+                                                            isSolved 
+                                                            ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(123,116,209,0.3)]' 
+                                                            : isInProgress
+                                                            ? 'bg-accent-yellow/10 border-accent-yellow/60 text-accent-yellow shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                                                            : 'border-border-subtle text-transparent hover:border-text-muted'
+                                                        }`}
                                                     >
-                                                        <div className="flex items-center gap-6">
-                                                            {/* Custom Checkbox */}
-                                                            <button 
-                                                                onClick={(e) => handleToggle(problem.id, e)}
-                                                                className={`relative w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 border-2 ${
-                                                                    completed[problem.id] 
-                                                                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
-                                                                    : 'border-white/10 text-transparent hover:border-white/30'
-                                                                }`}
-                                                            >
-                                                                <CheckCircle size={18} className={completed[problem.id] ? "scale-100" : "scale-0"} />
-                                                            </button>
-                                                            
-                                                            <div className="flex flex-col">
-                                                                <h4 className={`text-lg font-bold transition-all duration-300 ${
-                                                                    completed[problem.id] 
-                                                                    ? 'text-text-muted line-through opacity-50' 
-                                                                    : 'text-white group-hover:text-primary'
-                                                                }`}>
-                                                                    {problem.title}
-                                                                </h4>
-                                                                <div className="flex items-center gap-3 mt-1">
-                                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
-                                                                        problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
-                                                                        problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
-                                                                        'border-red-500/30 text-red-400 bg-red-500/5'
-                                                                    }`}>
-                                                                        {problem.difficulty}
-                                                                    </span>
-                                                                    <a 
-                                                                        href={problem.url} 
-                                                                        target="_blank" 
-                                                                        rel="noreferrer"
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                        className="text-[10px] font-bold text-text-muted hover:text-white flex items-center gap-1.5 transition-colors uppercase tracking-widest"
-                                                                    >
-                                                                        LeetCode <ExternalLink size={10} />
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div className="flex items-center gap-4">
-                                                            <motion.button 
-                                                                whileHover={{ scale: 1.05 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                                className="opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs font-black text-white bg-primary px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20"
-                                                            >
-                                                                <Play size={14} fill="currentColor" /> 
-                                                                <span>Visualize</span>
-                                                                <ChevronRight size={14} />
-                                                            </motion.button>
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
+                                                        {isSolved ? (
+                                                            <CheckCircle size={14} className="scale-100" />
+                                                        ) : isInProgress ? (
+                                                            <div className="w-2 h-2 rounded-full bg-accent-yellow animate-pulse" />
+                                                        ) : null}
+                                                    </button>
+                                                    
+                                                    <div className="min-w-0">
+                                                        <h4 className={`text-base font-black tracking-tight leading-snug transition-all duration-300 ${
+                                                            isSolved 
+                                                            ? 'text-text-muted line-through opacity-50' 
+                                                            : 'text-text-primary group-hover:text-primary'
+                                                        }`}>
+                                                            {problem.title}
+                                                        </h4>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex items-center justify-between mt-auto">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                                        problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
+                                                        problem.difficulty === 'Medium' ? 'border-orange-500/30 text-orange-400 bg-orange-500/5' :
+                                                        'border-red-500/30 text-red-400 bg-red-500/5'
+                                                    }`}>
+                                                        {problem.difficulty}
+                                                    </span>
+                                                    
+
+
+                                                    {problem.url && (
+                                                        <a 
+                                                            href={problem.url} 
+                                                            target="_blank" 
+                                                            rel="noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-[9px] font-black text-text-muted hover:text-text-primary flex items-center gap-1 transition-colors uppercase tracking-wider ml-1"
+                                                        >
+                                                            LeetCode <ExternalLink size={9} />
+                                                        </a>
+                                                    )}
+                                                </div>
+
+                                                <motion.button 
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="flex items-center gap-1.5 text-[10px] font-black text-white bg-primary px-3.5 py-2 rounded-lg transition-all shadow-md shadow-primary/20 opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Play size={10} fill="currentColor" /> 
+                                                    <span>Visualize</span>
+                                                    <ChevronRight size={10} />
+                                                </motion.button>
                                             </div>
                                         </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Empty state for filtered problems */}
+                        {filteredProblems.length === 0 && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-center py-20 liquid-glass-card border border-border-subtle"
+                            >
+                                <div className="text-4xl mb-4 grayscale opacity-40">🔍</div>
+                                <h3 className="text-lg font-black text-text-primary mb-1">No matches found</h3>
+                                <p className="text-sm text-text-muted">Try adjusting search or difficulty filters.</p>
                             </motion.div>
-                        );
-                    })}
-                </motion.div>
-                
-                <AnimatePresence>
-                    {Object.keys(groupedProblems).length === 0 && (
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className="text-center py-32 glass-morphism rounded-3xl border border-white/10"
-                        >
-                            <div className="text-6xl mb-6 grayscale opacity-50">🔍</div>
-                            <h3 className="text-2xl font-black text-white mb-2">No patterns found</h3>
-                            <p className="text-text-muted">Try adjusting your search or filters to explore more problems.</p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        )}
+                    </motion.div>
+                </div>
             </div>
         </div>
     );

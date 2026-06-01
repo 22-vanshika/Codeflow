@@ -9,6 +9,14 @@ import { PORT } from './config';
 import problemRoutes from './routes/problem.route';
 import userRoutes from './routes/user.routes';
 import visualizationRoutes from './routes/visualization.routes';
+import feedbackRoutes from './routes/feedback.routes';
+import profileRoutes from './routes/profile.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import githubRoutes from './routes/github.routes';
+import blogRoutes from './routes/blog.routes';
+import docRoutes from './routes/doc.routes';
+import notificationRoutes from './routes/notification.routes';
+import contactRoutes from './routes/contact.routes';
 import { connectDB } from './config/db';
 import { initFirebaseAdmin } from './config/firebase';
 
@@ -29,6 +37,15 @@ initFirebaseAdmin();
 app.use('/api/problems', problemRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/visualizations', visualizationRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/github', githubRoutes);
+app.use('/api/blogs', blogRoutes);
+app.use('/api/docs', docRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/contact', contactRoutes);
+
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server });

@@ -33,11 +33,11 @@ export default function ComplexityTab() {
     if (!analysis) {
         return (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center text-text-muted space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 animate-pulse">
+                <div className="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center border border-border-subtle animate-pulse">
                     <Zap size={32} className="text-primary" />
                 </div>
                 <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">No Complexity Data Available</h4>
+                    <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider">No Complexity Data Available</h4>
                     <p className="text-xs text-text-muted max-w-xs leading-relaxed">
                         Generate an execution trace or run simulation to analyze complexity.
                     </p>
@@ -139,29 +139,29 @@ export default function ComplexityTab() {
     const liveOp = currentStep ? getLiveOperation(currentLineContent) : null;
 
     return (
-        <div className="h-full flex flex-col bg-bg-main overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <div className="h-full flex flex-col bg-transparent overflow-y-auto custom-scrollbar p-6 space-y-6">
             
             {/* 1. FINAL COMPLEXITY CARD */}
             <div className="grid grid-cols-2 gap-4 shrink-0">
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-all duration-300 relative overflow-hidden">
+                <div className="p-5 rounded-2xl bg-surface border border-border-subtle group hover:border-primary/30 transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full" />
                     <div className="flex items-center gap-2 mb-2">
                         <Clock size={16} className="text-primary animate-pulse" />
-                        <span className="text-[10px] font-black text-text-muted uppercase tracking-wider">Time Complexity</span>
+                        <span className="text-[10px] font-black text-text-secondary uppercase tracking-wider">Time Complexity</span>
                     </div>
-                    <div className="text-3xl font-black text-white font-mono tracking-tight drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]">
+                    <div className="text-3xl font-black text-text-primary font-mono tracking-tight drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]">
                         {analysis.timeComplexity}
                     </div>
                     <p className="text-[10px] text-text-muted mt-2 font-medium">Worst-case runtime bounds</p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/5 group hover:border-secondary/30 transition-all duration-300 relative overflow-hidden">
+                <div className="p-5 rounded-2xl bg-surface border border-border-subtle group hover:border-secondary/30 transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/5 blur-2xl rounded-full" />
                     <div className="flex items-center gap-2 mb-2">
                         <Database size={16} className="text-secondary animate-pulse" />
-                        <span className="text-[10px] font-black text-text-muted uppercase tracking-wider">Space Complexity</span>
+                        <span className="text-[10px] font-black text-text-secondary uppercase tracking-wider">Space Complexity</span>
                     </div>
-                    <div className="text-3xl font-black text-white font-mono tracking-tight drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]">
+                    <div className="text-3xl font-black text-text-primary font-mono tracking-tight drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]">
                         {analysis.spaceComplexity}
                     </div>
                     <p className="text-[10px] text-text-muted mt-2 font-medium">Memory footprint bounds</p>
@@ -179,17 +179,17 @@ export default function ComplexityTab() {
                 </div>
                 {currentStep ? (
                     <div className="space-y-3 font-mono">
-                        <div className="p-3 bg-bg-main/60 rounded-xl border border-white/5 text-xs text-white overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-3">
-                            <span className="text-text-muted text-[10px] font-bold select-none border-r border-white/10 pr-2">Line {currentStep.line}</span>
+                        <div className="p-3 bg-surface border border-border-subtle text-xs text-text-primary overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-3">
+                            <span className="text-text-muted text-[10px] font-bold select-none border-r border-border-subtle pr-2">Line {currentStep.line}</span>
                             <span className="text-accent-cyan font-bold">{currentLineContent}</span>
                         </div>
                         {liveOp && (
                             <div className="grid grid-cols-2 gap-4 text-xs font-sans mt-2">
-                                <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                                <div className="p-2.5 rounded-lg bg-surface border border-border-subtle">
                                     <div className="text-[9px] font-bold text-text-muted uppercase mb-1">Active Operation</div>
-                                    <div className="font-bold text-white text-[11px]">{liveOp.name}</div>
+                                    <div className="font-bold text-text-primary text-[11px]">{liveOp.name}</div>
                                 </div>
-                                <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                                <div className="p-2.5 rounded-lg bg-surface border border-border-subtle">
                                     <div className="text-[9px] font-bold text-text-muted uppercase mb-1">Step Complexity</div>
                                     <div className="font-bold text-accent-cyan text-[11px] font-mono">{liveOp.cost}</div>
                                 </div>
@@ -214,14 +214,14 @@ export default function ComplexityTab() {
                         <Layers size={14} />
                         <h4 className="text-[10px] font-black uppercase tracking-widest">Complexity Breakdown</h4>
                     </div>
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                    <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-2">
                         {analysis.timeBreakdown.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between py-1 text-xs border-b border-white/5 last:border-0 last:pb-0">
+                            <div key={idx} className="flex items-center justify-between py-1 text-xs border-b border-border-subtle last:border-0 last:pb-0">
                                 <span className="text-text-secondary font-medium flex items-center gap-1.5">
                                     <CornerDownRight size={10} className="text-text-muted" />
                                     {item.operation}
                                 </span>
-                                <span className="font-bold text-white font-mono bg-white/5 px-2 py-0.5 rounded text-[10px]">{item.complexity}</span>
+                                <span className="font-bold text-text-primary font-mono bg-border-subtle px-2 py-0.5 rounded text-[10px]">{item.complexity}</span>
                             </div>
                         ))}
                     </div>
@@ -235,14 +235,14 @@ export default function ComplexityTab() {
                         <Database size={14} />
                         <h4 className="text-[10px] font-black uppercase tracking-widest">Space Allocation Breakdown</h4>
                     </div>
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                    <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-2">
                         {analysis.spaceBreakdown.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between py-1 text-xs border-b border-white/5 last:border-0 last:pb-0">
+                            <div key={idx} className="flex items-center justify-between py-1 text-xs border-b border-border-subtle last:border-0 last:pb-0">
                                 <span className="text-text-secondary font-medium flex items-center gap-1.5">
                                     <CornerDownRight size={10} className="text-text-muted" />
                                     {item.structure}
                                 </span>
-                                <span className="font-bold text-white font-mono bg-white/5 px-2 py-0.5 rounded text-[10px]">{item.complexity}</span>
+                                <span className="font-bold text-text-primary font-mono bg-border-subtle px-2 py-0.5 rounded text-[10px]">{item.complexity}</span>
                             </div>
                         ))}
                     </div>
@@ -256,7 +256,7 @@ export default function ComplexityTab() {
                         <BookOpen size={14} />
                         <h4 className="text-[10px] font-black uppercase tracking-widest">Derivation Explanation</h4>
                     </div>
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+                    <div className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3">
                         {analysis.stepExplanations.map((step, idx) => (
                             <div key={idx} className="flex gap-3 items-start">
                                 <div className="w-5 h-5 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary shrink-0 mt-0.5">
@@ -280,7 +280,7 @@ export default function ComplexityTab() {
                     </div>
                     <div className="space-y-4">
                         {analysis.detections.map((d, idx) => (
-                            <div key={idx} className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3 relative overflow-hidden group hover:border-accent-cyan/30 transition-all duration-300">
+                            <div key={idx} className="p-4 rounded-2xl bg-surface border border-border-subtle space-y-3 relative overflow-hidden group hover:border-accent-cyan/30 transition-all duration-300">
                                 <div className="absolute top-0 right-0 p-3">
                                     <span className="px-2 py-0.5 rounded font-mono text-[9px] font-black uppercase tracking-tighter bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/20">
                                         {d.complexity}
@@ -288,18 +288,18 @@ export default function ComplexityTab() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-accent-cyan" />
-                                    <h5 className="text-xs font-bold text-white">{d.title}</h5>
+                                    <h5 className="text-xs font-bold text-text-primary">{d.title}</h5>
                                 </div>
-                                <p className="text-[11px] text-text-muted leading-relaxed font-medium">
+                                <p className="text-[11px] text-text-secondary leading-relaxed font-medium">
                                     {d.explanation}
                                 </p>
-                                <pre className="p-2.5 bg-bg-main/60 border border-white/5 rounded-lg text-[10px] font-mono text-accent-cyan/80 overflow-x-auto whitespace-pre">
+                                <pre className="p-2.5 bg-surface border border-border-subtle rounded-lg text-[10px] font-mono text-accent-cyan/80 overflow-x-auto whitespace-pre">
                                     <code>{d.codeSnippet}</code>
                                 </pre>
 
                                 {/* Visual Tree representations */}
                                 {d.visualTree && d.visualTree.length > 0 && (
-                                    <div className="mt-2.5 pt-2.5 border-t border-white/5 space-y-1">
+                                    <div className="mt-2.5 pt-2.5 border-t border-border-subtle space-y-1">
                                         <div className="text-[9px] font-black text-text-muted uppercase tracking-wider mb-1.5">Visual Derivation</div>
                                         <div className="flex flex-wrap items-center gap-2 font-mono text-[10px]">
                                             {d.visualTree.map((node, nIdx) => (
@@ -307,7 +307,7 @@ export default function ComplexityTab() {
                                                     {node === "↓" || node === "×" || node === "=" || node === "+" || node === "↩" ? (
                                                         <span className="text-primary font-black">{node}</span>
                                                     ) : (
-                                                        <span className="px-2 py-1 bg-white/5 border border-white/5 rounded text-white font-bold">{node}</span>
+                                                        <span className="px-2 py-1 bg-border-subtle border border-border-subtle rounded text-text-primary font-bold">{node}</span>
                                                     )}
                                                 </div>
                                             ))}
@@ -327,12 +327,12 @@ export default function ComplexityTab() {
                         <GitCompare size={14} />
                         <h4 className="text-[10px] font-black uppercase tracking-widest">Complexity Learning Mode</h4>
                     </div>
-                    <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                    <div className="p-5 rounded-2xl bg-surface border border-border-subtle space-y-4">
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-3.5 rounded-xl bg-red-500/5 border border-red-500/10">
                                 <div className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-1">Brute Force</div>
-                                <div className="font-mono font-bold text-white text-sm mb-1">
+                                <div className="font-mono font-bold text-text-primary text-sm mb-1">
                                     Time: {analysis.learningMode.bruteForce.time}
                                 </div>
                                 <div className="font-mono text-[10px] text-text-muted">
@@ -347,7 +347,7 @@ export default function ComplexityTab() {
 
                             <div className="p-3.5 rounded-xl bg-green-500/5 border border-green-500/10">
                                 <div className="text-[9px] font-bold text-green-400 uppercase tracking-widest mb-1">Optimized</div>
-                                <div className="font-mono font-bold text-white text-sm mb-1">
+                                <div className="font-mono font-bold text-text-primary text-sm mb-1">
                                     Time: {analysis.learningMode.optimized.time}
                                 </div>
                                 <div className="font-mono text-[10px] text-text-muted">
@@ -362,7 +362,7 @@ export default function ComplexityTab() {
                         </div>
 
                         {/* Improvement tag */}
-                        <div className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between text-xs font-semibold">
+                        <div className="p-3 bg-surface/50 rounded-xl border border-border-subtle flex items-center justify-between text-xs font-semibold">
                             <span className="text-text-muted text-[10px] font-bold uppercase tracking-wider">Complexity Shift</span>
                             <span className="text-accent-cyan font-bold font-mono tracking-tight bg-accent-cyan/10 px-2 py-0.5 rounded border border-accent-cyan/20">
                                 {analysis.learningMode.improvement}
@@ -370,7 +370,7 @@ export default function ComplexityTab() {
                         </div>
 
                         <div className="text-xs text-text-secondary leading-relaxed font-medium">
-                            <span className="font-bold text-white block mb-1">Why this optimization works:</span>
+                            <span className="font-bold text-text-primary block mb-1">Why this optimization works:</span>
                             {analysis.learningMode.optimizationReason}
                         </div>
                     </div>
@@ -395,11 +395,11 @@ export default function ComplexityTab() {
                         <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
                             <div>
                                 <span className="block text-text-muted uppercase font-bold text-[8px]">Derived Complexity</span>
-                                <span className="font-mono text-white font-bold">{analysis.timeComplexity} / {analysis.spaceComplexity}</span>
+                                <span className="font-mono text-text-primary font-bold">{analysis.timeComplexity} / {analysis.spaceComplexity}</span>
                             </div>
                             <div>
                                 <span className="block text-text-muted uppercase font-bold text-[8px]">Steps Run</span>
-                                <span className="text-white font-bold">{stepsArray.length} execution steps</span>
+                                <span className="text-text-primary font-bold">{stepsArray.length} execution steps</span>
                             </div>
                         </div>
                     </div>
