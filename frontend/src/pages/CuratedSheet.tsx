@@ -37,7 +37,7 @@ export default function CuratedSheet() {
     const { visualizations, fetchUserVisualizations } = useVisualizationStore();
     
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState<'All' | 'Completed' | 'Not Completed'>('All');
+    const [activeFilter, setActiveFilter] = useState<'All' | 'Solved' | 'Not Solved'>('All');
     const [sortBy, setSortBy] = useState<'Default' | 'Difficulty' | 'Completion'>('Default');
     
     // Stable list of unique categories
@@ -133,8 +133,8 @@ export default function CuratedSheet() {
             const isSolved = completed[problem.id];
             const matchesFilter = 
                 activeFilter === 'All' || 
-                (activeFilter === 'Completed' && isSolved) || 
-                (activeFilter === 'Not Completed' && !isSolved);
+                (activeFilter === 'Solved' && isSolved) || 
+                (activeFilter === 'Not Solved' && !isSolved);
             return matchesSearch && matchesFilter;
         });
 
@@ -352,7 +352,7 @@ export default function CuratedSheet() {
                             {/* Filters & Sort Row (Responsive flex container) */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    {(['All', 'Completed', 'Not Completed'] as const).map((filter) => (
+                                    {(['All', 'Solved', 'Not Solved'] as const).map((filter) => (
                                         <button
                                             key={filter}
                                             onClick={() => setActiveFilter(filter)}
