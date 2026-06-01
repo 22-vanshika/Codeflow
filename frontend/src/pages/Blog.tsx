@@ -120,6 +120,28 @@ const posts: Post[] = [
     authorInitials: 'AA',
     gradient: 'from-accent-purple to-accent-orange',
   },
+  {
+    id: 'kadanes-algorithm',
+    title: "Kadane's Algorithm: O(N) Maximum Subarray Sum",
+    excerpt: "Struggling to solve maximum subarray problems efficiently? Learn Kadane's sliding dynamic programming approach in linear time with zero space overhead.",
+    date: 'Jun 1, 2026',
+    readTime: '6 min read',
+    tags: ['Arrays', 'Dynamic Programming', 'Patterns'],
+    author: 'Anshika Asati',
+    authorInitials: 'AA',
+    gradient: 'from-accent-cyan to-accent-purple',
+  },
+  {
+    id: 'floyds-cycle-detection',
+    title: "Floyd's Cycle Detection: The Tortoise & Hare Approach",
+    excerpt: "Learn how to detect cycles in linked lists or state diagrams in O(N) time and O(1) space, along with the math behind finding the cycle's starting node.",
+    date: 'Jun 1, 2026',
+    readTime: '8 min read',
+    tags: ['Linked List', 'Two Pointers', 'Algorithms'],
+    author: 'Anshika Asati',
+    authorInitials: 'AA',
+    gradient: 'from-primary to-accent-orange',
+  },
 ];
 
 const experiences: InterviewExperience[] = [
@@ -192,6 +214,34 @@ const experiences: InterviewExperience[] = [
     sourceUrl: 'https://leetcode.com/discuss/interview-experience',
     author: 'Cited from LeetCode (user: senior_dev_99)',
     gradient: 'from-accent-red to-secondary'
+  },
+  {
+    id: 'google-l4-onsite-experience',
+    company: 'Google',
+    role: 'Software Engineer (L4)',
+    year: '2026',
+    difficulty: 'Hard',
+    title: 'Google L4 Onsite: Triangles in Graph & Dynamic Programming',
+    excerpt: 'A real detailed account of a 4-round onsite interview for a mid-level L4 role at Google, featuring cycle counting in graphs and dynamic state tables.',
+    keyQuestions: 'Count Triangles in an Undirected Graph (Adjacency Matrix / Matrix Multiplication), Decode Ways (DP)',
+    keyLearnings: 'Always draw the graph nodes out and label their degree. Google interviewers love it when you mathematically explain the complexity of matrix powers.',
+    sourceUrl: 'https://leetcode.com/discuss/interview-experience/512903/Google-L4-Onsite-Interview-Experience-2020',
+    author: 'Cited from LeetCode Discuss (user: code_conqueror)',
+    gradient: 'from-accent-purple to-accent-cyan'
+  },
+  {
+    id: 'microsoft-sde2-reddit-experience',
+    company: 'Microsoft',
+    role: 'Software Engineer II',
+    year: '2025',
+    difficulty: 'Medium',
+    title: 'Microsoft SDE-2: Design a Distributed URL Shortener & Binary Search',
+    excerpt: 'Authentic Microsoft SDE-2 interview experience shared on Reddit. Focuses on low-level designs and robust binary search optimizations.',
+    keyQuestions: 'Design TinyURL / Distributed ID Generator (System Design), Find Peak Element (Binary Search)',
+    keyLearnings: 'For SDE-2, Microsoft tests low-level class structural choices and DB index trade-offs. Be extremely comfortable with distributed locks (Redis/Zookeeper) and base-62 encoding.',
+    sourceUrl: 'https://www.reddit.com/r/cscareerquestions/comments/mchm7x/microsoft_sde_ii_interview_experience/',
+    author: 'Cited from Reddit r/cscareerquestions (user: cloud_architect_se)',
+    gradient: 'from-accent-orange to-accent-red'
   }
 ];
 

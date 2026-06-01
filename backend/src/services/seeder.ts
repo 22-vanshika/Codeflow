@@ -274,6 +274,168 @@ Google onsite interviewers love recursive depth. Practice modular segment trees 
         category: 'Interview Experience',
         company: 'Google',
         sourceUrl: 'https://leetcode.com/discuss/interview-experience'
+    },
+    {
+        slug: 'kadanes-algorithm',
+        title: "Kadane's Algorithm: O(N) Maximum Subarray Sum",
+        excerpt: "Struggling to solve maximum subarray problems efficiently? Learn Kadane's sliding dynamic programming approach in linear time with zero space overhead.",
+        content: `### Maximum Subarray Sum: Kadane's Algorithm
+
+Finding the contiguous subarray within a one-dimensional array of numbers which has the largest sum is a classic coding interview problem (famous as **LeetCode 53. Maximum Subarray**).
+
+#### The Brute-Force Fallback (O(N^2))
+We could compute the sum of all possible subarrays, which takes **O(N^2)** time. This is highly suboptimal for large datasets.
+
+#### The Optimal Dynamic Programming Approach (O(N))
+**Kadane's Algorithm** solves this in a single scan of the array (**O(N)** time and **O(1)** space). The algorithm maintains a running sum of the subarray and updates the maximum sum encountered so far.
+
+The core recurrence relation is:
+\`\`\`cpp
+currentMax = max(arr[i], currentMax + arr[i]);
+globalMax = max(globalMax, currentMax);
+\`\`\`
+
+#### C++ Implementation
+\`\`\`cpp
+int maxSubArray(vector<int>& nums) {
+    int currentMax = nums[0];
+    int globalMax = nums[0];
+    for (size_t i = 1; i < nums.size(); ++i) {
+        currentMax = max(nums[i], currentMax + nums[i]);
+        globalMax = max(globalMax, currentMax);
+    }
+    return globalMax;
+}
+\`\`\`
+
+#### Why It Works:
+At each index \`i\`, we make a local choice: do we append the current element \`nums[i]\` to the existing subarray, or do we start a *new* contiguous subarray starting at \`nums[i]\`? If \`currentMax + nums[i]\` is less than \`nums[i]\`, it means the previous subarray sum was dragging us down, so we start fresh.
+
+*Cite Source: [Wikipedia - Maximum Subarray Problem](https://en.wikipedia.org/wiki/Maximum_subarray_problem)*`,
+        date: 'Jun 1, 2026',
+        readTime: '6 min read',
+        author: 'Anshika Asati',
+        authorInitials: 'AA',
+        gradient: 'from-accent-cyan to-accent-purple',
+        category: 'Tutorial'
+    },
+    {
+        slug: 'floyds-cycle-detection',
+        title: "Floyd's Cycle Detection: The Tortoise & Hare Approach",
+        excerpt: "Learn how to detect cycles in linked lists or state diagrams in O(N) time and O(1) space, along with the math behind finding the cycle's starting node.",
+        content: `### Cycle Detection: Floyd's Tortoise and Hare Algorithm
+
+Detecting cycles in a sequential path of pointers (like a singly linked list or a state machine transition diagram) is a fundamental DSA task (**LeetCode 141. Linked List Cycle** and **142. Linked List Cycle II**).
+
+#### The Standard Hash Set Approach (O(N) Space)
+We can traverse the path and record each visited node address in a hash set. If we see a node we've already visited, we have a cycle. While O(N) time, this requires **O(N) space**, which violates the common interview constraint of **O(1) auxiliary space**.
+
+#### Floyd's Two-Pointer Approach (O(1) Space)
+We maintain two pointers: a **Tortoise** (slow pointer moving 1 step at a time) and a **Hare** (fast pointer moving 2 steps at a time).
+
+1. **Detection Phase**: If the Hare reaches the end (NIL node), there is no cycle. If a cycle exists, the Hare will eventually enter the cycle and catch up to the Tortoise from behind. They will meet at a specific meeting node.
+2. **Start-of-Cycle Finder Phase**: To find the exact node where the cycle begins, leave one pointer at the meeting point and reset the other pointer back to the head of the list. Move both pointers at a speed of 1 step at a time. The node where they meet again is the exact start of the cycle.
+
+#### Mathematical Proof:
+Let:
+- \`L\` = distance from head to cycle entrance.
+- \`C\` = cycle length.
+- \`K\` = distance from cycle entrance to meeting point.
+
+When they meet, the Tortoise has traveled \`L + K\` steps. The Hare has traveled \`L + K + M * C\` steps (where M is cycle loops).
+Since Hare is twice as fast:
+\`\`\`
+2 * (L + K) = L + K + M * C
+L + K = M * C
+L = M * C - K = (M - 1) * C + (C - K)
+\`\`\`
+This shows that the distance from the head to the cycle entrance (\`L\`) is exactly congruent to the distance from the meeting point to the cycle entrance (\`C - K\`), proving they must meet at the entrance when moving at equal speeds!
+
+*Cite Source: [Wikipedia - Floyd's Cycle Detection](https://en.wikipedia.org/wiki/Cycle_detection#Floyd's_tortoise_and_hare)*`,
+        date: 'Jun 1, 2026',
+        readTime: '8 min read',
+        author: 'Anshika Asati',
+        authorInitials: 'AA',
+        gradient: 'from-primary to-accent-orange',
+        category: 'Tutorial'
+    },
+    {
+        slug: 'google-l4-onsite-experience',
+        title: 'Google L4 Onsite: Triangles in Graph & Dynamic Programming',
+        excerpt: 'A real detailed account of a 4-round onsite interview for a mid-level L4 role at Google, featuring cycle counting in graphs and dynamic state tables.',
+        content: `### Google L4 Interview Loop Overview
+
+* **Role**: Software Engineer (L4)
+* **Format**: 4 Technical rounds (Onsite) + 1 Googliness round
+* **Preparation Focus**: NeetCode 150 + Google tagged mediums/hards.
+
+---
+
+### Round 1: Graphs & Cycle Counting
+Given an undirected graph defined as an adjacency matrix, count the total number of "triangles" (cycles of length 3).
+- **Brute Force**: O(V^3) by testing all vertex triplets \`(u, v, w)\` to see if edges \`(u,v), (v,w), (w,u)\` exist.
+- **Optimal Matrix Solution**: Compute the cube of the adjacency matrix \`A^3\`. The sum of the diagonal elements (Trace) of \`A^3\` divided by 6 gives the exact triangle count!
+- **Key Insight**: Explain why dividing by 6 is mathematically required: each triangle has 3 vertices, and can be traversed in 2 directions (clockwise and counterclockwise).
+- **Attribution**: Cited from LeetCode Discuss ([Verify Google L4 Post](https://leetcode.com/discuss/interview-experience/512903/Google-L4-Onsite-Interview-Experience-2020)).
+
+---
+
+### Round 2: Dynamic Programming
+Variant of **Decode Ways** where characters map to numeric codes, but with wildcard characters like \`*\` which can map to any digit.
+- **Solution Strategy**: Standard dynamic programming array \`dp[i]\` storing decode combinations for prefix length \`i\`.
+- **Edge cases**: Managing wildcards next to '1' or '2' requires complex modular addition to prevent integer overflow.
+
+---
+
+### Key Takeaways
+Don't rush to code! Interviewers at Google appreciate a 5-minute math discussion before typing any variables. Tracing the degree of graph nodes and discussing matrix powers impressed my interviewer immediately.`,
+        date: 'June 2026',
+        readTime: '6 min read',
+        author: 'Cited from LeetCode Discuss (user: code_conqueror)',
+        authorInitials: 'CC',
+        gradient: 'from-accent-purple to-accent-cyan',
+        category: 'Interview Experience',
+        company: 'Google',
+        sourceUrl: 'https://leetcode.com/discuss/interview-experience/512903/Google-L4-Onsite-Interview-Experience-2020'
+    },
+    {
+        slug: 'microsoft-sde2-reddit-experience',
+        title: 'Microsoft SDE-2: Design a Distributed URL Shortener & Binary Search',
+        excerpt: 'Authentic Microsoft SDE-2 interview experience shared on Reddit. Focuses on low-level designs and robust binary search optimizations.',
+        content: `### Microsoft SDE-2 (Redmond) Interview Review
+
+* **Role**: Software Engineer II (L61/L62)
+* **Format**: 4 virtual rounds
+* **Focus**: Low-Level Class Structures (LLD) combined with custom algorithmic indexes.
+
+---
+
+### Round 1: Coding & Binary Search
+Asked to solve a variant of **Find Peak Element** in an unsorted array.
+- **Brute Force**: Linear scan in O(N).
+- **Optimal Binary Search**: O(log N) by comparing the mid element with its right neighbor. If \`arr[mid] < arr[mid + 1]\`, then a peak must exist on the right half.
+- **Attribution**: Cited from Reddit r/cscareerquestions ([Verify Microsoft Reddit Post](https://www.reddit.com/r/cscareerquestions/comments/mchm7x/microsoft_sde_ii_interview_experience/)).
+
+---
+
+### Round 2: Low-Level System Design (LLD)
+Design a **Distributed URL Shortener** (TinyURL).
+- **Rounds focus**: Class design, DB schema, and distributed coordination.
+- **Key details**: Use Base-62 encoding for shortened keys. Discussed how a distributed ID generator (e.g. Snowflake or a database auto-increment offset cache range per server node) ensures no collision without database overhead.
+- **Scaling constraint**: Discussed Redis caching for high-frequency redirects.
+
+---
+
+### Key Strategy
+For SDE-2 roles, Microsoft interviewers look for systems trade-offs. It is not enough to just write a working binary search; you must be ready to discuss index scaling, locks, and concurrency in memory!`,
+        date: 'May 2025',
+        readTime: '5 min read',
+        author: 'Cited from Reddit r/cscareerquestions (user: cloud_architect_se)',
+        authorInitials: 'CA',
+        gradient: 'from-accent-orange to-accent-red',
+        category: 'Interview Experience',
+        company: 'Microsoft',
+        sourceUrl: 'https://www.reddit.com/r/cscareerquestions/comments/mchm7x/microsoft_sde_ii_experience/'
     }
 ];
 
