@@ -12,6 +12,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProgressStore } from '../store/progressStore';
 import { problemsList } from '../data/problems/index';
+import DynamicBackground from '../components/DynamicBackground';
 
 const TOPIC_MAPPING: Record<string, string[]> = {
   'Arrays & Hashing': ['Arrays & Hashing', 'Sorting'],
@@ -199,7 +200,8 @@ export default function Dashboard() {
     const streakCount = dashboardData?.stats?.streak ?? Number(localStorage.getItem('cf_streak') || '3');
 
     return (
-        <div className="min-h-screen pt-[80px] px-6 pb-12 bg-bg-main text-text-primary relative overflow-x-hidden">
+        <div className="min-h-screen pt-[80px] px-6 pb-12 bg-transparent text-text-primary relative overflow-x-hidden">
+            <DynamicBackground />
             {/* Ambient Background Glows */}
             <div className="absolute top-[20%] right-[-10%] w-[35%] h-[35%] bg-primary/5 blur-[130px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[10%] left-[-10%] w-[35%] h-[35%] bg-secondary/5 blur-[130px] rounded-full pointer-events-none" />

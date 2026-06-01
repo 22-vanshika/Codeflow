@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Home from './pages/Home';
 import ProblemWorkspace from './pages/ProblemWorkspace';
 import CuratedSheet from './pages/CuratedSheet';
@@ -18,6 +19,7 @@ import AlgorithmsHub from './pages/AlgorithmsHub';
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === '/workspace';
+  const hideFooter = location.pathname === '/workspace';
 
   return (
     <>
@@ -39,6 +41,7 @@ function AppContent() {
         <Route path="/algorithms" element={<AlgorithmsHub />} />
         <Route path="/algorithm" element={<AlgorithmsHub />} />
       </Routes>
+      {!hideFooter && <Footer />}
     </>
   );
 }

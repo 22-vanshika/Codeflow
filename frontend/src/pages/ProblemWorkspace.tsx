@@ -13,6 +13,7 @@ import ComplexityInfo from '../features/workspace/components/ComplexityInfo';
 import ProblemDescription from '../features/workspace/components/ProblemDescription';
 import SlidingConsole from '../features/workspace/components/SlidingConsole';
 import FeedbackModal from '../components/FeedbackModal';
+import AuthModal from '../features/auth/components/AuthModal';
 import { problemsList } from '../data/problems/index';
 import { useProgressStore } from '../store/progressStore';
 import { useAuthStore } from '../store/authStore';
@@ -22,8 +23,8 @@ import {
     ChevronUp, Code2, Save, Github, BookOpen, 
     Zap, Terminal, Layers, MousePointer2,
     Maximize2, Minimize2, Menu, Search, CheckCircle, Trophy,
-    Cpu, LogOut, User, LayoutDashboard, Settings, Newspaper, Brain,
-    Star, FileText, Bookmark
+    Cpu, LogOut, LayoutDashboard, Settings, Newspaper, Brain,
+    Star, FileText, Bookmark, Edit3, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -88,6 +89,7 @@ export default function ProblemWorkspace() {
 
     const { user, logout } = useAuthStore();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isAuthOpen, setIsAuthOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Dropdown click outside listener
@@ -406,7 +408,7 @@ export default function ProblemWorkspace() {
                     </div>
 
                     {/* Profile Dropdown Section */}
-                    {user && (
+                    {user ? (
                         <div className="relative shrink-0 flex items-center" ref={dropdownRef}>
                             <button
                                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -443,8 +445,13 @@ export default function ProblemWorkspace() {
                                                         {(user.displayName || user.email || 'U')[0].toUpperCase()}
                                                     </div>
                                                 )}
-                                                <div className="min-w-0">
-                                                    <p className="text-white font-bold text-sm truncate">{user.displayName || 'User'}</p>
+                                                <div className="min-w-0 text-left">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="text-white font-bold text-sm truncate">{user.displayName || 'User'}</p>
+                                                        <Link to="/profile-settings" onClick={() => setIsProfileOpen(false)} className="text-text-muted hover:text-primary transition-colors shrink-0" title="Edit Profile">
+                                                            <Edit3 size={13} />
+                                                        </Link>
+                                                    </div>
                                                     <p className="text-text-muted text-xs truncate">{user.email}</p>
                                                 </div>
                                             </div>
@@ -452,7 +459,6 @@ export default function ProblemWorkspace() {
 
                                         <div className="border-t border-white/5 pt-1 space-y-0.5 text-left">
                                             <DropdownItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" description="Your visualizations & stats" onClick={() => setIsProfileOpen(false)} />
-                                            <DropdownItem to="/profile-settings" icon={User} label="Edit Profile" description="Name, avatar, social links" onClick={() => setIsProfileOpen(false)} />
                                             <DropdownItem to="/dashboard" icon={BookOpen} label="Saved Visualizations" onClick={() => setIsProfileOpen(false)} />
                                             <DropdownItem to="/sheet" icon={Star} label="Learning Progress" description="Track DSA topics" onClick={() => setIsProfileOpen(false)} />
                                             <DropdownItem to="/blog" icon={Newspaper} label="Blog" description="Insights & interview experiences" onClick={() => setIsProfileOpen(false)} />
@@ -480,6 +486,14 @@ export default function ProblemWorkspace() {
                                 )}
                             </AnimatePresence>
                         </div>
+                    ) : (
+                        <button
+                            onClick={() => setIsAuthOpen(true)}
+                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary/10 border border-primary/30 hover:bg-primary hover:text-white text-primary text-xs font-black tracking-wide transition-all active:scale-95 shadow-md shadow-primary/5 shrink-0"
+                        >
+                            <User size={14} />
+                            <span>Sign In</span>
+                        </button>
                     )}
                 </div>
             </header>
@@ -802,6 +816,10 @@ export default function ProblemWorkspace() {
             <GitHubImportDialog
                 isOpen={isGithubImportOpen}
                 onClose={() => setIsGithubImportOpen(false)}
+            />
+            <AuthModal
+                isOpen={isAuthOpen}
+                onClose={() => setIsAuthOpen(false)}
             />
 
             {/* Sliding Drawer for DSA Sheet */}

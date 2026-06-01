@@ -149,7 +149,7 @@ export default function ProfileSettings() {
   ];
 
   return (
-    <div className="min-h-screen pt-[80px] bg-bg-main text-text-primary relative overflow-x-hidden">
+    <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
       <div className="max-w-3xl mx-auto px-4 py-12 relative z-10">

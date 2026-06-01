@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Code2, Cpu, Zap, Play, Terminal, ArrowRight, ExternalLink } from 'lucide-react';
+import { BookOpen, Code2, Cpu, Zap, Play, Terminal, ArrowRight } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
 import { Link } from 'react-router-dom';
 
@@ -154,10 +154,12 @@ const sections = [
             { method: 'POST', route: '/users/sync', desc: 'Sync user profile after Firebase auth.' },
             { method: 'GET', route: '/users/progress', desc: 'Fetch the authenticated user\'s DSA progress.' },
             { method: 'POST', route: '/users/progress', desc: 'Update DSA problem completion status.' },
-            { method: 'GET', route: '/visualizations', desc: 'List all saved visualizations for the user.' },
-            { method: 'POST', route: '/visualizations', desc: 'Create a new saved visualization.' },
-            { method: 'PUT', route: '/visualizations/:id', desc: 'Update a saved visualization.' },
-            { method: 'DELETE', route: '/visualizations/:id', desc: 'Delete a saved visualization.' },
+            { method: 'GET', route: '/visualizations/user', desc: 'List all saved visualizations for the authenticated user.' },
+            { method: 'POST', route: '/visualizations/save', desc: 'Create a new saved visualization.' },
+            { method: 'GET', route: '/visualizations/:id', desc: 'Fetch a specific visualization by its unique ID.' },
+            { method: 'PUT', route: '/visualizations/:id', desc: 'Update an existing visualization by ID.' },
+            { method: 'DELETE', route: '/visualizations/:id', desc: 'Delete an existing visualization by ID.' },
+            { method: 'POST', route: '/visualizations/:id/duplicate', desc: 'Duplicate an existing visualization.' },
           ].map(ep => (
             <div key={ep.route} className="flex items-start gap-3 p-3 bg-surface/30 rounded-lg border border-border-subtle">
               <span className={`text-[10px] font-black px-2 py-0.5 rounded flex-shrink-0 mt-0.5 ${ep.method === 'GET' ? 'bg-accent-green/10 text-accent-green border border-accent-green/20' : ep.method === 'POST' ? 'bg-primary/10 text-primary border border-primary/20' : ep.method === 'PUT' ? 'bg-accent-orange/10 text-accent-orange border border-accent-orange/20' : 'bg-accent-red/10 text-accent-red border border-accent-red/20'}`}>
@@ -190,7 +192,7 @@ export default function Docs() {
   }, []);
 
   return (
-    <div className="min-h-screen pt-[80px] bg-bg-main text-text-primary relative overflow-x-hidden">
+    <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
       <div className="max-w-5xl mx-auto px-6 py-16 relative z-10 flex gap-8">
@@ -207,17 +209,7 @@ export default function Docs() {
               {s.title}
             </a>
           ))}
-          <div className="mt-6 pt-6 border-t border-border-subtle">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs text-text-muted hover:text-white transition-colors"
-            >
-              <ExternalLink size={12} />
-              Edit on GitHub
-            </a>
-          </div>
+
         </aside>
 
         {/* Main Content */}

@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
     BookOpen, Cpu, User, LogOut, LayoutDashboard, ChevronDown,
-    Newspaper, FileText, Brain, Settings, Bookmark, Menu, Star
+    Newspaper, FileText, Brain, Settings, Bookmark, Menu, Star, Edit3
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useProgressStore } from '../store/progressStore';
@@ -152,13 +152,6 @@ export default function Navbar() {
                     )}
                 </Link>
 
-                <Link to="/docs" className={`relative hidden lg:flex items-center space-x-2 text-sm font-bold transition-all duration-300 ${location.pathname === '/docs' ? 'text-primary' : 'text-text-muted hover:text-white'}`}>
-                    <FileText size={16} />
-                    <span>Docs</span>
-                    {location.pathname === '/docs' && (
-                        <motion.div layoutId="nav-underline" className="absolute -bottom-[22px] left-0 right-0 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                    )}
-                </Link>
 
                 <Link to="/blog" className={`relative hidden xl:flex items-center space-x-2 text-sm font-bold transition-all duration-300 ${location.pathname === '/blog' ? 'text-primary' : 'text-text-muted hover:text-white'}`}>
                     <Newspaper size={16} />
@@ -224,8 +217,13 @@ export default function Navbar() {
                                                     {(user.displayName || user.email || 'U')[0].toUpperCase()}
                                                 </div>
                                             )}
-                                            <div className="min-w-0">
-                                                <p className="text-white font-bold text-sm truncate">{user.displayName || 'User'}</p>
+                                            <div className="min-w-0 text-left">
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="text-white font-bold text-sm truncate">{user.displayName || 'User'}</p>
+                                                    <Link to="/profile-settings" onClick={closeDropdown} className="text-text-muted hover:text-primary transition-colors shrink-0" title="Edit Profile">
+                                                        <Edit3 size={13} />
+                                                    </Link>
+                                                </div>
                                                 <p className="text-text-muted text-xs truncate">{user.email}</p>
                                             </div>
                                         </div>
@@ -233,7 +231,6 @@ export default function Navbar() {
 
                                     <div className="border-t border-white/5 pt-1 space-y-0.5">
                                         <DropdownItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" description="Your visualizations & stats" onClick={closeDropdown} />
-                                        <DropdownItem to="/profile-settings" icon={User} label="Edit Profile" description="Name, avatar, social links" onClick={closeDropdown} />
                                         <DropdownItem to="/dashboard" icon={BookOpen} label="Saved Visualizations" onClick={closeDropdown} />
                                         <DropdownItem to="/sheet" icon={Star} label="Learning Progress" description="Track DSA topics" onClick={closeDropdown} />
                                         <DropdownItem to="/blog" icon={Newspaper} label="Blog" description="Insights & interview experiences" onClick={closeDropdown} />

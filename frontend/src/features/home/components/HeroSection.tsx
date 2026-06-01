@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, Zap, Code2, Play, Pause, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
@@ -134,13 +133,6 @@ export default function HeroSection() {
             >
               Start Visualizing <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </button>
-            
-            <Link
-              to="/workspace"
-              className="capsule-btn-secondary group w-full sm:w-auto flex items-center justify-center"
-            >
-              Explore Problems
-            </Link>
           </motion.div>
 
           {/* Metrics / Social Proof */}

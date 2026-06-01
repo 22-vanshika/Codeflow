@@ -108,7 +108,7 @@ export default function Roadmap() {
   };
 
   return (
-    <div className="min-h-screen pt-[80px] bg-bg-main text-text-primary relative overflow-x-hidden">
+    <div className="min-h-screen pt-[80px] bg-transparent text-text-primary relative overflow-x-hidden">
       <DynamicBackground />
 
       <div className="max-w-4xl mx-auto px-6 py-16 relative z-10">

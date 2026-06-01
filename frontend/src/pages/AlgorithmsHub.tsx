@@ -224,7 +224,7 @@ export default function AlgorithmsHub() {
   };
 
   return (
-    <div className="min-h-screen pt-[80px] bg-bg-main text-text-primary flex flex-col relative overflow-hidden">
+    <div className="min-h-screen pt-[80px] bg-transparent text-text-primary flex flex-col relative overflow-hidden">
       <DynamicBackground />
 
       {/* Page Header */}
