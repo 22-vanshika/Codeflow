@@ -163,9 +163,10 @@ export default function FeedbackModal({ isOpen, onClose, topicViewed = 'Algorith
                           >
                             <Star
                               size={32}
+                              fill={star <= (hoveredRating || rating) ? "currentColor" : "none"}
                               className={`transition-colors ${
                                 star <= (hoveredRating || rating)
-                                  ? 'text-accent-yellow fill-accent-yellow'
+                                  ? 'text-accent-yellow'
                                   : 'text-text-muted'
                               }`}
                             />
@@ -191,6 +192,8 @@ export default function FeedbackModal({ isOpen, onClose, topicViewed = 'Algorith
                         value={helpedText}
                         onChange={e => setHelpedText(e.target.value)}
                         rows={3}
+                        name="helpedText"
+                        autoComplete="off"
                         placeholder={`Tell us what made the biggest difference — the visualizer, step-by-step trace, DSA sheet, or something else... (minimum ${WORD_MIN} words)`}
                         className="w-full px-4 py-3 bg-surface border border-border-subtle rounded-2xl text-text-primary text-sm placeholder:text-text-muted outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none leading-relaxed"
                       />
@@ -208,6 +211,8 @@ export default function FeedbackModal({ isOpen, onClose, topicViewed = 'Algorith
                         value={improveText}
                         onChange={e => setImproveText(e.target.value)}
                         rows={2}
+                        name="improveText"
+                        autoComplete="off"
                         placeholder="Any feature requests, bugs, or suggestions..."
                         className="w-full px-4 py-3 bg-surface border border-border-subtle rounded-2xl text-text-primary text-sm placeholder:text-text-muted outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all resize-none leading-relaxed"
                       />

@@ -14,6 +14,7 @@
   --accent-cyan: #06b6d4;
   --accent-purple: #7B74D1;
   --accent-green: #10b981;
+  --accent-yellow: #f59e0b;
   --accent-orange: #eab308;
   --accent-red: #ef4444;
 
@@ -45,6 +46,7 @@
   --accent-cyan: #0891b2;
   --accent-purple: #8E89D6;
   --accent-green: #16a34a;
+  --accent-yellow: #d97706;
   --accent-orange: #ca8a04;
   --accent-red: #dc2626;
 
@@ -80,6 +82,7 @@
   --color-accent-cyan: var(--accent-cyan);
   --color-accent-purple: var(--accent-purple);
   --color-accent-green: var(--accent-green);
+  --color-accent-yellow: var(--accent-yellow);
   --color-accent-orange: var(--accent-orange);
   --color-accent-red: var(--accent-red);
 
