@@ -110,7 +110,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="relative w-full max-w-[440px] glass-morphism border border-white/10 rounded-[32px] shadow-2xl overflow-hidden z-10"
+                        className="relative w-full max-w-[440px] liquid-glass-card shadow-2xl overflow-hidden z-10"
                     >
                         {/* Internal Decorative Blobs */}
                         <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-primary/20 blur-[80px] rounded-full" />
@@ -120,7 +120,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             {/* Close Button */}
                             <button 
                                 onClick={onClose}
-                                className="absolute top-6 right-6 p-2 text-text-muted hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/5"
+                                className="absolute top-6 right-6 p-2 text-text-muted hover:text-text-primary rounded-full bg-surface/50 hover:bg-border-subtle/50 transition-all border border-border-subtle"
                             >
                                 <X size={18} />
                             </button>
@@ -134,10 +134,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 >
                                     <ShieldCheck size={24} className="text-white" />
                                 </motion.div>
-                                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">
+                                <h2 className="text-3xl font-black text-text-primary mb-2 tracking-tight">
                                     {isLogin ? 'Welcome Back' : 'Create Account'}
                                 </h2>
-                                <p className="text-text-muted text-sm font-medium">
+                                <p className="text-text-secondary text-sm font-medium">
                                     {isLogin ? 'Sign in to sync your DSA progress' : 'Join CodeFlow to master your patterns'}
                                 </p>
                             </div>
@@ -150,8 +150,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                         animate={{ height: 'auto', opacity: 1 }}
                                         className="mb-6 overflow-hidden"
                                     >
-                                        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center gap-3">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                        <div className="p-4 rounded-2xl bg-accent-red/10 border border-accent-red/20 text-accent-red text-xs font-bold flex items-center gap-3">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse" />
                                             {error}
                                         </div>
                                     </motion.div>
@@ -162,7 +162,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             <button 
                                 onClick={handleGithubAuth}
                                 disabled={isLoading}
-                                className="group relative w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold transition-all border border-white/10 overflow-hidden"
+                                className="group relative w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-surface hover:bg-border-subtle/20 text-text-primary font-bold transition-all border border-border-subtle overflow-hidden"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500" />
                                 <Github size={20} className="relative z-10" />
@@ -170,9 +170,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                             </button>
 
                             <div className="relative flex items-center py-8">
-                                <div className="flex-grow border-t border-white/5"></div>
-                                <span className="flex-shrink-0 mx-4 text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">or email</span>
-                                <div className="flex-grow border-t border-white/5"></div>
+                                <div className="flex-grow border-t border-border-subtle"></div>
+                                <span className="flex-shrink-0 mx-4 text-text-secondary text-[10px] font-black uppercase tracking-[0.2em]">or email</span>
+                                <div className="flex-grow border-t border-border-subtle"></div>
                             </div>
 
                             {/* Email Form */}
@@ -185,14 +185,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                             exit={{ opacity: 0, x: -20 }}
                                             className="space-y-2"
                                         >
-                                            <label className="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Display Name</label>
+                                            <label className="text-xs font-black text-text-secondary uppercase tracking-widest ml-1">Display Name</label>
                                             <div className="relative group">
                                                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
                                                 <input 
                                                     type="text" 
                                                     value={name}
                                                     onChange={(e) => setName(e.target.value)}
-                                                    className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-white font-bold placeholder:text-text-muted/50 outline-none transition-all"
+                                                    className="w-full pl-12 pr-4 py-4 bg-surface border border-border-subtle rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-text-primary font-bold placeholder:text-text-muted/50 outline-none transition-all"
                                                     placeholder="Example: John Doe"
                                                     required={!isLogin}
                                                 />
@@ -202,14 +202,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 </AnimatePresence>
                                 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Email Address</label>
+                                    <label className="text-xs font-black text-text-secondary uppercase tracking-widest ml-1">Email Address</label>
                                     <div className="relative group">
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
                                         <input 
                                             type="email" 
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-white font-bold placeholder:text-text-muted/50 outline-none transition-all"
+                                            className="w-full pl-12 pr-4 py-4 bg-surface border border-border-subtle rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-text-primary font-bold placeholder:text-text-muted/50 outline-none transition-all"
                                             placeholder="Example: user@codeflow.com"
                                             required
                                         />
@@ -217,21 +217,21 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Password</label>
+                                    <label className="text-xs font-black text-text-secondary uppercase tracking-widest ml-1">Password</label>
                                     <div className="relative group">
                                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-primary transition-colors" size={18} />
                                         <input 
                                             type={showPassword ? 'text' : 'password'} 
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full pl-12 pr-14 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-white font-bold placeholder:text-text-muted/50 outline-none transition-all"
+                                            className="w-full pl-12 pr-14 py-4 bg-surface border border-border-subtle rounded-2xl focus:ring-2 focus:ring-primary/30 focus:border-primary text-text-primary font-bold placeholder:text-text-muted/50 outline-none transition-all"
                                             placeholder="••••••••"
                                             required
                                         />
                                         <button 
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-text-muted hover:text-white transition-colors"
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-text-muted hover:text-text-primary transition-colors"
                                         >
                                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
@@ -253,11 +253,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                             {/* Footer */}
                             <div className="mt-10 text-center">
-                                <p className="text-sm font-bold text-text-muted">
+                                <p className="text-sm font-bold text-text-secondary">
                                     {isLogin ? "New to CodeFlow? " : "Already have an account? "}
                                     <button 
                                         onClick={() => setIsLogin(!isLogin)}
-                                        className="text-primary hover:text-white transition-colors font-black inline-flex items-center gap-1"
+                                        className="text-primary hover:text-text-primary transition-colors font-black inline-flex items-center gap-1"
                                     >
                                         {isLogin ? 'Create Account' : 'Sign In'}
                                         <Sparkles size={14} />
