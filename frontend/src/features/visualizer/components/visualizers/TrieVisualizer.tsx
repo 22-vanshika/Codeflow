@@ -31,11 +31,9 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
 
         if (nodes.length === 0) return { positions: layout, edges: edgeList, width: 400, height: 100 };
 
-        // 1. Identify Root
         const root = nodes.find(n => !n.parentId) || nodes[0];
         if (!root) return { positions: layout, edges: edgeList, width: 400, height: 100 };
 
-        // 2. Pre-calculate subtree widths to avoid node overlapping (Masterclass layout algorithm)
         const subtreeWidths = new Map<string, number>();
         const calculateSubtreeWidth = (nodeId: string): number => {
             const children = nodes.filter(n => n.parentId === nodeId);
@@ -50,7 +48,6 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
         };
         calculateSubtreeWidth(root.id);
 
-        // 3. Assign Positions recursively
         const Y_SPACING = 75;
         const TOP_PADDING = 85; // Extra padding for pointer badges
         let maxDepth = 0;
@@ -75,7 +72,6 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
         const svgWidth = Math.max(600, totalWidth + 100);
         assignPositions(root.id, 50, 0);
 
-        // 4. Build edges list
         nodes.forEach(node => {
             if (node.parentId && layout.has(node.parentId) && layout.has(node.id)) {
                 edgeList.push({
@@ -94,7 +90,6 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
         };
     }, [nodes]);
 
-    // Calculate pointer positions stacked globally above nodes with spring movement
     const pointerPositions = useMemo(() => {
         const counts: Record<string, number> = {};
         return pointers.map(p => {
@@ -141,23 +136,19 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
             <div className="relative w-full overflow-x-auto custom-scrollbar flex justify-start min-h-[300px]">
                 <svg width={width} height={height} className="overflow-visible select-none flex-none">
                     <defs>
-                        <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+                        <filter id="glow-cyan-trie" x="-20%" y="-20%" width="140%" height="140%">
                             <feGaussianBlur stdDeviation="4" result="blur" />
                             <feComposite in="SourceGraphic" in2="blur" operator="over" />
                         </filter>
-                        <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur stdDeviation="4" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                        </filter>
-                        <marker id="trie-arrow" markerWidth="8" markerHeight="6" refX="22" refY="3" orient="auto">
-                            <polygon points="0 0, 8 3, 0 6" fill="var(--color-border-subtle)" />
+                        <marker id="trie-arrow" markerWidth="6" markerHeight="5" refX="20" refY="2.5" orient="auto">
+                            <polygon points="0 0, 6 2.5, 0 5" fill="var(--color-border-subtle)" />
                         </marker>
-                        <marker id="trie-arrow-active" markerWidth="8" markerHeight="6" refX="22" refY="3" orient="auto">
-                            <polygon points="0 0, 8 3, 0 6" fill="var(--color-accent-cyan)" />
+                        <marker id="trie-arrow-active" markerWidth="6" markerHeight="5" refX="20" refY="2.5" orient="auto">
+                            <polygon points="0 0, 6 2.5, 0 5" fill="var(--color-accent-cyan)" />
                         </marker>
                     </defs>
 
-                    {/* A. DRAW LINKS / CONNECTIONS WITH ARROW MARKERS */}
+                    {/* Links */}
                     {edges.map((edge, idx) => {
                         const fromPos = positions.get(edge.from);
                         const toPos = positions.get(edge.to);
@@ -172,14 +163,27 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                                     x2={toPos.x}
                                     y2={toPos.y}
                                     stroke={isActive ? 'var(--color-accent-cyan)' : 'var(--color-border-subtle)'}
-                                    strokeWidth={isActive ? '2.5' : '1.5'}
+                                    strokeWidth={isActive ? '2' : '1.2'}
                                     markerEnd={isActive ? 'url(#trie-arrow-active)' : 'url(#trie-arrow)'}
                                 />
+                                
+                                {isActive && (
+                                    <line
+                                        x1={fromPos.x}
+                                        y1={fromPos.y}
+                                        x2={toPos.x}
+                                        y2={toPos.y}
+                                        stroke="#a5f3fc"
+                                        strokeWidth="2"
+                                        className="av-graph-edge-flow"
+                                        markerEnd="url(#trie-arrow-active)"
+                                    />
+                                )}
                             </g>
                         );
                     })}
 
-                    {/* B. DRAW POINTERS ARROWS & LABELS WITH SPRING SLIDE */}
+                    {/* Pointer badges */}
                     {pointerPositions.map(p => (
                         <g key={`ptr-${p.name}`}>
                             <motion.line
@@ -207,17 +211,17 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                                     width="52"
                                     height="18"
                                     rx="5"
-                                    fill={`${p.color}15`}
+                                    fill={`${p.color}20`}
                                     stroke={p.color}
-                                    strokeWidth="1.5"
+                                    strokeWidth="1.2"
                                     className="shadow-md"
                                 />
                                 <text
                                     x="0"
-                                    y="4"
+                                    y="3"
                                     textAnchor="middle"
                                     fill={p.color}
-                                    fontSize="9"
+                                    fontSize="8"
                                     fontWeight="black"
                                 >
                                     {p.name.toUpperCase()}
@@ -226,7 +230,7 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                         </g>
                     ))}
 
-                    {/* C. DRAW NODE CIRCLES WITH TEXT */}
+                    {/* Nodes */}
                     {nodes.map(node => {
                         const pos = positions.get(node.id);
                         if (!pos) return null;
@@ -234,20 +238,20 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                         const isActive = activeNodeIds.has(node.id);
                         const isRoot = node.val === 'ROOT';
 
-                        let circleColor = 'var(--color-bg-panel)';
+                        let circleColor = '#0f172a';
                         let strokeColor = 'var(--color-border-active)';
-                        let strokeWidth = '2';
+                        let strokeWidth = '1.5';
                         let filter = '';
 
                         if (isActive) {
-                            circleColor = 'var(--color-accent-cyan)';
-                            strokeColor = 'var(--color-accent-primary)';
-                            strokeWidth = '3';
-                            filter = 'url(#glow-cyan)';
+                            circleColor = 'rgba(6, 182, 212, 0.15)';
+                            strokeColor = 'var(--color-accent-cyan)';
+                            strokeWidth = '2.5';
+                            filter = 'url(#glow-cyan-trie)';
                         } else if (node.isWord) {
                             circleColor = 'rgba(34, 197, 94, 0.1)';
                             strokeColor = 'var(--color-accent-green)';
-                            strokeWidth = '2.5';
+                            strokeWidth = '2';
                         } else if (isRoot) {
                             circleColor = 'rgba(99, 102, 241, 0.05)';
                             strokeColor = '#6366f1';
@@ -260,8 +264,17 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                                 transition={{ type: 'spring', stiffness: 180, damping: 22 }}
                                 transform={`translate(${pos.x}, ${pos.y})`}
                             >
+                                {isActive && (
+                                    <circle
+                                        r="22"
+                                        fill="none"
+                                        stroke="var(--color-accent-cyan)"
+                                        strokeWidth="1.5"
+                                        className="animate-ping opacity-50"
+                                    />
+                                )}
                                 <circle
-                                    r="18"
+                                    r="16"
                                     fill={circleColor}
                                     stroke={strokeColor}
                                     strokeWidth={strokeWidth}
@@ -271,8 +284,8 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                                 <text
                                     textAnchor="middle"
                                     dy=".3em"
-                                    fill={isActive ? '#0B1120' : (node.isWord ? 'var(--color-accent-green)' : 'var(--color-text-primary)')}
-                                    fontSize={isRoot ? '8' : '12'}
+                                    fill={isActive ? 'var(--color-accent-cyan)' : (node.isWord ? 'var(--color-accent-green)' : 'var(--color-text-primary)')}
+                                    fontSize={isRoot ? '7' : '11'}
                                     fontWeight="bold"
                                     fontFamily="monospace"
                                 >
@@ -282,9 +295,9 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
                                 {/* Word End Indicator Ribbon */}
                                 {node.isWord && (
                                     <circle
-                                        cx="12"
-                                        cy="-12"
-                                        r="4"
+                                        cx="10"
+                                        cy="-10"
+                                        r="3.5"
                                         fill="var(--color-accent-green)"
                                     />
                                 )}
@@ -296,3 +309,4 @@ export default function TrieVisualizer({ visual, className = '' }: TrieVisualize
         </div>
     );
 }
+

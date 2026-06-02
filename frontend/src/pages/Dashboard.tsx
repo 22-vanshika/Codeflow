@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useProgressStore } from '../store/progressStore';
 import { problemsList } from '../data/problems/index';
 import DynamicBackground from '../components/DynamicBackground';
+import { API_URL } from '../config/api';
 
 const TOPIC_MAPPING: Record<string, string[]> = {
   'Arrays & Hashing': ['Arrays & Hashing', 'Sorting'],
@@ -68,7 +69,6 @@ export default function Dashboard() {
         const loadDashboardStats = async () => {
             if (!user) return;
             try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
                 const token = await user.getIdToken();
                 const res = await fetch(`${API_URL}/api/dashboard`, {
                     headers: {

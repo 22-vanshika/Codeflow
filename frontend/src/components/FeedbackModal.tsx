@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Send, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { API_URL } from '../config/api';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -49,7 +50,6 @@ export default function FeedbackModal({ isOpen, onClose, topicViewed = 'Algorith
     setIsSubmitting(true);
     setError('');
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const token = user ? await (user as any).getIdToken?.() : null;
       await fetch(`${API_URL}/api/feedback`, {
         method: 'POST',

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { API_URL } from '../config/api';
 
 interface ProgressState {
     completed: Record<string, boolean>;
@@ -12,7 +13,7 @@ interface ProgressState {
     reset: () => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
 export const useProgressStore = create<ProgressState>()(
     persist(

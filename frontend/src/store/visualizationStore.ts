@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_URL } from '../config/api';
 
 export interface SavedVisualization {
     _id: string;
@@ -34,7 +35,7 @@ interface VisualizationState {
     duplicateVisualization: (id: string, token: string) => Promise<SavedVisualization>;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
 export const useVisualizationStore = create<VisualizationState>((set, get) => ({
     visualizations: [],

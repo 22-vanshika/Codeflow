@@ -437,3 +437,32 @@
     30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
     40%, 60% { transform: translate3d(4px, 0, 0); }
 }
+
+/* Binary Search Boundaries Styles */
+.av-bs-discarded {
+    opacity: 0.25;
+    filter: grayscale(85%);
+    transition: all 0.4s ease;
+}
+
+.av-bs-active {
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.2), inset 0 0 8px rgba(6, 182, 212, 0.05);
+}
+
+.av-bs-mid {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.35), inset 0 0 10px rgba(245, 158, 11, 0.1) !important;
+    transform: scale(1.05);
+}
+
+/* Graph Edge Flow Scroll Animation */
+.av-graph-edge-flow {
+    stroke-dasharray: 6, 6;
+    animation: av-edge-flow-scroll 1.2s linear infinite;
+}
+
+@keyframes av-edge-flow-scroll {
+    to {
+        stroke-dashoffset: -12;
+    }
+}

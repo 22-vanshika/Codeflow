@@ -1,6 +1,5 @@
 import HeroSection from '../features/home/components/HeroSection';
 import FeaturesGrid from '../features/home/components/FeaturesGrid';
-import PopularVisualizations from '../features/home/components/PopularVisualizations';
 import DynamicBackground from '../components/DynamicBackground';
 import VisualizationShowcase from '../features/home/components/VisualizationShowcase';
 import LiveDemo from '../features/home/components/LiveDemo';
@@ -43,9 +42,6 @@ export default function Home() {
 
       {/* 6. Supported Topics grid */}
       <SupportedTopics />
-
-      {/* 7. Curated list of problems */}
-      <PopularVisualizations />
 
       {/* 8. Counting performance stats */}
       <PerformanceMetrics />

@@ -4,6 +4,7 @@ import { auth, githubProvider } from '../../../config/firebase';
 import { useAuthStore } from '../../../store/authStore';
 import { X, Github, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, Sparkles, Eye, EyeOff, KeyRound, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_URL } from '../../../config/api';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -119,7 +120,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     const syncUserWithBackend = async (firebaseUser: any) => {
         try {
             const token = await firebaseUser.getIdToken();
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             await fetch(`${API_URL}/api/users/sync`, {
                 method: 'POST',
                 headers: {

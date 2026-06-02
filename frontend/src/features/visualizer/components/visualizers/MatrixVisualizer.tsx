@@ -45,15 +45,17 @@ export default function MatrixVisualizer({ visual, className = '' }: MatrixVisua
     };
 
     return (
-        <div className={`matrix-visualizer flex flex-col items-center justify-center p-4 ${className}`}>
-            <div className="av-label mb-4">
-                <span className="av-label-text">{target}</span>
-                <span className="av-count-badge">{numRows} × {numCols} grid</span>
+        <div className={`matrix-visualizer flex flex-col items-center justify-center w-full ${className}`}>
+            <div className="av-label flex items-center justify-between w-full mb-3 pb-2 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <span className="av-label-text font-mono text-cyan-400 font-bold uppercase tracking-widest text-xs">{target}</span>
+                    <span className="av-count-badge text-[10px] bg-slate-900 border border-white/5 rounded-full px-2 py-0.5 text-[#768390]">{numRows} × {numCols} grid</span>
+                </div>
             </div>
 
-            <div className="flex flex-col gap-1 border border-border-subtle p-2 rounded-xl bg-bg-panel/40 shadow-lg">
+            <div className="flex flex-col gap-1.5 border border-white/5 p-3 rounded-2xl bg-slate-950/20 shadow-2xl backdrop-blur-md">
                 {values.map((row, rIndex) => (
-                    <div key={rIndex} className="flex gap-1">
+                    <div key={rIndex} className="flex gap-1.5">
                         {row.map((val, cIndex) => {
                             const ptrs = getCellPointers(rIndex, cIndex);
                             const isPointed = ptrs.length > 0;
@@ -67,15 +69,13 @@ export default function MatrixVisualizer({ visual, className = '' }: MatrixVisua
                             // Determine CSS classes dynamically
                             let cellClass = '';
                             if (isActiveCell) {
-                                cellClass = 'border-accent-orange bg-accent-orange/35 text-accent-orange shadow-xl scale-110 z-20 ring-2 ring-accent-orange/50 animate-pulse font-extrabold';
+                                cellClass = 'av-state-comparing scale-110 z-20 font-extrabold ring-1 ring-amber-500/35';
                             } else if (isPointed) {
-                                cellClass = 'border-accent-orange bg-accent-orange/20 text-accent-orange shadow-md scale-105 z-10';
+                                cellClass = 'av-state-pivot scale-105 z-10';
                             } else if (isVisited) {
-                                cellClass = 'border-accent-cyan/60 bg-accent-cyan/15 text-accent-cyan';
+                                cellClass = 'av-state-traversing';
                             } else if (val === 1 || val === true || String(val) === '#' || String(val).toLowerCase() === 'x') {
-                                cellClass = 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan';
-                            } else {
-                                cellClass = 'border-border-subtle bg-bg-main text-text-primary';
+                                cellClass = 'av-state-sorted';
                             }
 
                             // Apply dimming if out of active binary search range
@@ -87,8 +87,8 @@ export default function MatrixVisualizer({ visual, className = '' }: MatrixVisua
                                 <div 
                                     key={cIndex}
                                     className={`
-                                        w-10 h-10 rounded-lg flex flex-col items-center justify-center font-mono text-sm border font-bold relative transition-all duration-300
-                                        ${cellClass}
+                                        w-10 h-10 rounded-lg flex flex-col items-center justify-center font-mono text-sm font-bold relative transition-all duration-300
+                                        array-cell-value ${cellClass}
                                     `}
                                     data-array-name={target}
                                     data-cell-index={index1D}
@@ -98,7 +98,7 @@ export default function MatrixVisualizer({ visual, className = '' }: MatrixVisua
                                 >
                                     <span>{displayVal}</span>
                                     {isPointed && (
-                                        <div className="absolute -top-3 bg-accent-orange text-[#0B1120] text-[8px] px-1 rounded font-extrabold select-none shadow">
+                                        <div className="absolute -top-3 bg-amber-500 text-[#0b1120] text-[8px] px-1 rounded font-extrabold select-none shadow">
                                             {ptrs.join(' ')}
                                         </div>
                                     )}
@@ -111,3 +111,4 @@ export default function MatrixVisualizer({ visual, className = '' }: MatrixVisua
         </div>
     );
 }
+

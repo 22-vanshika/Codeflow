@@ -46,7 +46,6 @@ app.use('/api/docs', docRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
 
-
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -58,6 +57,15 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// Centralized error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled error:', err);
+    res.status(err.status || 500).json({
+        message: err.message || 'Internal Server Error',
+        error: process.env.NODE_ENV === 'production' ? {} : err
+    });
 });
 
 server.listen(PORT, () => {

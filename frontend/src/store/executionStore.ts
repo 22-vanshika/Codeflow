@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ExecutionTrace, AlgorithmAnalysis, FlowchartData, TraceStep, TraceResult, PatternInfo, RunResult } from '../types';
+import { WS_URL } from '../config/api';
 
 // Validation types (matching backend)
 export interface ValidationIssue {
@@ -116,8 +117,6 @@ int main() {
 
         connect: () => {
             if (ws) return;
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const WS_URL = API_URL.replace(/^http/, 'ws');
             ws = new WebSocket(WS_URL);
 
             ws.onopen = () => {

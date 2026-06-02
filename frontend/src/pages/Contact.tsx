@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, MessageSquare, Bug, Send, CheckCircle, AlertCircle, Upload, Trash2, Github, Linkedin } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
+import { API_URL } from '../config/api';
 
 type FormType = 'feedback' | 'bug';
 
@@ -103,7 +104,6 @@ export default function Contact() {
     setStatus('loading');
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_URL}/api/contact`, {
         method: 'POST',
         headers: {

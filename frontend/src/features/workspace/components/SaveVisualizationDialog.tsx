@@ -5,6 +5,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { useExecutionStore } from '../../../store/executionStore';
 import { useVisualizationStore } from '../../../store/visualizationStore';
 import type { SavedVisualization } from '../../../store/visualizationStore';
+import { API_URL } from '../../../config/api';
 
 interface SaveVisualizationDialogProps {
     isOpen: boolean;
@@ -81,7 +82,6 @@ export default function SaveVisualizationDialog({ isOpen, onClose, loadedVis, on
                 }, token);
             } else {
                 // Save new visualization
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
                 const response = await fetch(`${API_URL}/api/visualizations/save`, {
                     method: 'POST',
                     headers: {

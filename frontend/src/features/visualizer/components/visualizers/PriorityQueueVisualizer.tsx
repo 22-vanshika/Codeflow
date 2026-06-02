@@ -66,18 +66,26 @@ export default function PriorityQueueVisualizer({ visual, className = '' }: Prio
     }, [elements]);
 
     return (
-        <div className={`priority-queue-visualizer flex flex-col items-center p-4 w-full ${className}`}>
-            <div className="av-label mb-2">
-                <span className="av-label-text">{target}</span>
-                <span className="av-count-badge">
-                    {isMinHeap ? 'min-heap' : 'max-heap'} · {elements.length} items
-                </span>
+        <div className={`priority-queue-visualizer flex flex-col items-center w-full ${className}`}>
+            <div className="av-label flex items-center justify-between w-full mb-3 pb-2 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <span className="av-label-text font-mono text-cyan-400 font-bold uppercase tracking-widest text-xs">{target}</span>
+                    <span className="av-count-badge text-[10px] bg-slate-900 border border-white/5 rounded-full px-2 py-0.5 text-[#768390]">
+                        {isMinHeap ? 'min-heap' : 'max-heap'} · {elements.length} items
+                    </span>
+                </div>
             </div>
 
             {/* Heap Tree Visualization */}
             {elements.length > 0 ? (
-                <div className="relative flex flex-col items-center w-full min-h-0 overflow-auto bg-bg-panel/20 border border-border-subtle rounded-xl p-4 mb-4">
+                <div className="relative flex flex-col items-center w-full min-h-0 overflow-auto bg-slate-950/20 border border-white/5 rounded-2xl p-4 mb-4 shadow-2xl backdrop-blur-md">
                     <svg width={width} height={height} className="max-w-full" style={{ overflow: 'visible' }}>
+                        <defs>
+                            <filter id="glow-cyan-heap" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="4" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                        </defs>
                         {/* Edges */}
                         {edges.map((edge, i) => (
                             <line
@@ -87,7 +95,7 @@ export default function PriorityQueueVisualizer({ visual, className = '' }: Prio
                                 x2={edge.to.x}
                                 y2={edge.to.y}
                                 stroke="var(--color-border-subtle)"
-                                strokeWidth="2"
+                                strokeWidth="1.5"
                             />
                         ))}
 
@@ -97,23 +105,43 @@ export default function PriorityQueueVisualizer({ visual, className = '' }: Prio
                             if (!pos) return null;
 
                             const isActive = activeIndices.includes(idx);
-                            const fill = isActive ? 'var(--color-accent-cyan)' : 'var(--color-bg-main)';
-                            const stroke = isActive ? 'var(--color-accent-primary)' : 'var(--color-border-active)';
+                            
+                            let circleColor = '#0f172a';
+                            let strokeColor = 'var(--color-border-default)';
+                            let strokeWidth = '1.5';
+                            let filter = '';
+
+                            if (isActive) {
+                                circleColor = 'rgba(6, 182, 212, 0.15)';
+                                strokeColor = 'var(--color-accent-cyan)';
+                                strokeWidth = '2.5';
+                                filter = 'url(#glow-cyan-heap)';
+                            }
 
                             return (
                                 <g key={`heap-node-${idx}`} transform={`translate(${pos.x}, ${pos.y})`}>
+                                    {isActive && (
+                                        <circle
+                                            r="24"
+                                            fill="none"
+                                            stroke="var(--color-accent-cyan)"
+                                            strokeWidth="1.5"
+                                            className="animate-ping opacity-50"
+                                        />
+                                    )}
                                     <circle
                                         r="18"
-                                        fill={fill}
-                                        stroke={stroke}
-                                        strokeWidth={isActive ? 3 : 2}
+                                        fill={circleColor}
+                                        stroke={strokeColor}
+                                        strokeWidth={strokeWidth}
+                                        filter={filter}
                                         className="transition-all duration-300"
                                     />
                                     <text
                                         textAnchor="middle"
                                         dy=".3em"
-                                        fill={isActive ? '#0B1120' : 'var(--color-text-primary)'}
-                                        fontSize="12"
+                                        fill={isActive ? 'var(--color-accent-cyan)' : 'var(--color-text-primary)'}
+                                        fontSize="11"
                                         fontFamily="monospace"
                                         fontWeight={isActive ? 'bold' : 'normal'}
                                     >
@@ -123,7 +151,7 @@ export default function PriorityQueueVisualizer({ visual, className = '' }: Prio
                                         y="-24"
                                         textAnchor="middle"
                                         fill="var(--color-text-muted)"
-                                        fontSize="9"
+                                        fontSize="8"
                                     >
                                         [{idx}]
                                     </text>
@@ -133,28 +161,28 @@ export default function PriorityQueueVisualizer({ visual, className = '' }: Prio
                     </svg>
                 </div>
             ) : (
-                <div className="flex items-center justify-center h-24 border border-dashed border-border-subtle rounded-xl w-64 text-text-muted text-sm italic mb-4">
+                <div className="flex items-center justify-center h-24 border border-dashed border-white/5 bg-slate-950/20 rounded-2xl w-64 text-text-muted text-sm italic mb-4">
                     Priority Queue is empty
                 </div>
             )}
 
             {/* Flat Array Representation */}
             {elements.length > 0 && (
-                <div className="flex flex-wrap gap-1 items-center justify-center p-2 border border-border-subtle rounded-lg bg-bg-panel/40 max-w-full overflow-x-auto">
+                <div className="flex flex-wrap gap-1.5 items-center justify-center p-3 border border-white/5 rounded-2xl bg-slate-950/20 shadow-2xl backdrop-blur-md max-w-full overflow-x-auto">
                     {elements.map((val, idx) => {
                         const isActive = activeIndices.includes(idx);
                         return (
                             <div
                                 key={`flat-cell-${idx}`}
                                 className={`
-                                    w-12 h-12 flex flex-col items-center justify-center font-mono rounded-md border transition-all duration-300
+                                    w-12 h-12 flex flex-col items-center justify-center font-mono rounded-xl border transition-all duration-300 array-cell-value
                                     ${isActive 
-                                        ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan font-bold shadow' 
-                                        : 'border-border-subtle bg-bg-main text-text-primary'
+                                        ? 'av-state-comparing ring-1 ring-amber-500/20' 
+                                        : ''
                                     }
                                 `}
                             >
-                                <span className="text-xs">
+                                <span className="text-xs font-bold text-white">
                                     {typeof val === 'object' && val !== null && 'first' in val ? `(${val.first},${val.second})` : String(val)}
                                 </span>
                                 <span className="text-[8px] text-text-muted mt-1">[{idx}]</span>
@@ -166,3 +194,4 @@ export default function PriorityQueueVisualizer({ visual, className = '' }: Prio
         </div>
     );
 }
+
