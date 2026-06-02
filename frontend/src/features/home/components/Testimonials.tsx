@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, MessageSquare, PenTool } from 'lucide-react';
 import FeedbackModal from '../../../components/FeedbackModal';
+import { API_URL } from '../../../config/api';
 
 interface Testimonial {
   _id: string;
@@ -20,7 +21,6 @@ export default function Testimonials() {
   useEffect(() => {
     const fetchFeedbacks = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const res = await fetch(`${API_URL}/api/feedback`);
         if (res.ok) {
           const data = await res.json();

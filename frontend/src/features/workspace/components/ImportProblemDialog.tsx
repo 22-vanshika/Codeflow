@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Search, Loader2 } from 'lucide-react';
 import { useExecutionStore } from '../../../store/executionStore';
+import { API_URL } from '../../../config/api';
 
 interface ImportProblemDialogProps {
     isOpen: boolean;
@@ -26,8 +27,6 @@ export default function ImportProblemDialog({ isOpen, onClose, onImportSuccess }
         setError('');
 
         try {
-            // Using absolute URL to ensure it hits the backend correctly in dev
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             const response = await fetch(`${API_URL}/api/problems/import`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

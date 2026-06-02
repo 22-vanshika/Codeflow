@@ -8,6 +8,7 @@ import DynamicBackground from '../components/DynamicBackground';
 import { useAuthStore } from '../store/authStore';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { API_URL } from '../config/api';
 
 type Tab = 'personal' | 'account' | 'preferences';
 
@@ -42,7 +43,6 @@ export default function ProfileSettings() {
     const loadProfile = async () => {
       if (!user) return;
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const token = await (user as any).getIdToken?.();
         const res = await fetch(`${API_URL}/api/profile`, {
           headers: {
@@ -69,7 +69,6 @@ export default function ProfileSettings() {
   const savePersonalInfo = async () => {
     setSaveStatus('saving');
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const token = user ? await (user as any).getIdToken?.() : null;
 
       // Sync local storage as robust fallback

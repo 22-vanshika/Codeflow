@@ -2,7 +2,6 @@ import { WebSocket } from 'ws';
 import { ExecutionService } from '../services/execution.service';
 import { CompilerService } from '../services/compiler.service';
 import { CodeValidator } from '../services/validation.service';
-import { TraceService } from '../services/trace.service';
 import { AiService } from '../services/ai.service';
 import { Executor } from '../engine/languages/cpp/executor';
 import { ExecutionRequest, ExecutionResponse, ValidationPayload } from '../types';
@@ -11,14 +10,12 @@ export class ExecutionController {
     private executionService: ExecutionService;
     private compilerService: CompilerService;
     private codeValidator: CodeValidator;
-    private traceService: TraceService;
     private aiService: AiService;
 
     constructor() {
         this.executionService = new ExecutionService();
         this.compilerService = new CompilerService();
         this.codeValidator = new CodeValidator();
-        this.traceService = new TraceService();
         this.aiService = new AiService();
     }
 

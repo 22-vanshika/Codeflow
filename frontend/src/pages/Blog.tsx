@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Clock, Tag, ArrowRight, Search, Building, ExternalLink, PlusCircle, Send, X, Trophy } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
 import { useAuthStore } from '../store/authStore';
+import { API_URL } from '../config/api';
 
 interface Post {
   id: string;
@@ -275,7 +276,6 @@ export default function Blog() {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const res = await fetch(`${API_URL}/api/blogs`);
         const data = await res.json();
         if (data.blogs && data.blogs.length > 0) {
@@ -346,7 +346,6 @@ export default function Blog() {
     setSubmitting(true);
     setErrorMsg('');
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const token = await user?.getIdToken();
 
       const response = await fetch(`${API_URL}/api/blogs`, {

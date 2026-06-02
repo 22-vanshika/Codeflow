@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Code2, Cpu, Zap, Play, Terminal, ArrowRight, Check, Copy, ChevronRight } from 'lucide-react';
 import DynamicBackground from '../components/DynamicBackground';
 import { Link } from 'react-router-dom';
+import { API_URL } from '../config/api';
 
 function CopyableCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
@@ -233,7 +234,6 @@ export default function Docs() {
   useEffect(() => {
     const fetchDocs = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         await fetch(`${API_URL}/api/docs`);
       } catch (err) {
         console.error('Failed to fetch docs from API:', err);
