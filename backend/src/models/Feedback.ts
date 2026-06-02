@@ -22,7 +22,7 @@ const FeedbackSchema = new Schema<IFeedback>(
         topicViewed: { type: String, required: true, default: 'Algorithm Visualization' },
         userId: { type: String, required: true },
         userName: { type: String, required: true, default: 'Anonymous User' },
-        approved: { type: Boolean, required: true, default: false },
+        approved: { type: Boolean, required: true, default: true },
     },
     { timestamps: true }
 );

@@ -5,9 +5,9 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 const router = Router();
 
 // Submit feedback
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { rating, helpedText, improveText, recommend, topicViewed, userId, userName } = req.body;
+        const { rating, helpedText, improveText, recommend, topicViewed } = req.body;
 
         if (!rating || !helpedText || recommend === undefined) {
             res.status(400).json({ message: 'Missing required feedback fields' });
@@ -34,9 +34,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
             improveText,
             recommend: !!recommend,
             topicViewed: topicViewed || 'Algorithm Visualization',
-            userId: userId || 'anonymous',
-            userName: userName || 'Anonymous User',
-            approved: false // Default to false, manually approved for Home testimonials
+            userId: req.user?.firebaseUid || req.firebaseUid || req.body.userId,
+            userName: req.user?.displayName || req.body.userName || 'Verified User',
+            approved: true // Auto-approve to show on Home immediately
         });
 
         await feedback.save();

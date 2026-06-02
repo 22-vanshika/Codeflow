@@ -35,12 +35,8 @@ export default function Testimonials() {
     fetchFeedbacks();
   }, []);
 
-  // Helper to ensure enough items for seamless marquee repeating
-  const displayFeedbacks = feedbacks.length > 0
-    ? feedbacks.length < 5
-      ? Array(Math.ceil(5 / feedbacks.length)).fill(feedbacks).flat()
-      : feedbacks
-    : [];
+  // If there are 4 or fewer reviews, show them statically without duplicating
+  const isAnimated = feedbacks.length > 4;
 
   return (
     <section className="py-24 px-6 relative overflow-hidden bg-black/10 border-t border-border-subtle">
@@ -94,17 +90,17 @@ export default function Testimonials() {
             </button>
           </motion.div>
         ) : (
-          <div className="relative w-full overflow-hidden py-4 mask-marquee">
+          <div className={`relative w-full py-4 ${isAnimated ? 'overflow-hidden mask-marquee' : ''}`}>
             {/* Track */}
-            <div className="flex gap-6 w-max animate-marquee hover:[animation-play-state:paused]">
+            <div className={`flex gap-6 ${isAnimated ? 'w-max animate-marquee hover:[animation-play-state:paused]' : 'justify-center flex-wrap'}`}>
               
               {/* First Set */}
-              {displayFeedbacks.map((rev, idx) => (
+              {feedbacks.map((rev, idx) => (
                 <TestimonialCard key={`a-${rev._id}-${idx}`} review={rev} />
               ))}
               
-              {/* Second Set (Duplicate for infinite seamless loop) */}
-              {displayFeedbacks.map((rev, idx) => (
+              {/* Second Set (Duplicate for infinite seamless loop only if animated) */}
+              {isAnimated && feedbacks.map((rev, idx) => (
                 <TestimonialCard key={`b-${rev._id}-${idx}`} review={rev} />
               ))}
 
