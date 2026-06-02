@@ -90,22 +90,53 @@ export default function Testimonials() {
             </button>
           </motion.div>
         ) : (
-          <div className={`relative w-full py-4 ${isAnimated ? 'overflow-hidden mask-marquee' : ''}`}>
-            {/* Track */}
-            <div className={`flex gap-6 ${isAnimated ? 'w-max animate-marquee hover:[animation-play-state:paused]' : 'justify-center flex-wrap'}`}>
-              
-              {/* First Set */}
-              {feedbacks.map((rev, idx) => (
-                <TestimonialCard key={`a-${rev._id}-${idx}`} review={rev} />
-              ))}
-              
-              {/* Second Set (Duplicate for infinite seamless loop only if animated) */}
-              {isAnimated && feedbacks.map((rev, idx) => (
-                <TestimonialCard key={`b-${rev._id}-${idx}`} review={rev} />
-              ))}
+          <>
+            <div className={`relative w-full py-4 ${isAnimated ? 'overflow-hidden mask-marquee' : ''}`}>
+              {/* Track */}
+              <div className={`flex gap-6 ${isAnimated ? 'w-max animate-marquee hover:[animation-play-state:paused]' : 'justify-center flex-wrap'}`}>
+                
+                {/* First Set */}
+                {feedbacks.map((rev, idx) => (
+                  <TestimonialCard key={`a-${rev._id}-${idx}`} review={rev} />
+                ))}
+                
+                {/* Second Set (Duplicate for infinite seamless loop only if animated) */}
+                {isAnimated && feedbacks.map((rev, idx) => (
+                  <TestimonialCard key={`b-${rev._id}-${idx}`} review={rev} />
+                ))}
 
+              </div>
             </div>
-          </div>
+
+            {/* Container for writing a review */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-16 max-w-xl mx-auto text-center p-8 rounded-3xl border border-white/5 bg-white/[0.01] hover:border-primary/20 backdrop-blur-md transition-all duration-300 relative group shadow-xl"
+            >
+              {/* Glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-3xl" />
+              
+              <div className="relative z-10">
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center justify-center gap-2">
+                  <Star size={16} className="text-accent-orange fill-accent-orange animate-pulse" />
+                  Share your CodeFlow experience!
+                </h3>
+                <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-6 max-w-md mx-auto">
+                  Helped you master an algorithm or ace an interview? Let us know how CodeFlow transformed your coding journey.
+                </p>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mx-auto active:scale-95 cursor-pointer"
+                >
+                  <PenTool size={13} />
+                  Write a Review
+                </button>
+              </div>
+            </motion.div>
+          </>
         )}
 
       </div>
