@@ -13,9 +13,9 @@ interface HashMapVisualizerProps {
 const renderCellContent = (p: any) => {
     if (p && typeof p === 'object' && 'first' in p && 'second' in p) {
         return (
-            <div className="flex border border-border-subtle rounded-md overflow-hidden bg-bg-panel/85 font-mono text-xs shadow-sm">
-                <div className="px-2 py-1 bg-bg-main text-text-primary border-r border-border-subtle">{formatValue(p.first)}</div>
-                <div className="px-2 py-1 text-accent-orange font-semibold">{formatValue(p.second)}</div>
+            <div className="flex border border-white/5 rounded-md overflow-hidden bg-slate-950 font-mono text-[11px] shadow-sm">
+                <div className="px-1.5 py-0.5 bg-slate-900 text-slate-300 border-r border-white/5">{formatValue(p.first)}</div>
+                <div className="px-1.5 py-0.5 text-orange-400 font-semibold">{formatValue(p.second)}</div>
             </div>
         );
     }
@@ -32,7 +32,7 @@ const HashMapVisualizer = memo(({ visual, className = '', compact = false }: Has
     const isScopeVars = target === 'Scope Variables';
     const isPair = target.toLowerCase().includes('pair');
 
-    // 1. Render C++ Scope Variables as Premium Visual Cards
+    // 1. Render Scope Variables as Premium Visual Cards
     if (isScopeVars) {
         return (
             <div className={`flex flex-col items-center justify-center w-full ${compact ? 'p-1' : 'p-4'} ${className}`}>
@@ -54,24 +54,21 @@ const HashMapVisualizer = memo(({ visual, className = '', compact = false }: Has
                                     exit={{ opacity: 0, scale: 0.8 }}
                                     className="flex flex-col items-center"
                                 >
-                                    {/* Variable Name Label */}
-                                    <span className={`font-black text-text-muted uppercase tracking-[0.2em] font-mono ${
+                                    <span className={`font-black text-[#768390] uppercase tracking-[0.2em] font-mono ${
                                         compact ? 'text-[8px] mb-1' : 'text-[10px] mb-2'
                                     }`}>
                                         {String(key)}
                                     </span>
-                                    {/* variable Visual Card */}
                                     <div 
-                                        className={`rounded-xl border flex flex-col items-center justify-center font-mono font-black relative overflow-hidden transition-all duration-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05),0_10px_20px_rgba(0,0,0,0.3)]
-                                            ${compact ? 'w-12 h-12 text-sm' : 'w-16 h-16 text-base'}
+                                        className={`rounded-xl border flex flex-col items-center justify-center font-mono font-black relative overflow-hidden transition-all duration-300 shadow-md
+                                            ${compact ? 'w-12 h-12 text-xs' : 'w-14 h-14 text-sm'}
                                             ${isHighlighted
-                                                ? 'border-accent-cyan bg-bg-panel text-accent-cyan shadow-glow ring-1 ring-accent-cyan/30'
-                                                : 'border-white/10 bg-[#0B1120]/80 text-[#cdd6f4] hover:border-white/20'
+                                                ? 'border-accent-cyan bg-slate-900 text-accent-cyan shadow-glow ring-1 ring-accent-cyan/30'
+                                                : 'border-white/10 bg-slate-950/80 text-[#cdd6f4] hover:border-white/20'
                                             }
                                         `}
                                         data-var-name={String(key)}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
                                         <span>{formatValue(value)}</span>
                                     </div>
                                 </motion.div>
@@ -83,7 +80,7 @@ const HashMapVisualizer = memo(({ visual, className = '', compact = false }: Has
         );
     }
 
-    // 2. Render C++ std::pair as Split x/y Card
+    // 2. Render Pair as Split Card
     if (isPair) {
         const pairName = target.replace(' (pair)', '');
         const firstEntry = entries.find(e => e.key === 'first')?.value;
@@ -94,48 +91,48 @@ const HashMapVisualizer = memo(({ visual, className = '', compact = false }: Has
                 <span className="text-xs font-black text-accent-purple uppercase tracking-[0.2em] mb-3">
                     Pair: {pairName}
                 </span>
-                {/* Pair Split Container */}
-                <div className="flex border border-white/10 rounded-2xl overflow-hidden bg-[#0B1120]/80 shadow-[inset_0_1px_2px_rgba(255,255,255,0.05),0_10px_20px_rgba(0,0,0,0.3)] hover:border-accent-cyan/40 hover:shadow-glow transition-all duration-300">
-                    {/* First compartment */}
+                <div className="flex border border-white/10 rounded-2xl overflow-hidden bg-slate-950/80 shadow-md hover:border-accent-cyan/40 hover:shadow-glow transition-all duration-300">
                     <div 
-                        className="w-16 h-16 flex flex-col items-center justify-center border-r border-white/10 relative"
+                        className="w-14 h-14 flex flex-col items-center justify-center border-r border-white/10 relative"
                         data-var-name={`${pairName}.first`}
                     >
-                        <span className="text-[8px] font-black text-[#768390] uppercase absolute top-1 font-mono">first</span>
-                        <span className="font-mono text-sm font-bold text-accent-cyan mt-1.5">{formatValue(firstEntry)}</span>
+                        <span className="text-[7px] font-black text-[#768390] uppercase absolute top-1 font-mono">first</span>
+                        <span className="font-mono text-xs font-bold text-accent-cyan mt-1.5">{formatValue(firstEntry)}</span>
                     </div>
-                    {/* Second compartment */}
                     <div 
-                        className="w-16 h-16 flex flex-col items-center justify-center relative"
+                        className="w-14 h-14 flex flex-col items-center justify-center relative"
                         data-var-name={`${pairName}.second`}
                     >
-                        <span className="text-[8px] font-black text-[#768390] uppercase absolute top-1 font-mono">second</span>
-                        <span className="font-mono text-sm font-bold text-accent-orange mt-1.5">{formatValue(secondEntry)}</span>
+                        <span className="text-[7px] font-black text-[#768390] uppercase absolute top-1 font-mono">second</span>
+                        <span className="font-mono text-xs font-bold text-accent-orange mt-1.5">{formatValue(secondEntry)}</span>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // 3. Render Standard Hash Map / Set
+    const isSet = target.toLowerCase().includes('set');
+
     return (
         <div className={`flex flex-col items-center justify-center w-full h-full ${compact ? 'p-2' : 'p-4'} overflow-auto custom-scrollbar ${className}`}>
-            <h3 className={`${compact ? 'text-xs mb-2' : 'text-sm mb-4'} font-semibold text-accent-purple uppercase tracking-widest`}>
-                {target.replace(' (Set)', '')} <span className="text-text-muted text-xs normal-case">({target.toLowerCase().includes('set') ? 'Set' : 'Hash Map'})</span>
+            <h3 className={`${compact ? 'text-[10px] mb-2' : 'text-xs mb-4'} font-black text-accent-purple uppercase tracking-widest`}>
+                {target.replace(' (Set)', '')} <span className="text-text-muted text-[10px] normal-case">({isSet ? 'Set' : 'Hash Map'})</span>
             </h3>
 
             {entries.length === 0 ? (
                 <div className={`flex items-center justify-center border border-dashed border-border-subtle rounded-xl w-64 text-text-muted italic ${
-                    compact ? 'h-16 text-xs w-full' : 'h-24 text-sm'
+                    compact ? 'h-14 text-xs w-full' : 'h-20 text-sm'
                 }`}>
                     {target.replace(' (Set)', '')} is empty
                 </div>
             ) : (
-                <div className={compact ? "grid grid-cols-2 gap-2 w-full max-w-md" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl"}>
+                <div className={isSet 
+                    ? "flex flex-wrap justify-center gap-4 max-w-4xl" 
+                    : (compact ? "grid grid-cols-1 gap-2.5 w-full max-w-md" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl")
+                }>
                     <AnimatePresence>
                         {entries.map(({ key, value }) => {
                             const isActive = activeKeys.includes(key);
-                            const isSet = target.toLowerCase().includes('set');
 
                             const isOpTarget = currentTraceStep?.dataStructureOp &&
                                 (currentTraceStep.dataStructureOp.target === target || 
@@ -149,6 +146,32 @@ const HashMapVisualizer = memo(({ visual, className = '', compact = false }: Has
                             const isOpRejected = isOpTarget && isOpKey && currentTraceStep?.dataStructureOp?.isRejected;
                             const rejectClass = isOpRejected ? 'av-duplicate-rejected' : '';
 
+                            // 3A. Render Set Bucket
+                            if (isSet) {
+                                return (
+                                    <motion.div
+                                        key={String(key)}
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.7 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.2 } }}
+                                        className={`relative flex items-center justify-center rounded-full border-2 shadow-md font-mono text-xs font-black transition-all duration-300 w-14 h-14 ${rejectClass} ${
+                                            isActive
+                                                ? 'border-accent-cyan bg-slate-900 text-accent-cyan shadow-glow scale-105'
+                                                : 'border-white/10 bg-slate-900/60 text-[#cdd6f4] hover:border-white/20'
+                                        }`}
+                                    >
+                                        {isOpRejected && (
+                                            <div className="absolute -top-4 bg-red-500 text-slate-950 text-[7px] font-black px-1 py-0.5 rounded shadow tracking-widest uppercase animate-bounce whitespace-nowrap z-30">
+                                                Already Exists
+                                            </div>
+                                        )}
+                                        <span>{formatValue(key)}</span>
+                                    </motion.div>
+                                );
+                            }
+
+                            // 3B. Render Map Key-Value Mapping Cards
                             return (
                                 <motion.div
                                     key={String(key)}
@@ -156,35 +179,26 @@ const HashMapVisualizer = memo(({ visual, className = '', compact = false }: Has
                                     initial={{ opacity: 0, scale: 0.8, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-                                    className={`
-                                        flex items-stretch overflow-hidden rounded-xl border transition-all duration-300 shadow-sm ${rejectClass}
-                                        ${isActive
-                                            ? 'border-accent-cyan bg-bg-panel shadow-glow ring-1 ring-accent-cyan/50 z-10'
-                                            : 'border-border-subtle bg-bg-main hover:border-border-active'
-                                        }
-                                    `}
+                                    className={`relative flex items-center gap-2 p-2 rounded-2xl border transition-all duration-300 shadow-md ${rejectClass} ${
+                                        isActive
+                                            ? 'border-accent-cyan bg-slate-900/40 shadow-glow ring-1 ring-accent-cyan/20 z-10'
+                                            : 'border-white/5 bg-slate-950/40 hover:border-white/10'
+                                    }`}
                                 >
-                                    {/* Key Section */}
-                                    <div className={`
-                                        flex items-center justify-center font-mono font-bold flex-1
-                                        ${compact ? 'px-2.5 py-1.5 text-xs min-w-[40px]' : 'px-4 py-2 text-sm min-w-[60px]'}
-                                        ${isActive
-                                            ? 'bg-accent-cyan/20 text-accent-cyan'
-                                            : 'bg-bg-panel text-text-primary'
-                                        }
-                                        ${!isSet ? 'border-r border-border-subtle' : ''}
-                                    `}>
+                                    {/* Key block */}
+                                    <div className={`flex items-center justify-center font-mono font-black rounded-xl border flex-1 py-2 px-3 text-xs ${
+                                        isActive ? 'bg-slate-900 border-accent-cyan text-accent-cyan' : 'bg-slate-950 border-white/5 text-[#cdd6f4]'
+                                    }`}>
                                         {renderCellContent(key)}
                                     </div>
+                                    
+                                    {/* Mapping arrow */}
+                                    <span className={`text-[10px] font-bold ${isActive ? 'text-accent-cyan animate-pulse' : 'text-slate-600'}`}>→</span>
 
-                                    {/* Value Section */}
-                                    {!isSet && (
-                                        <div className={`flex items-center justify-center font-mono text-accent-orange font-semibold flex-1 ${
-                                            compact ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2 text-sm'
-                                        }`}>
-                                            {renderCellContent(value)}
-                                        </div>
-                                    )}
+                                    {/* Value block */}
+                                    <div className="flex items-center justify-center font-mono font-semibold rounded-xl border border-white/5 bg-slate-950 text-orange-400 flex-1 py-2 px-3 text-xs">
+                                        {renderCellContent(value)}
+                                    </div>
                                 </motion.div>
                             );
                         })}
@@ -205,3 +219,4 @@ function formatValue(val: any): string {
     if (typeof val === 'object') return JSON.stringify(val);
     return String(val);
 }
+

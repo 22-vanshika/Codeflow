@@ -1,10 +1,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import * as THREE from 'three';
 import { useExecutionStore } from '../../../../store/executionStore';
 import { Network } from 'lucide-react';
 import type { FlowchartData, ArrayVisual, CallStackVisual, TreeVisual, GraphVisual, StackQueueVisual, HashMapVisual, LinkedListVisual } from '../../../../types';
-import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer, MatrixVisualizer, PriorityQueueVisualizer, LinkedListVisualizer, TrieVisualizer } from '../visualizers';
+import { ArrayVisualizer, CallStackVisualizer, TreeVisualizer, GraphVisualizer, StackQueueVisualizer, HashMapVisualizer, MatrixVisualizer, PriorityQueueVisualizer, LinkedListVisualizer, TrieVisualizer, StringVisualizer } from '../visualizers';
 
 mermaid.initialize({
     startOnLoad: false,
@@ -17,6 +18,202 @@ mermaid.initialize({
         nodeBorder: '#fab387',
     },
     securityLevel: 'loose',
+});
+
+// Helper for variables formatting
+function formatVarValue(val: any): string {
+    if (val === null || val === undefined) return 'null';
+    if (typeof val === 'boolean') return val ? 'true' : 'false';
+    if (typeof val === 'string') return `"${val}"`;
+    if (Array.isArray(val)) {
+        if (val.length > 5) {
+            return `[${val.slice(0, 4).map(x => typeof x === 'object' ? 'obj' : String(x)).join(', ')}, ... (${val.length})]`;
+        }
+        return `[${val.map(x => typeof x === 'object' ? 'obj' : String(x)).join(', ')}]`;
+    }
+    if (typeof val === 'object') {
+        const keys = Object.keys(val);
+        if (keys.length > 2) {
+            return `{${keys.slice(0, 2).map(k => `${k}: ${typeof val[k] === 'object' ? 'obj' : String(val[k])}`).join(', ')}, ...}`;
+        }
+        return `{${keys.map(k => `${k}: ${typeof val[k] === 'object' ? 'obj' : String(val[k])}`).join(', ')}}`;
+    }
+    return String(val);
+}
+
+// 60 FPS Three.js Subtle Background Grid & Flowing Particles
+const WhiteboardBackground = React.memo(function WhiteboardBackground() {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const parent = canvas.parentElement;
+        if (!parent) return;
+
+        let width = parent.clientWidth || window.innerWidth;
+        let height = parent.clientHeight || window.innerHeight;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+        camera.position.z = 18;
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas,
+            alpha: true,
+            antialias: true
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.setSize(width, height);
+
+        // Light setup
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        // Flowing particles setup
+        const particleCount = 35;
+        const positions = new Float32Array(particleCount * 3);
+        const velocities: { x: number; y: number; z: number }[] = [];
+        const bounds = { x: 26, y: 16, z: 8 };
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * bounds.x;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * bounds.y;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * bounds.z;
+
+            velocities.push({
+                x: (Math.random() - 0.5) * 0.006,
+                y: (Math.random() - 0.5) * 0.006,
+                z: (Math.random() - 0.5) * 0.003
+            });
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const pointMaterial = new THREE.PointsMaterial({
+            size: 0.16,
+            color: 0x0ea5e9, // cyan-500
+            transparent: true,
+            opacity: 0.3,
+            sizeAttenuation: true
+        });
+
+        const pointCloud = new THREE.Points(geometry, pointMaterial);
+        scene.add(pointCloud);
+
+        // Neural network connections
+        const maxConnections = 45;
+        const linePositions = new Float32Array(maxConnections * 2 * 3);
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0x6366f1, // indigo-500
+            transparent: true,
+            opacity: 0.12
+        });
+
+        const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+        scene.add(lines);
+
+        let animationId: number;
+        const connectionThreshold = 4.8;
+
+        const animate = () => {
+            animationId = requestAnimationFrame(animate);
+
+            // Move particles
+            const posArr = geometry.attributes.position.array as Float32Array;
+            for (let i = 0; i < particleCount; i++) {
+                posArr[i * 3] += velocities[i].x;
+                posArr[i * 3 + 1] += velocities[i].y;
+                posArr[i * 3 + 2] += velocities[i].z;
+
+                // Bounce at bounds
+                if (Math.abs(posArr[i * 3]) > bounds.x / 2) velocities[i].x *= -1;
+                if (Math.abs(posArr[i * 3 + 1]) > bounds.y / 2) velocities[i].y *= -1;
+                if (Math.abs(posArr[i * 3 + 2]) > bounds.z / 2) velocities[i].z *= -1;
+            }
+            geometry.attributes.position.needsUpdate = true;
+
+            // Update lines
+            let lineIndex = 0;
+            for (let i = 0; i < particleCount; i++) {
+                const x1 = posArr[i * 3];
+                const y1 = posArr[i * 3 + 1];
+                const z1 = posArr[i * 3 + 2];
+
+                for (let j = i + 1; j < particleCount; j++) {
+                    const x2 = posArr[j * 3];
+                    const y2 = posArr[j * 3 + 1];
+                    const z2 = posArr[j * 3 + 2];
+
+                    const dx = x1 - x2;
+                    const dy = y1 - y2;
+                    const dz = z1 - z2;
+                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (dist < connectionThreshold && lineIndex < maxConnections) {
+                        const idx = lineIndex * 6;
+                        linePositions[idx] = x1;
+                        linePositions[idx + 1] = y1;
+                        linePositions[idx + 2] = z1;
+                        linePositions[idx + 3] = x2;
+                        linePositions[idx + 4] = y2;
+                        linePositions[idx + 5] = z2;
+                        lineIndex++;
+                    }
+                }
+            }
+
+            // Reset other line indices
+            for (let i = lineIndex; i < maxConnections; i++) {
+                const idx = i * 6;
+                linePositions[idx] = 0;
+                linePositions[idx + 1] = 0;
+                linePositions[idx + 2] = 0;
+                linePositions[idx + 3] = 0;
+                linePositions[idx + 4] = 0;
+                linePositions[idx + 5] = 0;
+            }
+            lineGeometry.attributes.position.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        };
+
+        animate();
+
+        const handleResize = () => {
+            if (!canvasRef.current) return;
+            const w = parent.clientWidth;
+            const h = parent.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        };
+
+        const resizeObserver = new ResizeObserver(() => handleResize());
+        resizeObserver.observe(parent);
+
+        return () => {
+            cancelAnimationFrame(animationId);
+            resizeObserver.disconnect();
+            geometry.dispose();
+            pointMaterial.dispose();
+            lineGeometry.dispose();
+            lineMaterial.dispose();
+            renderer.dispose();
+        };
+    }, []);
+
+    return (
+        <canvas 
+            ref={canvasRef} 
+            className="absolute inset-0 w-full h-full block pointer-events-none opacity-20" 
+            style={{ zIndex: 0 }}
+        />
+    );
 });
 
 const WhiteboardPanel = React.memo(function WhiteboardPanel() {
@@ -184,6 +381,7 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             case 'hash_map':   return <HashMapVisualizer visual={v as HashMapVisual} compact={compact} />;
             case 'linked_list': return <LinkedListVisualizer visual={v as LinkedListVisual} compact={compact} />;
             case 'trie':       return <TrieVisualizer visual={v as any} />;
+            case 'string':     return <StringVisualizer visual={v as any} stepType={arrayStepType as any} />;
             default:           return null;
         }
     };
@@ -196,19 +394,19 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
             
             // Filter large visual structures into mainVisuals
             const mainVisuals = list.filter((subV: any) => 
-                ['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list', 'trie'].includes(subV.type)
+                ['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list', 'trie', 'string'].includes(subV.type)
             );
             
             // Filter smaller helper variables/hash_maps into sideVisuals
             const sideVisuals = list.filter((subV: any) => 
-                !['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list', 'trie'].includes(subV.type)
+                !['array_1d', 'matrix', 'tree', 'graph', 'call_stack', 'stack', 'queue', 'deque', 'priority_queue', 'linked_list', 'trie', 'string'].includes(subV.type)
             );
 
             if (mainVisuals.length > 0 && sideVisuals.length > 0) {
                 return (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full h-full min-h-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full h-full min-h-0 relative z-10">
                         {/* Main Visualizer Area: takes 2 columns (66% width) */}
-                        <div className="lg:col-span-2 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 h-full min-h-0">
+                        <div className="lg:col-span-2 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 h-full min-h-0 justify-center">
                             {mainVisuals.map((subV: any, idx: number) => (
                                 <div key={subV.target || idx} className="w-full flex justify-center flex-none">
                                     {renderVisualizerItem(subV)}
@@ -217,7 +415,7 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
                         </div>
 
                         {/* Side Panel Area: takes 1 column (33% width) for sticky scope variables */}
-                        <div className="lg:col-span-1 flex flex-col bg-white/5 border border-white/5 rounded-2xl p-5 h-full min-h-0 shadow-xl backdrop-blur-md">
+                        <div className="lg:col-span-1 flex flex-col bg-slate-900/40 border border-white/5 rounded-2xl p-5 h-full min-h-0 shadow-xl backdrop-blur-md">
                             <div className="flex items-center gap-2 pb-3 border-b border-white/5 mb-3 text-cyan-400">
                                 <div className="w-1.5 h-3.5 rounded-full bg-cyan-400" />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-[#768390]">Scope Variables</span>
@@ -256,9 +454,7 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
     if (showEmptyState) {
         return (
             <div className="flex-1 w-full h-full flex flex-col bg-[#0B1120] relative text-white overflow-hidden items-center justify-center">
-                {/* Dot-grid background */}
-                <div className="absolute inset-0 pointer-events-none"
-                    style={{ backgroundImage: 'radial-gradient(#1e2d3d 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+                <WhiteboardBackground />
 
                 <div className="flex flex-col items-center justify-center text-[#768390] gap-4 z-20 select-none">
                     <div className="w-16 h-16 rounded-2xl bg-[#0d1117] border border-[#1e2d3d] flex items-center justify-center">
@@ -286,9 +482,43 @@ const WhiteboardPanel = React.memo(function WhiteboardPanel() {
 
     return (
         <div className="flex-1 w-full h-full flex flex-col bg-[#0B1120] relative text-white overflow-hidden">
-            {/* Dot-grid background */}
-            <div className="absolute inset-0 pointer-events-none"
-                style={{ backgroundImage: 'radial-gradient(#1e2d3d 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <WhiteboardBackground />
+
+            {traceMode && hasSteps && activeStep?.variables && Object.keys(activeStep.variables).length > 0 && (!currentTraceStep?.visuals || currentTraceStep.visuals.type !== 'multi_visuals') && (
+                <div className="absolute top-4 right-4 z-30 w-60 bg-[#090d16]/85 border border-white/10 rounded-2xl p-4 shadow-2xl text-xs font-mono max-h-64 overflow-y-auto custom-scrollbar backdrop-blur-md animate-fade-slide-in">
+                    <div className="flex items-center gap-1.5 text-cyan-400 font-black mb-2 pb-1 border-b border-white/5 tracking-widest text-[9px] uppercase">
+                        <div className="w-1.5 h-3.5 rounded-full bg-cyan-400" />
+                        <span>Scope Variables</span>
+                    </div>
+                    <div className="space-y-1.5 mt-2">
+                        {Object.entries(activeStep.variables).map(([name, value]) => {
+                            let typeStr = 'var';
+                            if (typeof value === 'number') {
+                                typeStr = Number.isInteger(value) ? 'int' : 'double';
+                            } else if (typeof value === 'boolean') {
+                                typeStr = 'bool';
+                            } else if (typeof value === 'string') {
+                                typeStr = value.length === 1 ? 'char' : 'string';
+                            } else if (Array.isArray(value)) {
+                                typeStr = 'vector';
+                            } else if (typeof value === 'object' && value !== null) {
+                                typeStr = 'struct';
+                            }
+                            return (
+                                <div key={name} className="flex items-center justify-between py-1 border-b border-white/5 last:border-b-0 px-1 rounded hover:bg-white/5 transition-colors group">
+                                    <span className="text-cyan-400 font-bold">
+                                        {name}
+                                        <span className="text-[8px] font-normal text-slate-500 ml-1">({typeStr})</span>
+                                    </span>
+                                    <span className="text-orange-400 font-semibold truncate max-w-[120px]" title={String(value)}>
+                                        {formatVarValue(value)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {traceMode ? (
                 /* Primary Data Visualization Area takes 100% of height */
